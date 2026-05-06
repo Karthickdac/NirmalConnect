@@ -305,6 +305,20 @@ export interface GrievanceStatusUpdateBody {
   note?: string | null;
 }
 
+export type GrievancePriorityUpdateBodyPriority =
+  (typeof GrievancePriorityUpdateBodyPriority)[keyof typeof GrievancePriorityUpdateBodyPriority];
+
+export const GrievancePriorityUpdateBodyPriority = {
+  Low: "Low",
+  Medium: "Medium",
+  High: "High",
+  Urgent: "Urgent",
+} as const;
+
+export interface GrievancePriorityUpdateBody {
+  priority: GrievancePriorityUpdateBodyPriority;
+}
+
 export interface GrievanceRemarkBody {
   remark: string;
   isPublic?: boolean;
@@ -315,6 +329,55 @@ export interface GrievanceAssignBody {
   officerName: string;
   /** @nullable */
   note?: string | null;
+}
+
+export interface GrievanceOfficerItem {
+  id: number;
+  name: string;
+  role: string;
+}
+
+export interface GrievanceOfficerList {
+  officers: GrievanceOfficerItem[];
+}
+
+export interface GrievanceAttachmentItem {
+  id: number;
+  grievanceId: number;
+  fileUrl: string;
+  fileName: string;
+  fileType: string;
+  /** @nullable */
+  fileSize?: number | null;
+  createdAt: string;
+}
+
+export interface GrievanceStaffDetail {
+  id: number;
+  ticketNo: string;
+  name: string;
+  phone: string;
+  /** @nullable */
+  email?: string | null;
+  category: string;
+  description: string;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  ward?: string | null;
+  constituency: string;
+  priority: string;
+  status: string;
+  anonymous: boolean;
+  /** @nullable */
+  assignedTo?: number | null;
+  /** @nullable */
+  resolvedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  remarks: GrievanceRemark[];
+  statusLog: GrievanceStatusLogEntry[];
+  attachments: GrievanceAttachmentItem[];
 }
 
 export type ListNewsParams = {
@@ -368,4 +431,5 @@ export type ListGrievancesParams = {
   category?: string;
   priority?: string;
   ward?: string;
+  constituency?: string;
 };

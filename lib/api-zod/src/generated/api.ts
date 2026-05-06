@@ -429,6 +429,7 @@ export const ListGrievancesQueryParams = zod.object({
   category: zod.coerce.string().optional(),
   priority: zod.coerce.string().optional(),
   ward: zod.coerce.string().optional(),
+  constituency: zod.coerce.string().optional(),
 });
 
 export const ListGrievancesResponse = zod.object({
@@ -451,6 +452,101 @@ export const ListGrievancesResponse = zod.object({
   total: zod.number(),
   page: zod.number(),
   totalPages: zod.number(),
+});
+
+/**
+ * @summary List staff users available for grievance assignment (staff only)
+ */
+export const ListGrievanceOfficersResponse = zod.object({
+  officers: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      role: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Get full grievance detail with all remarks and attachments (staff only)
+ */
+export const GetGrievanceDetailParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetGrievanceDetailResponse = zod.object({
+  id: zod.number(),
+  ticketNo: zod.string(),
+  name: zod.string(),
+  phone: zod.string(),
+  email: zod.string().nullish(),
+  category: zod.string(),
+  description: zod.string(),
+  address: zod.string().nullish(),
+  ward: zod.string().nullish(),
+  constituency: zod.string(),
+  priority: zod.string(),
+  status: zod.string(),
+  anonymous: zod.boolean(),
+  assignedTo: zod.number().nullish(),
+  resolvedAt: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+  remarks: zod.array(
+    zod.object({
+      id: zod.number(),
+      grievanceId: zod.number(),
+      remark: zod.string(),
+      isPublic: zod.boolean(),
+      authorName: zod.string(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  statusLog: zod.array(
+    zod.object({
+      id: zod.number(),
+      fromStatus: zod.string().nullish(),
+      toStatus: zod.string(),
+      changedByName: zod.string(),
+      note: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  attachments: zod.array(
+    zod.object({
+      id: zod.number(),
+      grievanceId: zod.number(),
+      fileUrl: zod.string(),
+      fileName: zod.string(),
+      fileType: zod.string(),
+      fileSize: zod.number().nullish(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Update grievance priority (staff only)
+ */
+export const UpdateGrievancePriorityParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateGrievancePriorityBody = zod.object({
+  priority: zod.enum(["Low", "Medium", "High", "Urgent"]),
+});
+
+export const UpdateGrievancePriorityResponse = zod.object({
+  id: zod.number(),
+  ticketNo: zod.string(),
+  category: zod.string(),
+  status: zod.string(),
+  priority: zod.string(),
+  ward: zod.string().nullish(),
+  constituency: zod.string(),
+  anonymous: zod.boolean(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
 });
 
 /**

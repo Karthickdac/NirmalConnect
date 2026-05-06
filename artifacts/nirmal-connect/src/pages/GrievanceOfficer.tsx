@@ -20,6 +20,8 @@ import {
   updateGrievanceStatus,
   addGrievanceRemark,
   assignGrievance,
+  listGrievanceOfficers,
+  updateGrievancePriority,
 } from "@workspace/api-client-react";
 import type { GrievanceListItem } from "@workspace/api-client-react";
 
@@ -123,8 +125,15 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
   const [statusNote, setStatusNote] = useState("");
   const [remarkText, setRemarkText] = useState("");
   const [remarkPublic, setRemarkPublic] = useState(true);
-  const [assignOfficerName, setAssignOfficerName] = useState("");
+  const [assignOfficerId, setAssignOfficerId] = useState<string>("");
   const [assignNote, setAssignNote] = useState("");
+  const [newPriority, setNewPriority] = useState("");
+
+  const { data: officersData } = useQuery({
+    queryKey: ["grievance-officers"],
+    queryFn: () => listGrievanceOfficers({ headers: makeAuthHeaders(token) }),
+    staleTime: 60_000,
+  });
 
   const params = {
     page,
@@ -156,9 +165,10 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
     setDetail(null);
     setDetailLoading(true);
     setNewStatus(item.status);
+    setNewPriority(item.priority);
     setStatusNote("");
     setRemarkText("");
-    setAssignOfficerName("");
+    setAssignOfficerId("");
     setAssignNote("");
     try {
       const d = await fetchStaffDetail(item.id, token);
@@ -195,16 +205,35 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
   });
 
   const assignMutation = useMutation({
-    mutationFn: () =>
-      assignGrievance(selected!.id,
-        { officerId: 0, officerName: assignOfficerName.trim(), note: assignNote.trim() || null },
-        { headers: makeAuthHeaders(token) }),
+    mutationFn: () => {
+      const officer = officersData?.officers.find((o) => String(o.id) === assignOfficerId);
+      return assignGrievance(
+        selected!.id,
+        { officerId: officer!.id, officerName: officer!.name, note: assignNote.trim() || null },
+        { headers: makeAuthHeaders(token) }
+      );
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["grievances-list"] });
       const updated = { ...selected!, status: "Assigned" };
       setSelected(updated as GrievanceListItem);
-      setAssignOfficerName("");
+      setAssignOfficerId("");
       setAssignNote("");
+      refreshDetail(selected!.id);
+    },
+  });
+
+  const priorityMutation = useMutation({
+    mutationFn: () =>
+      updateGrievancePriority(
+        selected!.id,
+        { priority: newPriority as "Low" | "Medium" | "High" | "Urgent" },
+        { headers: makeAuthHeaders(token) }
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["grievances-list"] });
+      const updated = { ...selected!, priority: newPriority };
+      setSelected(updated as GrievanceListItem);
       refreshDetail(selected!.id);
     },
   });
@@ -479,17 +508,50 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
                 </div>
               </div>
 
+              {/* Update Priority */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <h4 className="font-semibold text-sm flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-primary" />
+                  {lang === "ta" ? "முன்னுரிமை மாற்று" : "Update Priority"}
+                </h4>
+                <Select value={newPriority} onValueChange={setNewPriority}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRIORITY_OPTS.filter(Boolean).map((p) => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => priorityMutation.mutate()}
+                  disabled={priorityMutation.isPending || newPriority === detail.priority}
+                >
+                  {priorityMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : lang === "ta" ? "புதுப்பி" : "Set Priority"}
+                </Button>
+              </div>
+
               {/* Assign to Officer */}
               <div className="border rounded-lg p-4 space-y-3">
                 <h4 className="font-semibold text-sm flex items-center gap-2">
                   <Users className="w-4 h-4 text-primary" />
                   {lang === "ta" ? "அலுவலருக்கு ஒதுக்கு" : "Assign to Officer"}
                 </h4>
-                <Input
-                  placeholder={lang === "ta" ? "அலுவலர் பெயர்..." : "Officer name..."}
-                  value={assignOfficerName}
-                  onChange={(e) => setAssignOfficerName(e.target.value)}
-                />
+                <Select value={assignOfficerId} onValueChange={setAssignOfficerId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={lang === "ta" ? "அலுவலரை தேர்வு செய்யவும்..." : "Select officer..."} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(officersData?.officers ?? []).map((o) => (
+                      <SelectItem key={o.id} value={String(o.id)}>
+                        {o.name} <span className="text-muted-foreground text-xs ml-1">({o.role.replace("_", " ")})</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Input
                   placeholder={lang === "ta" ? "குறிப்பு (விரும்பினால்)..." : "Note (optional)..."}
                   value={assignNote}
@@ -499,7 +561,7 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
                   size="sm"
                   variant="outline"
                   onClick={() => assignMutation.mutate()}
-                  disabled={assignMutation.isPending || !assignOfficerName.trim()}
+                  disabled={assignMutation.isPending || !assignOfficerId}
                 >
                   {assignMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : lang === "ta" ? "ஒதுக்கு" : "Assign"}
                 </Button>

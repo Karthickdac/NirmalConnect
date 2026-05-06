@@ -5,6 +5,7 @@ import {
   grievanceAttachmentsTable,
   grievanceRemarksTable,
   grievanceStatusLogTable,
+  usersTable,
 } from "@workspace/db/schema";
 import { requireStaff, type AuthRequest } from "../lib/auth.js";
 import { eq, desc, and, count } from "drizzle-orm";
@@ -230,6 +231,49 @@ router.get("/grievances", requireStaff, async (req: AuthRequest, res) => {
     });
   } catch (err) {
     console.error("[grievances] list error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /api/grievances/officers — staff only (list staff users available for assignment)
+router.get("/grievances/officers", requireStaff, async (_req, res) => {
+  try {
+    const officers = await db
+      .select({ id: usersTable.id, name: usersTable.name, role: usersTable.role })
+      .from(usersTable)
+      .where(eq(usersTable.isActive, "true"))
+      .orderBy(usersTable.name);
+    res.json({ officers });
+  } catch (err) {
+    console.error("[grievances] officers error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PATCH /api/grievances/:id/priority — staff only
+router.patch("/grievances/:id/priority", requireStaff, async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params.id as string);
+    const PriorityBody = z.object({
+      priority: z.enum(["Low", "Medium", "High", "Urgent"]),
+    });
+    const body = PriorityBody.safeParse(req.body);
+    if (!body.success) {
+      res.status(400).json({ error: "Invalid request", details: body.error.issues });
+      return;
+    }
+
+    const [current] = await db.select().from(grievancesTable).where(eq(grievancesTable.id, id)).limit(1);
+    if (!current) { res.status(404).json({ error: "Grievance not found" }); return; }
+
+    const [updated] = await db.update(grievancesTable)
+      .set({ priority: body.data.priority })
+      .where(eq(grievancesTable.id, id))
+      .returning();
+
+    res.json(serializeGrievance(updated));
+  } catch (err) {
+    console.error("[grievances] priority update error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

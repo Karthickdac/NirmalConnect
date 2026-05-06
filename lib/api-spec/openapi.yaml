@@ -478,6 +478,10 @@ paths:
           in: query
           schema:
             type: string
+        - name: constituency
+          in: query
+          schema:
+            type: string
       responses:
         "200":
           description: Paginated grievance list
@@ -485,6 +489,93 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GrievanceListResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /grievances/officers:
+    get:
+      operationId: listGrievanceOfficers
+      tags: [grievances]
+      summary: List staff users available for grievance assignment (staff only)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of staff officers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GrievanceOfficerList"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /grievances/{id}:
+    get:
+      operationId: getGrievanceDetail
+      tags: [grievances]
+      summary: Get full grievance detail with all remarks and attachments (staff only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Full grievance detail with internal remarks and attachments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GrievanceStaffDetail"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Grievance not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /grievances/{id}/priority:
+    patch:
+      operationId: updateGrievancePriority
+      tags: [grievances]
+      summary: Update grievance priority (staff only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GrievancePriorityUpdateBody"
+      responses:
+        "200":
+          description: Priority updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GrievancePublic"
         "401":
           description: Unauthorized
           content:
@@ -1265,6 +1356,15 @@ components:
       required:
         - status
 
+    GrievancePriorityUpdateBody:
+      type: object
+      properties:
+        priority:
+          type: string
+          enum: [Low, Medium, High, Urgent]
+      required:
+        - priority
+
     GrievanceRemarkBody:
       type: object
       properties:
@@ -1287,3 +1387,121 @@ components:
       required:
         - officerId
         - officerName
+
+    GrievanceOfficerItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        role:
+          type: string
+      required:
+        - id
+        - name
+        - role
+
+    GrievanceOfficerList:
+      type: object
+      properties:
+        officers:
+          type: array
+          items:
+            $ref: "#/components/schemas/GrievanceOfficerItem"
+      required:
+        - officers
+
+    GrievanceAttachmentItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        grievanceId:
+          type: integer
+        fileUrl:
+          type: string
+        fileName:
+          type: string
+        fileType:
+          type: string
+        fileSize:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - grievanceId
+        - fileUrl
+        - fileName
+        - fileType
+        - createdAt
+
+    GrievanceStaffDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        ticketNo:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: ["string", "null"]
+        category:
+          type: string
+        description:
+          type: string
+        address:
+          type: ["string", "null"]
+        ward:
+          type: ["string", "null"]
+        constituency:
+          type: string
+        priority:
+          type: string
+        status:
+          type: string
+        anonymous:
+          type: boolean
+        assignedTo:
+          type: ["integer", "null"]
+        resolvedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        remarks:
+          type: array
+          items:
+            $ref: "#/components/schemas/GrievanceRemark"
+        statusLog:
+          type: array
+          items:
+            $ref: "#/components/schemas/GrievanceStatusLogEntry"
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/GrievanceAttachmentItem"
+      required:
+        - id
+        - ticketNo
+        - name
+        - phone
+        - category
+        - description
+        - constituency
+        - priority
+        - status
+        - anonymous
+        - createdAt
+        - updatedAt
+        - remarks
+        - statusLog
+        - attachments
