@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,9 +11,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle, Search, FileText, Phone, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import {
+  CheckCircle, Search, FileText, Phone, MessageSquare,
+  Copy, AlertCircle, TrendingUp, Clock, CheckCheck, Loader2,
+} from "lucide-react";
 import type { Language } from "@/lib/i18n";
+import { submitGrievance, trackGrievance, getGrievanceHeatmap } from "@workspace/api-client-react";
+import type { GrievanceTrackResponse } from "@workspace/api-client-react";
 
 interface GrievanceProps { lang: Language; }
 
@@ -22,7 +30,6 @@ const CATEGORIES = [
   "Ration", "Transport", "Pension", "Housing",
   "Agriculture", "Employment", "Others",
 ];
-
 const CATEGORIES_TA = [
   "சாலை", "குடிநீர்", "மின்சாரம்", "கழிவுநீர்",
   "சுகாதாரம்", "கல்வி", "பெண் பாதுகாப்பு", "ஊழல்",
@@ -30,54 +37,188 @@ const CATEGORIES_TA = [
   "விவசாயம்", "வேலைவாய்ப்பு", "பிறவை",
 ];
 
+const STATUS_FLOW = ["Submitted", "Under Review", "Assigned", "In Progress", "Resolved", "Closed"];
+const STATUS_COLORS: Record<string, string> = {
+  "Submitted": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+  "Under Review": "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
+  "Assigned": "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+  "In Progress": "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+  "Resolved": "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+  "Closed": "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+};
+const STATUS_TA: Record<string, string> = {
+  "Submitted": "பதிவு செய்யப்பட்டது",
+  "Under Review": "ஆய்வில் உள்ளது",
+  "Assigned": "ஒதுக்கப்பட்டது",
+  "In Progress": "நடவடிக்கையில் உள்ளது",
+  "Resolved": "தீர்க்கப்பட்டது",
+  "Closed": "மூடப்பட்டது",
+};
+
+const CHART_COLORS = ["#CC0000", "#e53e3e", "#fc8181", "#feb2b2", "#fed7d7", "#fff5f5",
+  "#FFD700", "#f6c200", "#b7791f", "#975a16", "#1a365d", "#2c7a7b", "#276749", "#553c9a", "#702459"];
+
 const schema = z.object({
-  name: z.string().min(2, "Name is required"),
-  phone: z.string().min(10, "Valid phone required"),
+  name: z.string().min(2, "Name required"),
+  phone: z.string().min(7, "Valid phone required"),
   category: z.string().min(1, "Category required"),
-  description: z.string().min(20, "Please provide at least 20 characters"),
+  description: z.string().min(20, "Provide at least 20 characters"),
   address: z.string().optional(),
   ward: z.string().optional(),
   anonymous: z.boolean().optional(),
 });
-
 type FormData = z.infer<typeof schema>;
+
+function StatusTimeline({ status, lang }: { status: string; lang: Language }) {
+  const idx = STATUS_FLOW.indexOf(status);
+  return (
+    <div className="space-y-1">
+      <div className="flex gap-1">
+        {STATUS_FLOW.map((s, i) => (
+          <div key={s} className={`h-2 flex-1 rounded-full transition-colors ${i <= idx ? "bg-primary" : "bg-muted"}`} />
+        ))}
+      </div>
+      <div className="flex justify-between text-xs text-muted-foreground">
+        <span>{lang === "ta" ? "பதிவு" : "Filed"}</span>
+        <span>{lang === "ta" ? "தீர்வு" : "Resolved"}</span>
+      </div>
+    </div>
+  );
+}
+
+function TrackResult({ data, lang, ticketNo }: { data: GrievanceTrackResponse; lang: Language; ticketNo: string }) {
+  const statusLabel = lang === "ta" ? (STATUS_TA[data.status] ?? data.status) : data.status;
+  return (
+    <div className="space-y-4">
+      <div className="p-4 border rounded-xl space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <span className="font-mono font-bold text-primary">{ticketNo}</span>
+          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[data.status] ?? "bg-muted text-muted-foreground"}`}>
+            {statusLabel}
+          </span>
+        </div>
+        <div className="text-sm text-muted-foreground space-y-1">
+          <p><span className="font-medium">{lang === "ta" ? "வகை:" : "Category:"}</span> {data.category}</p>
+          {data.ward && <p><span className="font-medium">{lang === "ta" ? "வார்டு:" : "Ward:"}</span> {data.ward}</p>}
+          <p><span className="font-medium">{lang === "ta" ? "தொகுதி:" : "Constituency:"}</span> {data.constituency}</p>
+          <p className="text-xs">{lang === "ta" ? "பதிவு:" : "Filed:"} {new Date(data.createdAt).toLocaleDateString("ta-IN")}</p>
+        </div>
+        <StatusTimeline status={data.status} lang={lang} />
+      </div>
+
+      {data.statusLog.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold">{lang === "ta" ? "நிலை வரலாறு" : "Status Timeline"}</h4>
+          <div className="space-y-2">
+            {data.statusLog.map((log) => (
+              <div key={log.id} className="flex gap-3 text-sm">
+                <div className="flex flex-col items-center">
+                  <div className="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0" />
+                  <div className="w-px flex-1 bg-border mt-1" />
+                </div>
+                <div className="pb-3">
+                  <p className="font-medium">
+                    {lang === "ta" ? (STATUS_TA[log.toStatus] ?? log.toStatus) : log.toStatus}
+                  </p>
+                  {log.note && <p className="text-muted-foreground text-xs">{log.note}</p>}
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {log.changedByName} · {new Date(log.createdAt).toLocaleString("ta-IN")}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.remarks.filter((r) => r.isPublic).length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold">{lang === "ta" ? "அலுவலக குறிப்புகள்" : "Office Remarks"}</h4>
+          {data.remarks.filter((r) => r.isPublic).map((r) => (
+            <div key={r.id} className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
+              <p>{r.remark}</p>
+              <p className="text-xs text-muted-foreground">{r.authorName} · {new Date(r.createdAt).toLocaleDateString()}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Grievance({ lang }: GrievanceProps) {
   const [submitted, setSubmitted] = useState(false);
   const [ticketNo, setTicketNo] = useState("");
   const [trackInput, setTrackInput] = useState("");
-  const [trackResult, setTrackResult] = useState<null | { status: string; category: string }>(null);
+  const [trackData, setTrackData] = useState<GrievanceTrackResponse | null>(null);
+  const [trackError, setTrackError] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [isTracking, setIsTracking] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", phone: "", category: "", description: "", address: "", ward: "" },
+    defaultValues: { name: "", phone: "", category: "", description: "", address: "", ward: "", anonymous: false },
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: (data: FormData) =>
+      submitGrievance({
+        name: data.name,
+        phone: data.phone,
+        category: data.category,
+        description: data.description,
+        address: data.address || null,
+        ward: data.ward || null,
+        anonymous: data.anonymous ?? false,
+      }),
+    onSuccess: (result) => {
+      setTicketNo(result.ticketNo);
+      setSubmitted(true);
+    },
+    onError: () => {
+      form.setError("root", { message: lang === "ta" ? "சேவை தடைபட்டது. மீண்டும் முயற்சிக்கவும்." : "Service error. Please try again." });
+    },
+  });
+
+  const { data: heatmapData } = useQuery({
+    queryKey: ["grievance-heatmap"],
+    queryFn: () => getGrievanceHeatmap(),
+    staleTime: 60_000,
   });
 
   function onSubmit(values: FormData) {
-    const ticket = `GRV-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 90000) + 10000)}`;
-    setTicketNo(ticket);
-    setSubmitted(true);
+    submitMutation.mutate(values);
   }
 
-  function handleTrack() {
-    if (trackInput.startsWith("GRV-")) {
-      setTrackResult({ status: "Under Review", category: "General" });
-    } else {
-      setTrackResult(null);
+  async function handleTrack() {
+    const ticket = trackInput.trim();
+    if (!ticket) return;
+    setIsTracking(true);
+    setTrackError("");
+    setTrackData(null);
+    try {
+      const result = await trackGrievance(ticket);
+      setTrackData(result);
+    } catch {
+      setTrackError(lang === "ta" ? "புகார் எண் கிடைக்கவில்லை." : "Ticket not found. Check the number and try again.");
+    } finally {
+      setIsTracking(false);
     }
   }
 
-  const statusColors: Record<string, string> = {
-    "Submitted": "bg-blue-100 text-blue-700",
-    "Under Review": "bg-yellow-100 text-yellow-700",
-    "Assigned": "bg-purple-100 text-purple-700",
-    "In Progress": "bg-orange-100 text-orange-700",
-    "Resolved": "bg-green-100 text-green-700",
-    "Closed": "bg-gray-100 text-gray-700",
-  };
+  function copyTicket() {
+    navigator.clipboard.writeText(ticketNo).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  const resolvedPct = heatmapData
+    ? Math.round((heatmapData.resolved / Math.max(heatmapData.total, 1)) * 100)
+    : 0;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-12">
+    <div className="max-w-5xl mx-auto px-4 py-12 space-y-12">
       <SectionHeader
         title={lang === "ta" ? "மக்கள் புகார் மையம்" : "Public Grievance Portal"}
         subtitle={lang === "ta"
@@ -86,43 +227,55 @@ export default function Grievance({ lang }: GrievanceProps) {
       />
 
       <Tabs defaultValue="submit" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto">
+        <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto">
           <TabsTrigger value="submit" data-testid="tab-submit">
             <FileText className="w-4 h-4 mr-2" />
-            {lang === "ta" ? "புகார் அனுப்பு" : "Submit Grievance"}
+            {lang === "ta" ? "புகார் அனுப்பு" : "Submit"}
           </TabsTrigger>
           <TabsTrigger value="track" data-testid="tab-track">
             <Search className="w-4 h-4 mr-2" />
-            {lang === "ta" ? "நிலை அறிய" : "Track Status"}
+            {lang === "ta" ? "நிலை அறிய" : "Track"}
+          </TabsTrigger>
+          <TabsTrigger value="stats" data-testid="tab-stats">
+            <TrendingUp className="w-4 h-4 mr-2" />
+            {lang === "ta" ? "புள்ளிவிவரம்" : "Stats"}
           </TabsTrigger>
         </TabsList>
 
+        {/* ── Submit Tab ── */}
         <TabsContent value="submit">
           {submitted ? (
-            <div className="text-center py-16 space-y-4">
+            <div className="text-center py-16 space-y-5 max-w-sm mx-auto">
               <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto">
                 <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
               <h3 className="text-xl font-bold">
-                {lang === "ta" ? "புகார் பதிவு செய்யப்பட்டது!" : "Grievance Submitted Successfully!"}
+                {lang === "ta" ? "புகார் பதிவு செய்யப்பட்டது!" : "Grievance Submitted!"}
               </h3>
-              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 inline-block">
-                <p className="text-xs text-muted-foreground mb-1">{lang === "ta" ? "உங்கள் புகார் எண்" : "Your Ticket Number"}</p>
-                <p className="text-2xl font-bold text-primary">{ticketNo}</p>
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 space-y-2">
+                <p className="text-xs text-muted-foreground">{lang === "ta" ? "உங்கள் புகார் எண்" : "Your Ticket Number"}</p>
+                <p className="text-2xl font-bold text-primary font-mono tracking-wider">{ticketNo}</p>
+                <Button variant="ghost" size="sm" onClick={copyTicket} className="gap-1.5">
+                  {copied ? <CheckCheck className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? (lang === "ta" ? "நகலெடுக்கப்பட்டது" : "Copied!") : (lang === "ta" ? "நகலெடு" : "Copy")}
+                </Button>
               </div>
-              <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+              <p className="text-muted-foreground text-sm">
                 {lang === "ta"
-                  ? "இந்த எண்ணை வைத்து நிலையை கண்காணியுங்கள். விரைவில் தொடர்பு கொள்வோம்."
-                  : "Save this ticket number to track your grievance status. Our office will contact you shortly."}
+                  ? "இந்த எண்ணை வைத்து Track தாவலில் நிலையை கண்காணியுங்கள்."
+                  : "Use this number in the Track tab to follow your grievance status."}
               </p>
-              <div className="flex gap-3 justify-center">
+              <div className="flex gap-3 justify-center flex-wrap">
                 <Button onClick={() => { setSubmitted(false); form.reset(); }} variant="outline">
                   {lang === "ta" ? "மற்றொரு புகார்" : "Submit Another"}
                 </Button>
-                <a href={`https://wa.me/919876543210?text=My+grievance+ticket+number+is+${ticketNo}`} target="_blank" rel="noopener noreferrer">
-                  <Button className="bg-[#25D366] hover:bg-[#20b558] text-white">
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    {lang === "ta" ? "WhatsApp மூலம் அனுப்பு" : "Share via WhatsApp"}
+                <a
+                  href={`https://wa.me/919876543210?text=${encodeURIComponent(`My grievance ticket: ${ticketNo}`)}`}
+                  target="_blank" rel="noopener noreferrer"
+                >
+                  <Button className="bg-[#25D366] hover:bg-[#20b558] text-white gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    {lang === "ta" ? "WhatsApp மூலம் பகிர்" : "Share via WhatsApp"}
                   </Button>
                 </a>
               </div>
@@ -151,6 +304,7 @@ export default function Grievance({ lang }: GrievanceProps) {
                         </FormItem>
                       )} />
                     </div>
+
                     <FormField control={form.control} name="category" render={({ field }) => (
                       <FormItem>
                         <FormLabel>{lang === "ta" ? "புகார் வகை" : "Complaint Category"} *</FormLabel>
@@ -171,6 +325,7 @@ export default function Grievance({ lang }: GrievanceProps) {
                         <FormMessage />
                       </FormItem>
                     )} />
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField control={form.control} name="ward" render={({ field }) => (
                         <FormItem>
@@ -187,6 +342,7 @@ export default function Grievance({ lang }: GrievanceProps) {
                         </FormItem>
                       )} />
                     </div>
+
                     <FormField control={form.control} name="description" render={({ field }) => (
                       <FormItem>
                         <FormLabel>{lang === "ta" ? "புகார் விவரம்" : "Complaint Details"} *</FormLabel>
@@ -201,12 +357,39 @@ export default function Grievance({ lang }: GrievanceProps) {
                         <FormMessage />
                       </FormItem>
                     )} />
+
+                    <FormField control={form.control} name="anonymous" render={({ field }) => (
+                      <FormItem className="flex items-center gap-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            data-testid="grievance-anonymous"
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal cursor-pointer">
+                          {lang === "ta" ? "அநாமதேய புகார் (பெயர் மறைக்கப்படும்)" : "Submit anonymously (name hidden from public)"}
+                        </FormLabel>
+                      </FormItem>
+                    )} />
+
+                    {form.formState.errors.root && (
+                      <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 rounded-lg p-3">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        {form.formState.errors.root.message}
+                      </div>
+                    )}
+
                     <Button
                       data-testid="submit-grievance-btn"
                       type="submit"
+                      disabled={submitMutation.isPending}
                       className="w-full bg-primary hover:bg-primary/90 text-white"
                     >
-                      {lang === "ta" ? "புகார் அனுப்பு" : "Submit Grievance"}
+                      {submitMutation.isPending
+                        ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{lang === "ta" ? "அனுப்புகிறது..." : "Submitting..."}</>
+                        : lang === "ta" ? "புகார் அனுப்பு" : "Submit Grievance"
+                      }
                     </Button>
                   </form>
                 </Form>
@@ -215,72 +398,175 @@ export default function Grievance({ lang }: GrievanceProps) {
           )}
         </TabsContent>
 
+        {/* ── Track Tab ── */}
         <TabsContent value="track">
-          <div className="max-w-lg mx-auto space-y-6">
+          <div className="max-w-lg mx-auto space-y-5">
             <Card>
-              <CardHeader><CardTitle>{lang === "ta" ? "புகார் நிலை" : "Track Your Grievance"}</CardTitle></CardHeader>
+              <CardHeader><CardTitle>{lang === "ta" ? "புகார் நிலை அறிய" : "Track Your Grievance"}</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex gap-2">
                   <Input
                     data-testid="track-ticket-input"
-                    placeholder={lang === "ta" ? "புகார் எண் உள்ளிடுங்கள் (GRV-...)" : "Enter ticket number (GRV-...)"}
+                    placeholder={lang === "ta" ? "புகார் எண் (GRV-...)" : "Ticket number (GRV-...)"}
                     value={trackInput}
                     onChange={(e) => setTrackInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleTrack()}
                   />
-                  <Button data-testid="track-submit" onClick={handleTrack} className="bg-primary text-white hover:bg-primary/90">
-                    <Search className="w-4 h-4" />
+                  <Button
+                    data-testid="track-submit"
+                    onClick={handleTrack}
+                    disabled={isTracking || !trackInput.trim()}
+                    className="bg-primary text-white hover:bg-primary/90 shrink-0"
+                  >
+                    {isTracking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                   </Button>
                 </div>
-                {trackResult ? (
-                  <div className="p-4 border rounded-lg space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono font-semibold">{trackInput}</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[trackResult.status] ?? "bg-gray-100 text-gray-700"}`}>
-                        {trackResult.status}
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">Category: {trackResult.category}</p>
-                    <div className="flex gap-1 flex-wrap">
-                      {["Submitted", "Under Review", "Assigned", "In Progress", "Resolved", "Closed"].map((s) => (
-                        <div
-                          key={s}
-                          className={`h-1.5 flex-1 rounded-full ${
-                            ["Submitted", "Under Review"].includes(trackResult.status) && s === "Submitted" ? "bg-primary" :
-                            trackResult.status === "Under Review" && s === "Under Review" ? "bg-primary" :
-                            "bg-muted"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {lang === "ta" ? "உங்கள் புகார் நடவடிக்கையில் உள்ளது." : "Your grievance is being processed by our team."}
-                    </p>
+
+                {trackError && (
+                  <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 rounded-lg p-3">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    {trackError}
                   </div>
-                ) : trackInput && (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    {lang === "ta" ? "புகார் எண் கிடைக்கவில்லை." : "Ticket not found. Please check the number and try again."}
-                  </p>
                 )}
+
+                {trackData && <TrackResult data={trackData} lang={lang} ticketNo={trackInput.trim()} />}
               </CardContent>
             </Card>
 
             <Card className="bg-primary/5 border-primary/20">
-              <CardContent className="p-5">
-                <h4 className="font-semibold mb-3 flex items-center gap-2">
+              <CardContent className="p-5 space-y-3">
+                <h4 className="font-semibold flex items-center gap-2">
                   <Phone className="w-4 h-4 text-primary" />
                   {lang === "ta" ? "நேரடி தொடர்பு" : "Direct Contact"}
                 </h4>
-                <div className="space-y-2 text-sm">
-                  <p className="text-muted-foreground">
-                    {lang === "ta" ? "அலுவலக நேரம்: திங்கள் - சனி, காலை 9 - மாலை 6" : "Office hours: Mon–Sat, 9 AM – 6 PM"}
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p className="flex items-center gap-2"><Clock className="w-3.5 h-3.5" />
+                    {lang === "ta" ? "திங்கள் – சனி, காலை 9 – மாலை 6" : "Mon – Sat, 9 AM – 6 PM"}
                   </p>
-                  <a href="https://wa.me/919876543210" className="text-primary font-medium hover:underline flex items-center gap-1">
+                  <a
+                    href="https://wa.me/919876543210"
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-primary font-medium hover:underline flex items-center gap-1"
+                  >
                     <MessageSquare className="w-3.5 h-3.5" />
                     WhatsApp: +91 98765 43210
                   </a>
                 </div>
               </CardContent>
             </Card>
+          </div>
+        </TabsContent>
+
+        {/* ── Stats / Heatmap Tab ── */}
+        <TabsContent value="stats">
+          <div className="space-y-6">
+            {/* Summary cards */}
+            {heatmapData ? (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {[
+                    {
+                      label: lang === "ta" ? "மொத்த புகார்கள்" : "Total Grievances",
+                      value: heatmapData.total,
+                      icon: <FileText className="w-5 h-5 text-primary" />,
+                    },
+                    {
+                      label: lang === "ta" ? "தீர்க்கப்பட்டவை" : "Resolved",
+                      value: heatmapData.resolved,
+                      icon: <CheckCircle className="w-5 h-5 text-green-600" />,
+                    },
+                    {
+                      label: lang === "ta" ? "நிலுவையில் உள்ளவை" : "Pending",
+                      value: heatmapData.total - heatmapData.resolved,
+                      icon: <Clock className="w-5 h-5 text-yellow-600" />,
+                    },
+                    {
+                      label: lang === "ta" ? "தீர்வு விகிதம்" : "Resolution Rate",
+                      value: `${resolvedPct}%`,
+                      icon: <TrendingUp className="w-5 h-5 text-blue-600" />,
+                    },
+                  ].map(({ label, value, icon }) => (
+                    <Card key={label}>
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">{icon}</div>
+                        <div>
+                          <p className="text-2xl font-bold">{value}</p>
+                          <p className="text-xs text-muted-foreground">{label}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {heatmapData.byCategory.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">
+                        {lang === "ta" ? "வகை வாரியான புகார்கள்" : "Grievances by Category"}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={280}>
+                        <BarChart data={heatmapData.byCategory} margin={{ top: 5, right: 10, left: 0, bottom: 60 }}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                          <XAxis
+                            dataKey="category"
+                            tick={{ fontSize: 11 }}
+                            angle={-40}
+                            textAnchor="end"
+                            interval={0}
+                          />
+                          <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                          <Tooltip
+                            contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
+                            formatter={(value) => [value, lang === "ta" ? "புகார்கள்" : "Grievances"]}
+                          />
+                          <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                            {heatmapData.byCategory.map((_entry, i) => (
+                              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {heatmapData.byWard.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">
+                        {lang === "ta" ? "வார்டு வாரியான புகார்கள்" : "Grievances by Ward"}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {heatmapData.byWard.map(({ ward, count: cnt }, i) => (
+                          <div key={ward} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-sm shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                              <span className="text-sm font-medium truncate">{ward}</span>
+                            </div>
+                            <Badge variant="secondary">{cnt}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {heatmapData.total === 0 && (
+                  <div className="text-center py-16 text-muted-foreground">
+                    <TrendingUp className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                    <p>{lang === "ta" ? "இன்னும் புகார்கள் இல்லை." : "No grievances submitted yet."}</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            )}
           </div>
         </TabsContent>
       </Tabs>

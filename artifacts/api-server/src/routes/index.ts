@@ -8,6 +8,7 @@ import galleryRouter from "./gallery.js";
 import volunteersRouter from "./volunteers.js";
 import faqsRouter from "./faqs.js";
 import statsRouter from "./stats.js";
+import grievancesRouter from "./grievances.js";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(galleryRouter);
 router.use(volunteersRouter);
 router.use(faqsRouter);
 router.use(statsRouter);
+router.use(grievancesRouter);
 
 export default router;

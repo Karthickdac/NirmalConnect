@@ -29,10 +29,20 @@ import type {
   GetFeaturedNewsParams,
   GetRecentActivitiesParams,
   GetUpcomingEventsParams,
+  GrievanceAssignBody,
+  GrievanceHeatmap,
+  GrievanceListResponse,
+  GrievancePublic,
+  GrievanceRemark,
+  GrievanceRemarkBody,
+  GrievanceStatusUpdateBody,
+  GrievanceSubmitBody,
+  GrievanceTrackResponse,
   HealthStatus,
   ListActivitiesParams,
   ListEventsParams,
   ListGalleryParams,
+  ListGrievancesParams,
   ListNewsParams,
   LoginBody,
   NewsArticle,
@@ -1415,3 +1425,608 @@ export function useGetRecentActivities<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Submit a public grievance
+ */
+export const getSubmitGrievanceUrl = () => {
+  return `/api/grievances/submit`;
+};
+
+export const submitGrievance = async (
+  grievanceSubmitBody: GrievanceSubmitBody,
+  options?: RequestInit,
+): Promise<GrievancePublic> => {
+  return customFetch<GrievancePublic>(getSubmitGrievanceUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(grievanceSubmitBody),
+  });
+};
+
+export const getSubmitGrievanceMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitGrievance>>,
+    TError,
+    { data: BodyType<GrievanceSubmitBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitGrievance>>,
+  TError,
+  { data: BodyType<GrievanceSubmitBody> },
+  TContext
+> => {
+  const mutationKey = ["submitGrievance"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitGrievance>>,
+    { data: BodyType<GrievanceSubmitBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return submitGrievance(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitGrievanceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitGrievance>>
+>;
+export type SubmitGrievanceMutationBody = BodyType<GrievanceSubmitBody>;
+export type SubmitGrievanceMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Submit a public grievance
+ */
+export const useSubmitGrievance = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitGrievance>>,
+    TError,
+    { data: BodyType<GrievanceSubmitBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof submitGrievance>>,
+  TError,
+  { data: BodyType<GrievanceSubmitBody> },
+  TContext
+> => {
+  return useMutation(getSubmitGrievanceMutationOptions(options));
+};
+
+/**
+ * @summary Track a grievance by ticket number (public)
+ */
+export const getTrackGrievanceUrl = (ticketNo: string) => {
+  return `/api/grievances/track/${ticketNo}`;
+};
+
+export const trackGrievance = async (
+  ticketNo: string,
+  options?: RequestInit,
+): Promise<GrievanceTrackResponse> => {
+  return customFetch<GrievanceTrackResponse>(getTrackGrievanceUrl(ticketNo), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getTrackGrievanceQueryKey = (ticketNo: string) => {
+  return [`/api/grievances/track/${ticketNo}`] as const;
+};
+
+export const getTrackGrievanceQueryOptions = <
+  TData = Awaited<ReturnType<typeof trackGrievance>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  ticketNo: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof trackGrievance>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getTrackGrievanceQueryKey(ticketNo);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof trackGrievance>>> = ({
+    signal,
+  }) => trackGrievance(ticketNo, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!ticketNo,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof trackGrievance>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type TrackGrievanceQueryResult = NonNullable<
+  Awaited<ReturnType<typeof trackGrievance>>
+>;
+export type TrackGrievanceQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Track a grievance by ticket number (public)
+ */
+
+export function useTrackGrievance<
+  TData = Awaited<ReturnType<typeof trackGrievance>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  ticketNo: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof trackGrievance>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getTrackGrievanceQueryOptions(ticketNo, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get public grievance category heatmap data
+ */
+export const getGetGrievanceHeatmapUrl = () => {
+  return `/api/grievances/heatmap`;
+};
+
+export const getGrievanceHeatmap = async (
+  options?: RequestInit,
+): Promise<GrievanceHeatmap> => {
+  return customFetch<GrievanceHeatmap>(getGetGrievanceHeatmapUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetGrievanceHeatmapQueryKey = () => {
+  return [`/api/grievances/heatmap`] as const;
+};
+
+export const getGetGrievanceHeatmapQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGrievanceHeatmap>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getGrievanceHeatmap>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetGrievanceHeatmapQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getGrievanceHeatmap>>
+  > = ({ signal }) => getGrievanceHeatmap({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGrievanceHeatmap>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetGrievanceHeatmapQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGrievanceHeatmap>>
+>;
+export type GetGrievanceHeatmapQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get public grievance category heatmap data
+ */
+
+export function useGetGrievanceHeatmap<
+  TData = Awaited<ReturnType<typeof getGrievanceHeatmap>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getGrievanceHeatmap>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetGrievanceHeatmapQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List grievances (staff only)
+ */
+export const getListGrievancesUrl = (params?: ListGrievancesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/grievances?${stringifiedParams}`
+    : `/api/grievances`;
+};
+
+export const listGrievances = async (
+  params?: ListGrievancesParams,
+  options?: RequestInit,
+): Promise<GrievanceListResponse> => {
+  return customFetch<GrievanceListResponse>(getListGrievancesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListGrievancesQueryKey = (params?: ListGrievancesParams) => {
+  return [`/api/grievances`, ...(params ? [params] : [])] as const;
+};
+
+export const getListGrievancesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listGrievances>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: ListGrievancesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listGrievances>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListGrievancesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listGrievances>>> = ({
+    signal,
+  }) => listGrievances(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listGrievances>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListGrievancesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listGrievances>>
+>;
+export type ListGrievancesQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List grievances (staff only)
+ */
+
+export function useListGrievances<
+  TData = Awaited<ReturnType<typeof listGrievances>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: ListGrievancesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listGrievances>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListGrievancesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update grievance status (staff only)
+ */
+export const getUpdateGrievanceStatusUrl = (id: number) => {
+  return `/api/grievances/${id}/status`;
+};
+
+export const updateGrievanceStatus = async (
+  id: number,
+  grievanceStatusUpdateBody: GrievanceStatusUpdateBody,
+  options?: RequestInit,
+): Promise<GrievancePublic> => {
+  return customFetch<GrievancePublic>(getUpdateGrievanceStatusUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(grievanceStatusUpdateBody),
+  });
+};
+
+export const getUpdateGrievanceStatusMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateGrievanceStatus>>,
+    TError,
+    { id: number; data: BodyType<GrievanceStatusUpdateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateGrievanceStatus>>,
+  TError,
+  { id: number; data: BodyType<GrievanceStatusUpdateBody> },
+  TContext
+> => {
+  const mutationKey = ["updateGrievanceStatus"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateGrievanceStatus>>,
+    { id: number; data: BodyType<GrievanceStatusUpdateBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateGrievanceStatus(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateGrievanceStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateGrievanceStatus>>
+>;
+export type UpdateGrievanceStatusMutationBody =
+  BodyType<GrievanceStatusUpdateBody>;
+export type UpdateGrievanceStatusMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update grievance status (staff only)
+ */
+export const useUpdateGrievanceStatus = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateGrievanceStatus>>,
+    TError,
+    { id: number; data: BodyType<GrievanceStatusUpdateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateGrievanceStatus>>,
+  TError,
+  { id: number; data: BodyType<GrievanceStatusUpdateBody> },
+  TContext
+> => {
+  return useMutation(getUpdateGrievanceStatusMutationOptions(options));
+};
+
+/**
+ * @summary Add a remark to a grievance (staff only)
+ */
+export const getAddGrievanceRemarkUrl = (id: number) => {
+  return `/api/grievances/${id}/remarks`;
+};
+
+export const addGrievanceRemark = async (
+  id: number,
+  grievanceRemarkBody: GrievanceRemarkBody,
+  options?: RequestInit,
+): Promise<GrievanceRemark> => {
+  return customFetch<GrievanceRemark>(getAddGrievanceRemarkUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(grievanceRemarkBody),
+  });
+};
+
+export const getAddGrievanceRemarkMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addGrievanceRemark>>,
+    TError,
+    { id: number; data: BodyType<GrievanceRemarkBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addGrievanceRemark>>,
+  TError,
+  { id: number; data: BodyType<GrievanceRemarkBody> },
+  TContext
+> => {
+  const mutationKey = ["addGrievanceRemark"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addGrievanceRemark>>,
+    { id: number; data: BodyType<GrievanceRemarkBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return addGrievanceRemark(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddGrievanceRemarkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addGrievanceRemark>>
+>;
+export type AddGrievanceRemarkMutationBody = BodyType<GrievanceRemarkBody>;
+export type AddGrievanceRemarkMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Add a remark to a grievance (staff only)
+ */
+export const useAddGrievanceRemark = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addGrievanceRemark>>,
+    TError,
+    { id: number; data: BodyType<GrievanceRemarkBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addGrievanceRemark>>,
+  TError,
+  { id: number; data: BodyType<GrievanceRemarkBody> },
+  TContext
+> => {
+  return useMutation(getAddGrievanceRemarkMutationOptions(options));
+};
+
+/**
+ * @summary Assign grievance to an officer (staff only)
+ */
+export const getAssignGrievanceUrl = (id: number) => {
+  return `/api/grievances/${id}/assign`;
+};
+
+export const assignGrievance = async (
+  id: number,
+  grievanceAssignBody: GrievanceAssignBody,
+  options?: RequestInit,
+): Promise<GrievancePublic> => {
+  return customFetch<GrievancePublic>(getAssignGrievanceUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(grievanceAssignBody),
+  });
+};
+
+export const getAssignGrievanceMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof assignGrievance>>,
+    TError,
+    { id: number; data: BodyType<GrievanceAssignBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof assignGrievance>>,
+  TError,
+  { id: number; data: BodyType<GrievanceAssignBody> },
+  TContext
+> => {
+  const mutationKey = ["assignGrievance"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof assignGrievance>>,
+    { id: number; data: BodyType<GrievanceAssignBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return assignGrievance(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AssignGrievanceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof assignGrievance>>
+>;
+export type AssignGrievanceMutationBody = BodyType<GrievanceAssignBody>;
+export type AssignGrievanceMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Assign grievance to an officer (staff only)
+ */
+export const useAssignGrievance = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof assignGrievance>>,
+    TError,
+    { id: number; data: BodyType<GrievanceAssignBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof assignGrievance>>,
+  TError,
+  { id: number; data: BodyType<GrievanceAssignBody> },
+  TContext
+> => {
+  return useMutation(getAssignGrievanceMutationOptions(options));
+};

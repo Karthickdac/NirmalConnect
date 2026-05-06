@@ -23,7 +23,7 @@ Bilingual (Tamil-default) political leader website + grievance management platfo
 
 ## Where things live
 
-- DB schema: `lib/db/src/schema.ts` (source of truth)
+- DB schema: `lib/db/src/schema/` (source of truth — index.ts re-exports all tables)
 - Seed data: `lib/db/src/seed.ts`
 - API contract: `lib/api-spec/openapi.yaml` (source of truth)
 - API routes: `artifacts/api-server/src/routes/*`
@@ -36,11 +36,13 @@ Bilingual (Tamil-default) political leader website + grievance management platfo
 - Bilingual content stored as twin columns (`title`/`titleTa`, `content`/`contentTa`) — pages select one based on `lang` state.
 - Default language is Tamil (`ta`); English is opt-in via the navbar toggle.
 - Wow endpoints use 3-segment paths (`/news/featured/latest`, `/events/upcoming/list`, `/activities/recent`) so they don't collide with `/news/:id` or `/events/:id`.
+- Grievance routes: `/grievances/submit` (POST, public), `/grievances/heatmap` (GET, public), `/grievances/track/:ticketNo` (GET, public), `/grievances` (GET, staff+Bearer), `/grievances/:id/status` PATCH, `/grievances/:id/remarks` POST, `/grievances/:id/assign` POST.
 - JWT is hand-rolled HMAC (no external dep) — admin-only routes guarded by `requireAuth` middleware.
+- Express v5 types `req.params[x]` as `string | string[]`; cast with `as string` before `parseInt`.
 
 ## Product
 
-Public site (home, about, news, events, gallery, activities, achievements, FAQ, contact, donate, emergency, volunteer, grievance submission) + admin CMS for content + grievance lifecycle management.
+Public site (home, about, news, events, gallery, activities, achievements, FAQ, contact, donate, emergency, volunteer, grievance submission) + grievance lifecycle management (submit → track → officer dashboard) + admin CMS for content (Task 3).
 
 ## User preferences
 

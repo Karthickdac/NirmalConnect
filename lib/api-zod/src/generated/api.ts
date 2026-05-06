@@ -340,3 +340,178 @@ export const GetRecentActivitiesResponseItem = zod.object({
 export const GetRecentActivitiesResponse = zod.array(
   GetRecentActivitiesResponseItem,
 );
+
+/**
+ * @summary Submit a public grievance
+ */
+export const SubmitGrievanceBody = zod.object({
+  name: zod.string(),
+  phone: zod.string(),
+  email: zod.string().nullish(),
+  category: zod.string(),
+  description: zod.string(),
+  address: zod.string().nullish(),
+  ward: zod.string().nullish(),
+  constituency: zod.string().nullish(),
+  anonymous: zod.boolean().optional(),
+});
+
+/**
+ * @summary Track a grievance by ticket number (public)
+ */
+export const TrackGrievanceParams = zod.object({
+  ticketNo: zod.coerce.string(),
+});
+
+export const TrackGrievanceResponse = zod.object({
+  id: zod.number(),
+  ticketNo: zod.string(),
+  category: zod.string(),
+  status: zod.string(),
+  priority: zod.string(),
+  ward: zod.string().nullish(),
+  constituency: zod.string(),
+  description: zod.string(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+  remarks: zod.array(
+    zod.object({
+      id: zod.number(),
+      grievanceId: zod.number(),
+      remark: zod.string(),
+      isPublic: zod.boolean(),
+      authorName: zod.string(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  statusLog: zod.array(
+    zod.object({
+      id: zod.number(),
+      fromStatus: zod.string().nullish(),
+      toStatus: zod.string(),
+      changedByName: zod.string(),
+      note: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Get public grievance category heatmap data
+ */
+export const GetGrievanceHeatmapResponse = zod.object({
+  byCategory: zod.array(
+    zod.object({
+      category: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+  byWard: zod.array(
+    zod.object({
+      ward: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+  total: zod.number(),
+  resolved: zod.number(),
+});
+
+/**
+ * @summary List grievances (staff only)
+ */
+export const listGrievancesQueryPageDefault = 1;
+export const listGrievancesQueryLimitDefault = 20;
+
+export const ListGrievancesQueryParams = zod.object({
+  page: zod.coerce.number().default(listGrievancesQueryPageDefault),
+  limit: zod.coerce.number().default(listGrievancesQueryLimitDefault),
+  status: zod.coerce.string().optional(),
+  category: zod.coerce.string().optional(),
+  priority: zod.coerce.string().optional(),
+  ward: zod.coerce.string().optional(),
+});
+
+export const ListGrievancesResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      ticketNo: zod.string(),
+      name: zod.string(),
+      phone: zod.string(),
+      category: zod.string(),
+      status: zod.string(),
+      priority: zod.string(),
+      ward: zod.string().nullish(),
+      constituency: zod.string(),
+      anonymous: zod.boolean(),
+      createdAt: zod.coerce.date(),
+      updatedAt: zod.coerce.date(),
+    }),
+  ),
+  total: zod.number(),
+  page: zod.number(),
+  totalPages: zod.number(),
+});
+
+/**
+ * @summary Update grievance status (staff only)
+ */
+export const UpdateGrievanceStatusParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateGrievanceStatusBody = zod.object({
+  status: zod.string(),
+  note: zod.string().nullish(),
+});
+
+export const UpdateGrievanceStatusResponse = zod.object({
+  id: zod.number(),
+  ticketNo: zod.string(),
+  category: zod.string(),
+  status: zod.string(),
+  priority: zod.string(),
+  ward: zod.string().nullish(),
+  constituency: zod.string(),
+  anonymous: zod.boolean(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Add a remark to a grievance (staff only)
+ */
+export const AddGrievanceRemarkParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AddGrievanceRemarkBody = zod.object({
+  remark: zod.string(),
+  isPublic: zod.boolean().optional(),
+});
+
+/**
+ * @summary Assign grievance to an officer (staff only)
+ */
+export const AssignGrievanceParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AssignGrievanceBody = zod.object({
+  officerId: zod.number(),
+  officerName: zod.string(),
+  note: zod.string().nullish(),
+});
+
+export const AssignGrievanceResponse = zod.object({
+  id: zod.number(),
+  ticketNo: zod.string(),
+  category: zod.string(),
+  status: zod.string(),
+  priority: zod.string(),
+  ward: zod.string().nullish(),
+  constituency: zod.string(),
+  anonymous: zod.boolean(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});

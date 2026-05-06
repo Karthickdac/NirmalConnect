@@ -193,6 +193,130 @@ export interface SiteSummary {
   upcomingEventsCount: number;
 }
 
+export interface GrievanceSubmitBody {
+  name: string;
+  phone: string;
+  /** @nullable */
+  email?: string | null;
+  category: string;
+  description: string;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  ward?: string | null;
+  /** @nullable */
+  constituency?: string | null;
+  anonymous?: boolean;
+}
+
+export interface GrievancePublic {
+  id: number;
+  ticketNo: string;
+  category: string;
+  status: string;
+  priority: string;
+  /** @nullable */
+  ward?: string | null;
+  constituency: string;
+  anonymous: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GrievanceRemark {
+  id: number;
+  grievanceId: number;
+  remark: string;
+  isPublic: boolean;
+  authorName: string;
+  createdAt: string;
+}
+
+export interface GrievanceStatusLogEntry {
+  id: number;
+  /** @nullable */
+  fromStatus?: string | null;
+  toStatus: string;
+  changedByName: string;
+  /** @nullable */
+  note?: string | null;
+  createdAt: string;
+}
+
+export interface GrievanceTrackResponse {
+  id: number;
+  ticketNo: string;
+  category: string;
+  status: string;
+  priority: string;
+  /** @nullable */
+  ward?: string | null;
+  constituency: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+  remarks: GrievanceRemark[];
+  statusLog: GrievanceStatusLogEntry[];
+}
+
+export interface GrievanceListItem {
+  id: number;
+  ticketNo: string;
+  name: string;
+  phone: string;
+  category: string;
+  status: string;
+  priority: string;
+  /** @nullable */
+  ward?: string | null;
+  constituency: string;
+  anonymous: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GrievanceListResponse {
+  items: GrievanceListItem[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export interface GrievanceHeatmapCategory {
+  category: string;
+  count: number;
+}
+
+export interface GrievanceHeatmapWard {
+  ward: string;
+  count: number;
+}
+
+export interface GrievanceHeatmap {
+  byCategory: GrievanceHeatmapCategory[];
+  byWard: GrievanceHeatmapWard[];
+  total: number;
+  resolved: number;
+}
+
+export interface GrievanceStatusUpdateBody {
+  status: string;
+  /** @nullable */
+  note?: string | null;
+}
+
+export interface GrievanceRemarkBody {
+  remark: string;
+  isPublic?: boolean;
+}
+
+export interface GrievanceAssignBody {
+  officerId: number;
+  officerName: string;
+  /** @nullable */
+  note?: string | null;
+}
+
 export type ListNewsParams = {
   page?: number;
   limit?: number;
@@ -235,4 +359,13 @@ export type GetUpcomingEventsParams = {
 
 export type GetRecentActivitiesParams = {
   limit?: number;
+};
+
+export type ListGrievancesParams = {
+  page?: number;
+  limit?: number;
+  status?: string;
+  category?: string;
+  priority?: string;
+  ward?: string;
 };

@@ -6,3 +6,4 @@ export * from "./gallery";
 export * from "./volunteers";
 export * from "./faqs";
 export * from "./constituency";
+export * from "./grievances";
