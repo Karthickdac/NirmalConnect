@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Award, BookOpen, MapPin, Users, Heart, Star } from "lucide-react";
 import type { Language } from "@/lib/i18n";
+import leaderPhoto from "@assets/image_1778085777744.png";
 
 interface AboutProps { lang: Language; }
 
@@ -32,8 +33,12 @@ export default function About({ lang }: AboutProps) {
         {/* Leader card */}
         <div className="lg:col-span-1">
           <div className="bg-gradient-to-b from-primary/10 to-transparent rounded-2xl p-6 text-center">
-            <div className="w-36 h-36 rounded-full bg-gradient-to-br from-primary to-red-800 flex items-center justify-center mx-auto mb-4 text-white text-5xl font-bold shadow-xl">
-              N
+            <div className="w-36 h-36 rounded-full overflow-hidden mx-auto mb-4 shadow-xl ring-4 ring-primary/30">
+              <img
+                src={leaderPhoto}
+                alt={lang === "ta" ? "சி.டி.ஆர். நிர்மல் குமார்" : "C.T.R. Nirmal Kumar"}
+                className="w-full h-full object-cover"
+              />
             </div>
             <h2 className="text-xl font-bold mb-1">
               {lang === "ta" ? "சி.டி.ஆர். நிர்மல் குமார்" : "C.T.R. Nirmal Kumar"}

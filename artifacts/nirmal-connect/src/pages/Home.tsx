@@ -17,6 +17,7 @@ import {
 import type { Language } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
 import { format } from "date-fns";
+import leaderPhoto from "@assets/image_1778085777744.png";
 
 interface HomeProps {
   lang: Language;
@@ -126,8 +127,12 @@ export default function Home({ lang }: HomeProps) {
           {/* Volunteer count card */}
           <div className="hidden lg:flex justify-center">
             <div className="glass-card rounded-2xl p-8 max-w-sm w-full text-center text-white">
-              <div className="w-16 h-16 rounded-full bg-primary/30 border-2 border-yellow-400 flex items-center justify-center mx-auto mb-4">
-                <Users className="w-8 h-8 text-yellow-400" />
+              <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-yellow-400 mx-auto mb-4 shadow-2xl">
+                <img
+                  src={leaderPhoto}
+                  alt={lang === "ta" ? "சி.டி.ஆர். நிர்மல் குமார்" : "C.T.R. Nirmal Kumar"}
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div className="text-5xl font-bold text-yellow-400 mb-2">
                 {summary?.totalVolunteers?.toLocaleString() ?? "—"}+

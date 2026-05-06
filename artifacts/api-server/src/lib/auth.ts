@@ -1,10 +1,19 @@
 import { type Request, type Response, type NextFunction } from "express";
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 
-const JWT_SECRET = process.env["JWT_SECRET"];
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET environment variable is required");
+function resolveJwtSecret(): string {
+  const fromEnv = process.env["JWT_SECRET"];
+  if (fromEnv && fromEnv.length >= 16) return fromEnv;
+  if (process.env["NODE_ENV"] === "production") {
+    throw new Error("JWT_SECRET environment variable is required in production");
+  }
+  // Dev fallback: ephemeral random secret per process. Tokens won't survive restarts,
+  // but no secret is committed or shared. Set JWT_SECRET to make sessions persistent.
+  const ephemeral = randomBytes(32).toString("hex");
+  console.warn("[auth] JWT_SECRET not set; using an ephemeral dev-only secret. Set JWT_SECRET for persistent sessions.");
+  return ephemeral;
 }
+const JWT_SECRET = resolveJwtSecret();
 
 function base64url(str: string): string {
   return Buffer.from(str).toString("base64url");
