@@ -66,7 +66,7 @@ export default function Admin({ lang = "ta" }: AdminProps) {
   const token = getToken() ?? "";
   const role = me?.role ?? "";
 
-  const STAFF_ROLES = ["super_admin", "admin", "pa_staff", "media_team", "constituency_coordinator", "grievance_officer", "minister"];
+  const STAFF_ROLES = ["super_admin", "admin", "pa_staff", "media_team", "constituency_coordinator", "grievance_officer", "minister", "staff"];
 
   // Authenticated but not a staff role → show forbidden screen
   if (me && !STAFF_ROLES.includes(role)) {

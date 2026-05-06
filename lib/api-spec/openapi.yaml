@@ -28,6 +28,8 @@ tags:
     description: Constituency statistics and analytics
   - name: grievances
     description: Grievance management
+  - name: admin
+    description: Admin CMS — staff-only routes (requires Bearer token + staff role)
 
 paths:
   /healthz:
@@ -683,6 +685,186 @@ paths:
                 $ref: "#/components/schemas/GrievancePublic"
         "401":
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/wards:
+    get:
+      operationId: adminListWards
+      tags: [admin]
+      summary: List all wards/areas
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Ward list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ward"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: adminCreateWard
+      tags: [admin]
+      summary: Create a ward/area
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WardBody"
+      responses:
+        "201":
+          description: Ward created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ward"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/wards/{id}:
+    put:
+      operationId: adminUpdateWard
+      tags: [admin]
+      summary: Update a ward/area
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WardBody"
+      responses:
+        "200":
+          description: Ward updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ward"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: adminDeleteWard
+      tags: [admin]
+      summary: Delete a ward/area
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/grievances/bulk-assign:
+    post:
+      operationId: adminBulkAssignGrievances
+      tags: [admin]
+      summary: Bulk-assign grievances to an officer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkGrievanceAssignBody"
+      responses:
+        "200":
+          description: Number of updated records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkUpdateResult"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
           content:
             application/json:
               schema:
@@ -1411,6 +1593,89 @@ components:
             $ref: "#/components/schemas/GrievanceOfficerItem"
       required:
         - officers
+
+    Ward:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        area:
+          type: ["string", "null"]
+        coordinatorName:
+          type: ["string", "null"]
+        coordinatorPhone:
+          type: ["string", "null"]
+        coordinatorEmail:
+          type: ["string", "null"]
+        population:
+          type: ["integer", "null"]
+        households:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - createdAt
+        - updatedAt
+
+    WardBody:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        area:
+          type: ["string", "null"]
+        coordinatorName:
+          type: ["string", "null"]
+        coordinatorPhone:
+          type: ["string", "null"]
+        coordinatorEmail:
+          type: ["string", "null"]
+        population:
+          type: ["integer", "null"]
+        households:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - name
+
+    BulkGrievanceAssignBody:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: integer
+          minItems: 1
+          maxItems: 200
+        officerId:
+          type: integer
+        officerName:
+          type: string
+          minLength: 1
+      required:
+        - ids
+        - officerId
+        - officerName
+
+    BulkUpdateResult:
+      type: object
+      properties:
+        updated:
+          type: integer
+      required:
+        - updated
 
     GrievanceAttachmentItem:
       type: object
