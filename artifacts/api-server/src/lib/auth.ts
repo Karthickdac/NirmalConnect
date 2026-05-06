@@ -1,5 +1,6 @@
 import { type Request, type Response, type NextFunction } from "express";
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
+import bcrypt from "bcryptjs";
 
 function resolveJwtSecret(): string {
   const fromEnv = process.env["JWT_SECRET"];
@@ -45,12 +46,23 @@ export function verifyToken(token: string): Record<string, unknown> | null {
 }
 
 export function hashPassword(password: string): string {
+  return bcrypt.hashSync(password, 12);
+}
+
+export function verifyPassword(password: string, stored: string): boolean {
+  if (stored.startsWith("$2")) {
+    try { return bcrypt.compareSync(password, stored); } catch { return false; }
+  }
+  return legacyVerifyPassword(password, stored);
+}
+
+function legacyHashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
   const hash = createHmac("sha256", salt).update(password).digest("hex");
   return `${salt}:${hash}`;
 }
 
-export function verifyPassword(password: string, stored: string): boolean {
+function legacyVerifyPassword(password: string, stored: string): boolean {
   const [salt, hash] = stored.split(":");
   if (!salt || !hash) return false;
   const attempt = createHmac("sha256", salt).update(password).digest("hex");

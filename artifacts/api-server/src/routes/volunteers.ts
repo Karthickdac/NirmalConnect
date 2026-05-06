@@ -23,7 +23,11 @@ router.post("/volunteers", async (req, res) => {
       message: body.data.message ?? null,
       status: "pending",
     }).returning();
-    res.status(201).json({ id: volunteer.id, message: "Volunteer registered successfully" });
+    res.status(201).json({
+      ...volunteer,
+      createdAt: volunteer.createdAt.toISOString(),
+      updatedAt: volunteer.updatedAt.toISOString(),
+    });
   } catch {
     res.status(500).json({ error: "Internal server error" });
   }

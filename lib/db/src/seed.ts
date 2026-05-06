@@ -10,7 +10,11 @@ import {
 } from "./schema/index.js";
 import { createHmac, randomBytes } from "crypto";
 
+import bcrypt from "bcryptjs";
 function hashPassword(password: string): string {
+  return bcrypt.hashSync(password, 12);
+}
+function _legacyHashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
   const hash = createHmac("sha256", salt).update(password).digest("hex");
   return `${salt}:${hash}`;
