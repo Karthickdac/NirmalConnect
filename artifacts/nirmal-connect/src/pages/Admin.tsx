@@ -66,6 +66,24 @@ export default function Admin({ lang = "ta" }: AdminProps) {
   const token = getToken() ?? "";
   const role = me?.role ?? "";
 
+  const STAFF_ROLES = ["super_admin", "admin", "pa_staff", "media_team", "constituency_coordinator", "grievance_officer", "minister"];
+
+  // Authenticated but not a staff role → show forbidden screen
+  if (me && !STAFF_ROLES.includes(role)) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
+          <span className="text-3xl">🚫</span>
+        </div>
+        <h1 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h1>
+        <p className="text-sm text-muted-foreground mb-6 max-w-xs">
+          Your account (<strong>{me.email}</strong>) does not have staff privileges to access the admin panel.
+        </p>
+        <Button variant="outline" onClick={logout}>Sign out</Button>
+      </div>
+    );
+  }
+
   const visibleNav = NAV_ITEMS.filter(item => {
     if (!item.roles) return true;
     return item.roles.includes(role);

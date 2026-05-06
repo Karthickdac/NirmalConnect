@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2, MapPin, CalendarDays } from "lucide-react";
 import { adminApi } from "./api";
+import RichTextEditor from "@/components/RichTextEditor";
 
 interface EventItem {
   id: number;
@@ -170,7 +171,12 @@ export default function EventsAdmin() {
             </div>
             <div>
               <Label className="text-xs">Description</Label>
-              <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="mt-1 text-sm" />
+              <RichTextEditor
+                value={form.description}
+                onChange={html => setForm(f => ({ ...f, description: html }))}
+                placeholder="Event description…"
+                minHeight={120}
+              />
             </div>
             <div>
               <Label className="text-xs">Venue *</Label>

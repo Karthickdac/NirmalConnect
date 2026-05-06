@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { adminApi } from "./api";
+import RichTextEditor from "@/components/RichTextEditor";
 
 interface NewsItem {
   id: number;
@@ -179,11 +180,21 @@ export default function NewsAdmin({ fixedCategory, categoryLabel = "Article", se
             </div>
             <div>
               <Label className="text-xs">Content (English) *</Label>
-              <Textarea value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} rows={4} className="mt-1 text-sm" />
+              <RichTextEditor
+                value={form.content}
+                onChange={html => setForm(f => ({ ...f, content: html }))}
+                placeholder="Write article content here…"
+                minHeight={140}
+              />
             </div>
             <div>
               <Label className="text-xs">Content (Tamil)</Label>
-              <Textarea value={form.contentTa} onChange={e => setForm(f => ({ ...f, contentTa: e.target.value }))} rows={3} className="mt-1 text-sm" />
+              <RichTextEditor
+                value={form.contentTa}
+                onChange={html => setForm(f => ({ ...f, contentTa: html }))}
+                placeholder="தமிழில் உள்ளடக்கத்தை இங்கே எழுதுங்கள்…"
+                minHeight={100}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>

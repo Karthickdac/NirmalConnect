@@ -13,7 +13,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import {
   ChevronLeft, ChevronRight, RefreshCw, Loader2, CheckCircle,
   Clock, AlertTriangle, MessageSquare, Filter, X, Paperclip, Users,
-  ListChecks, CalendarRange,
+  ListChecks, CalendarRange, FileDown, FileText,
 } from "lucide-react";
 import type { Language } from "@/lib/i18n";
 import {
@@ -253,6 +253,51 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
   }
   const hasFilters = filterStatus || filterCategory || filterPriority || filterWard || filterConstituency || filterDateFrom || filterDateTo;
 
+  async function exportCSV() {
+    const res = await fetch("/api/admin/grievances/export", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `grievances-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function exportPDF() {
+    const { default: jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    doc.setFontSize(16);
+    doc.text("Tirupparankundram Constituency — Grievance Report", 14, 15);
+    doc.setFontSize(9);
+    doc.text(`Generated: ${new Date().toLocaleString("en-IN")} | Filters: ${filterStatus || "All"} | ${filterCategory || "All categories"}`, 14, 22);
+
+    const rows = (data?.items ?? []).map(g => [
+      g.ticketNo,
+      g.name,
+      g.category,
+      g.status,
+      g.priority,
+      g.ward ?? "",
+      new Date(g.createdAt).toLocaleDateString("en-IN"),
+    ]);
+
+    autoTable(doc, {
+      startY: 27,
+      head: [["Ticket #", "Petitioner", "Category", "Status", "Priority", "Ward", "Filed On"]],
+      body: rows,
+      styles: { fontSize: 7.5 },
+      headStyles: { fillColor: [30, 58, 138] },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
+    });
+
+    doc.save(`grievances-${new Date().toISOString().slice(0, 10)}.pdf`);
+  }
+
   function toggleSelect(id: number) {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -314,10 +359,22 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
 
   return (
     <div className="space-y-6">
-      <SectionHeader
-        title={lang === "ta" ? "புகார் அலுவலர் பலகை" : "Grievance Officer Dashboard"}
-        subtitle={lang === "ta" ? "புகார்களை நிர்வகிக்கவும், நிலை புதுப்பிக்கவும்" : "Manage, assign and resolve constituent grievances"}
-      />
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <SectionHeader
+          title={lang === "ta" ? "புகார் அலுவலர் பலகை" : "Grievance Officer Dashboard"}
+          subtitle={lang === "ta" ? "புகார்களை நிர்வகிக்கவும், நிலை புதுப்பிக்கவும்" : "Manage, assign and resolve constituent grievances"}
+        />
+        <div className="flex gap-2 shrink-0">
+          <Button variant="outline" size="sm" className="gap-1.5 h-8" onClick={exportCSV}>
+            <FileText className="w-3.5 h-3.5" />
+            {lang === "ta" ? "CSV ஏற்றுமதி" : "Export CSV"}
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5 h-8" onClick={exportPDF}>
+            <FileDown className="w-3.5 h-3.5" />
+            {lang === "ta" ? "PDF ஏற்றுமதி" : "Export PDF"}
+          </Button>
+        </div>
+      </div>
 
       {/* Filters */}
       <Card>
