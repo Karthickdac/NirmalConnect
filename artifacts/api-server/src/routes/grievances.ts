@@ -187,12 +187,35 @@ router.get("/grievances/track/:ticketNo", async (req, res) => {
       .where(eq(grievanceStatusLogTable.grievanceId, grievance.id))
       .orderBy(grievanceStatusLogTable.createdAt);
 
+    // Return a public-safe DTO — no PII (name/phone/email/address never exposed for non-anonymous)
     res.json({
-      ...serializeGrievance(grievance),
-      name: grievance.anonymous ? "Anonymous" : grievance.name,
-      phone: grievance.anonymous ? "***" : grievance.phone,
-      remarks: remarks.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
-      statusLog: statusLog.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() })),
+      id: grievance.id,
+      ticketNo: grievance.ticketNo,
+      category: grievance.category,
+      status: grievance.status,
+      priority: grievance.priority,
+      ward: grievance.ward,
+      constituency: grievance.constituency,
+      description: grievance.description,
+      anonymous: grievance.anonymous,
+      createdAt: grievance.createdAt.toISOString(),
+      updatedAt: grievance.updatedAt.toISOString(),
+      remarks: remarks.map((r) => ({
+        id: r.id,
+        grievanceId: r.grievanceId,
+        remark: r.remark,
+        isPublic: r.isPublic,
+        authorName: r.authorName,
+        createdAt: r.createdAt.toISOString(),
+      })),
+      statusLog: statusLog.map((l) => ({
+        id: l.id,
+        fromStatus: l.fromStatus,
+        toStatus: l.toStatus,
+        changedByName: l.changedByName,
+        note: l.note,
+        createdAt: l.createdAt.toISOString(),
+      })),
     });
   } catch (err) {
     console.error("[grievances] track error:", err);
