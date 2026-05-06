@@ -92,3 +92,16 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
   req.user = payload as { id: number; email: string; role: string; name: string };
   next();
 }
+
+/** Allow admin, grievance_officer, and staff roles only. */
+export function requireStaff(req: AuthRequest, res: Response, next: NextFunction): void {
+  requireAuth(req, res, () => {
+    const role = req.user?.role;
+    const allowed = ["admin", "super_admin", "grievance_officer", "staff"];
+    if (!role || !allowed.includes(role)) {
+      res.status(403).json({ error: "Forbidden: requires admin or grievance_officer role" });
+      return;
+    }
+    next();
+  });
+}

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -12,18 +12,66 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { SectionHeader } from "@/components/SectionHeader";
 import {
   ChevronLeft, ChevronRight, RefreshCw, Loader2, CheckCircle,
-  Clock, AlertTriangle, MessageSquare, Filter, X,
+  Clock, AlertTriangle, MessageSquare, Filter, X, Paperclip,
 } from "lucide-react";
 import type { Language } from "@/lib/i18n";
 import {
   listGrievances,
   updateGrievanceStatus,
   addGrievanceRemark,
-  trackGrievance,
 } from "@workspace/api-client-react";
-import type { GrievanceListItem, GrievanceTrackResponse } from "@workspace/api-client-react";
+import type { GrievanceListItem } from "@workspace/api-client-react";
 
 interface GrievanceOfficerProps { lang: Language; token: string }
+
+// Full staff-view detail type — includes internal remarks and attachments
+interface StaffGrievanceDetail {
+  id: number;
+  ticketNo: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  category: string;
+  description: string;
+  address: string | null;
+  ward: string | null;
+  constituency: string;
+  priority: string;
+  status: string;
+  anonymous: boolean;
+  assignedTo: number | null;
+  resolvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  remarks: Array<{
+    id: number;
+    grievanceId: number;
+    remark: string;
+    isPublic: boolean;
+    authorId: number | null;
+    authorName: string;
+    createdAt: string;
+  }>;
+  statusLog: Array<{
+    id: number;
+    grievanceId: number;
+    fromStatus: string | null;
+    toStatus: string;
+    changedBy: number | null;
+    changedByName: string;
+    note: string | null;
+    createdAt: string;
+  }>;
+  attachments: Array<{
+    id: number;
+    grievanceId: number;
+    fileUrl: string;
+    fileName: string;
+    fileType: string;
+    fileSize: number | null;
+    createdAt: string;
+  }>;
+}
 
 const STATUS_OPTS = ["", "Submitted", "Under Review", "Assigned", "In Progress", "Resolved", "Closed"];
 const PRIORITY_OPTS = ["", "Low", "Medium", "High", "Urgent"];
@@ -50,6 +98,15 @@ function makeAuthHeaders(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}` };
 }
 
+/** Fetch full staff detail (all remarks, attachments) for a grievance by id. */
+async function fetchStaffDetail(id: number, token: string): Promise<StaffGrievanceDetail> {
+  const res = await fetch(`/api/grievances/${id}`, {
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+  });
+  if (!res.ok) throw new Error(`Failed to load detail: ${res.status}`);
+  return res.json() as Promise<StaffGrievanceDetail>;
+}
+
 export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps) {
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
@@ -57,8 +114,9 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
   const [filterCategory, setFilterCategory] = useState("");
   const [filterPriority, setFilterPriority] = useState("");
   const [filterWard, setFilterWard] = useState("");
+  const [filterConstituency, setFilterConstituency] = useState("");
   const [selected, setSelected] = useState<GrievanceListItem | null>(null);
-  const [detail, setDetail] = useState<GrievanceTrackResponse | null>(null);
+  const [detail, setDetail] = useState<StaffGrievanceDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [newStatus, setNewStatus] = useState("");
   const [statusNote, setStatusNote] = useState("");
@@ -72,6 +130,7 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
     ...(filterCategory && { category: filterCategory }),
     ...(filterPriority && { priority: filterPriority }),
     ...(filterWard && { ward: filterWard }),
+    ...(filterConstituency && { constituency: filterConstituency }),
   };
 
   const { data, isFetching, refetch } = useQuery({
@@ -79,6 +138,15 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
     queryFn: () => listGrievances(params, { headers: makeAuthHeaders(token) }),
     staleTime: 30_000,
   });
+
+  async function refreshDetail(id: number) {
+    try {
+      const d = await fetchStaffDetail(id, token);
+      setDetail(d);
+    } catch (err) {
+      console.error("Detail refresh failed:", err);
+    }
+  }
 
   async function openDetail(item: GrievanceListItem) {
     setSelected(item);
@@ -88,7 +156,7 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
     setStatusNote("");
     setRemarkText("");
     try {
-      const d = await trackGrievance(item.ticketNo);
+      const d = await fetchStaffDetail(item.id, token);
       setDetail(d);
     } finally {
       setDetailLoading(false);
@@ -97,14 +165,17 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
 
   const statusMutation = useMutation({
     mutationFn: () =>
-      updateGrievanceStatus(selected!.id, { status: newStatus as GrievanceTrackResponse["status"], note: statusNote || null },
-        { headers: makeAuthHeaders(token) }),
+      updateGrievanceStatus(
+        selected!.id,
+        { status: newStatus as StaffGrievanceDetail["status"], note: statusNote || null },
+        { headers: makeAuthHeaders(token) }
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["grievances-list"] });
       const updatedItem = { ...selected!, status: newStatus };
       setSelected(updatedItem as GrievanceListItem);
-      trackGrievance(selected!.ticketNo).then(setDetail);
       setStatusNote("");
+      refreshDetail(selected!.id);
     },
   });
 
@@ -113,15 +184,16 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
       addGrievanceRemark(selected!.id, { remark: remarkText, isPublic: remarkPublic },
         { headers: makeAuthHeaders(token) }),
     onSuccess: () => {
-      trackGrievance(selected!.ticketNo).then(setDetail);
       setRemarkText("");
+      refreshDetail(selected!.id);
     },
   });
 
   function clearFilters() {
-    setFilterStatus(""); setFilterCategory(""); setFilterPriority(""); setFilterWard(""); setPage(1);
+    setFilterStatus(""); setFilterCategory(""); setFilterPriority("");
+    setFilterWard(""); setFilterConstituency(""); setPage(1);
   }
-  const hasFilters = filterStatus || filterCategory || filterPriority || filterWard;
+  const hasFilters = filterStatus || filterCategory || filterPriority || filterWard || filterConstituency;
 
   return (
     <div className="space-y-6">
@@ -163,10 +235,16 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
               </SelectContent>
             </Select>
             <Input
-              className="w-32 h-8 text-sm"
+              className="w-28 h-8 text-sm"
               placeholder={lang === "ta" ? "வார்டு" : "Ward"}
               value={filterWard}
               onChange={(e) => { setFilterWard(e.target.value); setPage(1); }}
+            />
+            <Input
+              className="w-40 h-8 text-sm"
+              placeholder={lang === "ta" ? "தொகுதி" : "Constituency"}
+              value={filterConstituency}
+              onChange={(e) => { setFilterConstituency(e.target.value); setPage(1); }}
             />
             {hasFilters && (
               <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 gap-1 text-muted-foreground">
@@ -272,10 +350,12 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
                 {[
                   { label: "Category", value: detail.category },
                   { label: "Status", value: detail.status },
-                  { label: "Priority", value: selected?.priority ?? "" },
+                  { label: "Priority", value: detail.priority },
                   { label: "Ward", value: detail.ward ?? "–" },
                   { label: "Constituency", value: detail.constituency },
                   { label: "Filed", value: new Date(detail.createdAt).toLocaleDateString() },
+                  { label: "Name", value: detail.anonymous ? "Anonymous" : detail.name },
+                  { label: "Phone", value: detail.anonymous ? "***" : detail.phone },
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <p className="text-xs text-muted-foreground">{label}</p>
@@ -288,6 +368,30 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
                 <p className="text-xs text-muted-foreground mb-1">{lang === "ta" ? "விவரம்" : "Description"}</p>
                 <p className="text-sm bg-muted/40 rounded-lg p-3">{detail.description}</p>
               </div>
+
+              {/* Attachments */}
+              {detail.attachments.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold flex items-center gap-2">
+                    <Paperclip className="w-4 h-4" />
+                    {lang === "ta" ? "இணைப்புகள்" : "Attachments"}
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {detail.attachments.map((a) => (
+                      <a
+                        key={a.id}
+                        href={a.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 border rounded-lg hover:bg-muted/40 transition-colors"
+                      >
+                        <Paperclip className="w-3 h-3" />
+                        {a.fileName}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Update Status */}
               <div className="border rounded-lg p-4 space-y-3">
@@ -355,7 +459,7 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
                 </div>
               </div>
 
-              {/* Status Log */}
+              {/* Status History */}
               {detail.statusLog.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold flex items-center gap-2">
@@ -377,15 +481,20 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
                 </div>
               )}
 
-              {/* Remarks */}
+              {/* All Remarks (including internal) */}
               {detail.remarks.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-semibold">{lang === "ta" ? "குறிப்புகள்" : "Remarks"}</h4>
+                  <h4 className="text-sm font-semibold">
+                    {lang === "ta" ? "குறிப்புகள்" : "Remarks"}
+                  </h4>
                   {detail.remarks.map((r) => (
-                    <div key={r.id} className="text-sm p-3 border rounded-lg space-y-1">
+                    <div key={r.id} className={`text-sm p-3 border rounded-lg space-y-1 ${!r.isPublic ? "border-orange-200 bg-orange-50/50" : ""}`}>
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-xs">{r.authorName}</span>
-                        {!r.isPublic && <Badge variant="secondary" className="text-xs">Internal</Badge>}
+                        {r.isPublic
+                          ? <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">Public</Badge>
+                          : <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700">Internal</Badge>
+                        }
                       </div>
                       <p>{r.remark}</p>
                       <p className="text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleString()}</p>

@@ -2,15 +2,16 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import {
   grievancesTable,
+  grievanceAttachmentsTable,
   grievanceRemarksTable,
   grievanceStatusLogTable,
 } from "@workspace/db/schema";
-import { requireAuth, type AuthRequest } from "../lib/auth.js";
-import { eq, desc, and, sql, count } from "drizzle-orm";
+import { requireStaff, type AuthRequest } from "../lib/auth.js";
+import { eq, desc, and, count } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 const router = Router();
 
@@ -86,8 +87,8 @@ router.post("/grievances/submit", upload.array("attachments", 3), async (req, re
     }
 
     let ticketNo = generateTicketNo();
-    // Ensure uniqueness (retry once on collision)
-    const existing = await db.select({ id: grievancesTable.id }).from(grievancesTable).where(eq(grievancesTable.ticketNo, ticketNo)).limit(1);
+    const existing = await db.select({ id: grievancesTable.id }).from(grievancesTable)
+      .where(eq(grievancesTable.ticketNo, ticketNo)).limit(1);
     if (existing.length > 0) ticketNo = generateTicketNo();
 
     const [grievance] = await db.insert(grievancesTable).values({
@@ -105,7 +106,21 @@ router.post("/grievances/submit", upload.array("attachments", 3), async (req, re
       status: "Submitted",
     }).returning();
 
-    // Log status creation
+    // Persist uploaded attachments
+    const files = req.files as Express.Multer.File[] | undefined;
+    if (files && files.length > 0) {
+      await db.insert(grievanceAttachmentsTable).values(
+        files.map((f) => ({
+          grievanceId: grievance.id,
+          fileUrl: `/uploads/grievances/${f.filename}`,
+          fileName: f.originalname,
+          fileType: f.mimetype,
+          fileSize: f.size,
+        }))
+      );
+    }
+
+    // Log initial status
     await db.insert(grievanceStatusLogTable).values({
       grievanceId: grievance.id,
       fromStatus: null,
@@ -136,15 +151,15 @@ router.get("/grievances/heatmap", async (_req, res) => {
       .groupBy(grievancesTable.ward)
       .orderBy(desc(count()));
 
-    const totalResult = await db.select({ count: count() }).from(grievancesTable);
-    const resolvedResult = await db.select({ count: count() }).from(grievancesTable)
+    const [totalResult] = await db.select({ count: count() }).from(grievancesTable);
+    const [resolvedResult] = await db.select({ count: count() }).from(grievancesTable)
       .where(eq(grievancesTable.status, "Resolved"));
 
     res.json({
       byCategory: byCategory.map((r) => ({ category: r.category, count: Number(r.count) })),
       byWard: byWardRaw.filter((r) => r.ward).map((r) => ({ ward: r.ward!, count: Number(r.count) })),
-      total: Number(totalResult[0]?.count ?? 0),
-      resolved: Number(resolvedResult[0]?.count ?? 0),
+      total: Number(totalResult?.count ?? 0),
+      resolved: Number(resolvedResult?.count ?? 0),
     });
   } catch (err) {
     console.error("[grievances] heatmap error:", err);
@@ -152,11 +167,12 @@ router.get("/grievances/heatmap", async (_req, res) => {
   }
 });
 
-// GET /api/grievances/track/:ticketNo — public
+// GET /api/grievances/track/:ticketNo — public (shows only public remarks)
 router.get("/grievances/track/:ticketNo", async (req, res) => {
   try {
     const { ticketNo } = req.params;
-    const [grievance] = await db.select().from(grievancesTable).where(eq(grievancesTable.ticketNo, ticketNo)).limit(1);
+    const [grievance] = await db.select().from(grievancesTable)
+      .where(eq(grievancesTable.ticketNo, ticketNo)).limit(1);
     if (!grievance) {
       res.status(404).json({ error: "Ticket not found" });
       return;
@@ -175,10 +191,7 @@ router.get("/grievances/track/:ticketNo", async (req, res) => {
       name: grievance.anonymous ? "Anonymous" : grievance.name,
       phone: grievance.anonymous ? "***" : grievance.phone,
       remarks: remarks.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
-      statusLog: statusLog.map((l) => ({
-        ...l,
-        createdAt: l.createdAt.toISOString(),
-      })),
+      statusLog: statusLog.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() })),
     });
   } catch (err) {
     console.error("[grievances] track error:", err);
@@ -186,8 +199,8 @@ router.get("/grievances/track/:ticketNo", async (req, res) => {
   }
 });
 
-// GET /api/grievances — staff only
-router.get("/grievances", requireAuth, async (req: AuthRequest, res) => {
+// GET /api/grievances — staff only (paginated list with filters)
+router.get("/grievances", requireStaff, async (req: AuthRequest, res) => {
   try {
     const page = Math.max(1, parseInt(String(req.query.page ?? "1")));
     const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit ?? "20"))));
@@ -198,11 +211,13 @@ router.get("/grievances", requireAuth, async (req: AuthRequest, res) => {
     if (req.query.category) conditions.push(eq(grievancesTable.category, String(req.query.category)));
     if (req.query.priority) conditions.push(eq(grievancesTable.priority, String(req.query.priority)));
     if (req.query.ward) conditions.push(eq(grievancesTable.ward, String(req.query.ward)));
+    if (req.query.constituency) conditions.push(eq(grievancesTable.constituency, String(req.query.constituency)));
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
     const [items, totalResult] = await Promise.all([
-      db.select().from(grievancesTable).where(where).orderBy(desc(grievancesTable.createdAt)).limit(limit).offset(offset),
+      db.select().from(grievancesTable).where(where)
+        .orderBy(desc(grievancesTable.createdAt)).limit(limit).offset(offset),
       db.select({ count: count() }).from(grievancesTable).where(where),
     ]);
 
@@ -219,8 +234,42 @@ router.get("/grievances", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+// GET /api/grievances/:id — staff only (full detail, ALL remarks including internal)
+router.get("/grievances/:id", requireStaff, async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params.id as string);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+    const [grievance] = await db.select().from(grievancesTable)
+      .where(eq(grievancesTable.id, id)).limit(1);
+    if (!grievance) { res.status(404).json({ error: "Grievance not found" }); return; }
+
+    const [remarks, statusLog, attachments] = await Promise.all([
+      db.select().from(grievanceRemarksTable)
+        .where(eq(grievanceRemarksTable.grievanceId, id))
+        .orderBy(grievanceRemarksTable.createdAt),
+      db.select().from(grievanceStatusLogTable)
+        .where(eq(grievanceStatusLogTable.grievanceId, id))
+        .orderBy(grievanceStatusLogTable.createdAt),
+      db.select().from(grievanceAttachmentsTable)
+        .where(eq(grievanceAttachmentsTable.grievanceId, id))
+        .orderBy(grievanceAttachmentsTable.createdAt),
+    ]);
+
+    res.json({
+      ...serializeGrievance(grievance),
+      remarks: remarks.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
+      statusLog: statusLog.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() })),
+      attachments: attachments.map((a) => ({ ...a, createdAt: a.createdAt.toISOString() })),
+    });
+  } catch (err) {
+    console.error("[grievances] detail error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // PATCH /api/grievances/:id/status — staff only
-router.patch("/grievances/:id/status", requireAuth, async (req: AuthRequest, res) => {
+router.patch("/grievances/:id/status", requireStaff, async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params.id as string);
     const body = StatusUpdateBody.safeParse(req.body);
@@ -232,12 +281,11 @@ router.patch("/grievances/:id/status", requireAuth, async (req: AuthRequest, res
     const [current] = await db.select().from(grievancesTable).where(eq(grievancesTable.id, id)).limit(1);
     if (!current) { res.status(404).json({ error: "Grievance not found" }); return; }
 
-    const updates: Partial<typeof grievancesTable.$inferInsert> = {
-      status: body.data.status,
-    };
+    const updates: Partial<typeof grievancesTable.$inferInsert> = { status: body.data.status };
     if (body.data.status === "Resolved") updates.resolvedAt = new Date();
 
-    const [updated] = await db.update(grievancesTable).set(updates).where(eq(grievancesTable.id, id)).returning();
+    const [updated] = await db.update(grievancesTable).set(updates)
+      .where(eq(grievancesTable.id, id)).returning();
 
     await db.insert(grievanceStatusLogTable).values({
       grievanceId: id,
@@ -256,7 +304,7 @@ router.patch("/grievances/:id/status", requireAuth, async (req: AuthRequest, res
 });
 
 // POST /api/grievances/:id/remarks — staff only
-router.post("/grievances/:id/remarks", requireAuth, async (req: AuthRequest, res) => {
+router.post("/grievances/:id/remarks", requireStaff, async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params.id as string);
     const body = RemarkBody.safeParse(req.body);
@@ -265,7 +313,8 @@ router.post("/grievances/:id/remarks", requireAuth, async (req: AuthRequest, res
       return;
     }
 
-    const [grievance] = await db.select({ id: grievancesTable.id }).from(grievancesTable).where(eq(grievancesTable.id, id)).limit(1);
+    const [grievance] = await db.select({ id: grievancesTable.id }).from(grievancesTable)
+      .where(eq(grievancesTable.id, id)).limit(1);
     if (!grievance) { res.status(404).json({ error: "Grievance not found" }); return; }
 
     const [remark] = await db.insert(grievanceRemarksTable).values({
@@ -284,7 +333,7 @@ router.post("/grievances/:id/remarks", requireAuth, async (req: AuthRequest, res
 });
 
 // POST /api/grievances/:id/assign — staff only
-router.post("/grievances/:id/assign", requireAuth, async (req: AuthRequest, res) => {
+router.post("/grievances/:id/assign", requireStaff, async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params.id as string);
     const body = AssignBody.safeParse(req.body);
@@ -293,7 +342,8 @@ router.post("/grievances/:id/assign", requireAuth, async (req: AuthRequest, res)
       return;
     }
 
-    const [current] = await db.select().from(grievancesTable).where(eq(grievancesTable.id, id)).limit(1);
+    const [current] = await db.select().from(grievancesTable)
+      .where(eq(grievancesTable.id, id)).limit(1);
     if (!current) { res.status(404).json({ error: "Grievance not found" }); return; }
 
     const [updated] = await db.update(grievancesTable)
