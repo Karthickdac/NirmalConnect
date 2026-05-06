@@ -3,20 +3,36 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Nirmal Connect API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: news
+    description: News and announcements
+  - name: events
+    description: Events and campaigns
+  - name: activities
+    description: Daily activities
+  - name: gallery
+    description: Media gallery
+  - name: volunteers
+    description: Volunteer management
+  - name: faqs
+    description: Frequently asked questions
+  - name: stats
+    description: Constituency statistics and analytics
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,7 +40,352 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /news:
+    get:
+      operationId: listNews
+      tags: [news]
+      summary: List news articles
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: featured
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of news articles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NewsListResponse"
+
+  /news/{id}:
+    get:
+      operationId: getNewsArticle
+      tags: [news]
+      summary: Get a news article by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: News article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NewsArticle"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /events:
+    get:
+      operationId: listEvents
+      tags: [events]
+      summary: List events
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: upcoming
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventListResponse"
+
+  /events/{id}:
+    get:
+      operationId: getEvent
+      tags: [events]
+      summary: Get an event by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Event details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /activities:
+    get:
+      operationId: listActivities
+      tags: [activities]
+      summary: List daily activities
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: List of activities
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityListResponse"
+
+  /gallery:
+    get:
+      operationId: listGallery
+      tags: [gallery]
+      summary: List gallery media items
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [photo, video]
+        - name: album
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Gallery items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GalleryListResponse"
+
+  /volunteers:
+    post:
+      operationId: registerVolunteer
+      tags: [volunteers]
+      summary: Register as a volunteer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VolunteerRegistrationBody"
+      responses:
+        "201":
+          description: Volunteer registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Volunteer"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /faqs:
+    get:
+      operationId: listFaqs
+      tags: [faqs]
+      summary: List FAQs
+      responses:
+        "200":
+          description: List of FAQs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Faq"
+
+  /stats/constituency:
+    get:
+      operationId: getConstituencyStats
+      tags: [stats]
+      summary: Get constituency development statistics
+      responses:
+        "200":
+          description: Constituency statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConstituencyStats"
+
+  /stats/summary:
+    get:
+      operationId: getSiteSummary
+      tags: [stats]
+      summary: Get site-wide summary counts for homepage
+      responses:
+        "200":
+          description: Site summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteSummary"
+
+  /news/featured/latest:
+    get:
+      operationId: getFeaturedNews
+      tags: [news]
+      summary: Get featured/latest news for homepage ticker
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 5
+      responses:
+        "200":
+          description: Featured news items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NewsArticle"
+
+  /events/upcoming/list:
+    get:
+      operationId: getUpcomingEvents
+      tags: [events]
+      summary: Get upcoming events for homepage
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 3
+      responses:
+        "200":
+          description: Upcoming events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+
+  /activities/recent:
+    get:
+      operationId: getRecentActivities
+      tags: [activities]
+      summary: Get recent activities for homepage ticker
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 5
+      responses:
+        "200":
+          description: Recent activities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Activity"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +395,383 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+      required:
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+      required:
+        - token
+        - user
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - name
+        - role
+        - createdAt
+
+    NewsArticle:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        titleTa:
+          type: ["string", "null"]
+        content:
+          type: string
+        contentTa:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        category:
+          type: string
+        featured:
+          type: boolean
+        publishedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - content
+        - category
+        - featured
+        - createdAt
+
+    NewsListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/NewsArticle"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - items
+        - total
+        - page
+        - totalPages
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        titleTa:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        descriptionTa:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        venue:
+          type: string
+        eventDate:
+          type: string
+          format: date-time
+        endDate:
+          type: ["string", "null"]
+          format: date-time
+        category:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - venue
+        - eventDate
+        - category
+        - createdAt
+
+    EventListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - items
+        - total
+        - page
+        - totalPages
+
+    Activity:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        titleTa:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        activityDate:
+          type: string
+          format: date-time
+        location:
+          type: ["string", "null"]
+        category:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - activityDate
+        - category
+        - createdAt
+
+    ActivityListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Activity"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - items
+        - total
+        - page
+        - totalPages
+
+    GalleryItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        mediaUrl:
+          type: string
+        thumbnailUrl:
+          type: ["string", "null"]
+        mediaType:
+          type: string
+          enum: [photo, video]
+        album:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - mediaUrl
+        - mediaType
+        - createdAt
+
+    GalleryListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/GalleryItem"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - items
+        - total
+        - page
+        - totalPages
+
+    VolunteerRegistrationBody:
+      type: object
+      properties:
+        name:
+          type: string
+        nameTa:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+          format: email
+        phone:
+          type: string
+        ward:
+          type: ["string", "null"]
+        constituency:
+          type: string
+        skills:
+          type: ["string", "null"]
+        message:
+          type: ["string", "null"]
+      required:
+        - name
+        - phone
+        - constituency
+
+    Volunteer:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        ward:
+          type: ["string", "null"]
+        constituency:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - phone
+        - constituency
+        - status
+        - createdAt
+
+    Faq:
+      type: object
+      properties:
+        id:
+          type: integer
+        question:
+          type: string
+        questionTa:
+          type: ["string", "null"]
+        answer:
+          type: string
+        answerTa:
+          type: ["string", "null"]
+        order:
+          type: integer
+      required:
+        - id
+        - question
+        - answer
+        - order
+
+    ConstituencyStats:
+      type: object
+      properties:
+        roadsBuiltKm:
+          type: number
+        waterProjectsCompleted:
+          type: integer
+        schoolsUpgraded:
+          type: integer
+        healthClinicsOpened:
+          type: integer
+        jobsCreated:
+          type: integer
+        beneficiariesServed:
+          type: integer
+        totalProjects:
+          type: integer
+        completedProjects:
+          type: integer
+        ongoingProjects:
+          type: integer
+      required:
+        - roadsBuiltKm
+        - waterProjectsCompleted
+        - schoolsUpgraded
+        - healthClinicsOpened
+        - jobsCreated
+        - beneficiariesServed
+        - totalProjects
+        - completedProjects
+        - ongoingProjects
+
+    SiteSummary:
+      type: object
+      properties:
+        totalNews:
+          type: integer
+        totalEvents:
+          type: integer
+        totalActivities:
+          type: integer
+        totalGalleryItems:
+          type: integer
+        totalVolunteers:
+          type: integer
+        upcomingEventsCount:
+          type: integer
+      required:
+        - totalNews
+        - totalEvents
+        - totalActivities
+        - totalGalleryItems
+        - totalVolunteers
+        - upcomingEventsCount

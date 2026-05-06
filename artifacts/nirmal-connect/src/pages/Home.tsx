@@ -1,0 +1,397 @@
+import { useState, useEffect, useRef } from "react";
+import { Link } from "wouter";
+import { ArrowRight, Star, CheckCircle, Calendar, Users, Award, Megaphone, TrendingUp, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SectionHeader } from "@/components/SectionHeader";
+import {
+  useGetSiteSummary,
+  useGetConstituencyStats,
+  useGetFeaturedNews,
+  useGetUpcomingEvents,
+  useGetRecentActivities,
+  useListGallery,
+} from "@workspace/api-client-react";
+import type { Language } from "@/lib/i18n";
+import { t } from "@/lib/i18n";
+import { format } from "date-fns";
+
+interface HomeProps {
+  lang: Language;
+}
+
+function useCountUp(target: number, duration = 2000) {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const started = useRef(false);
+
+  useEffect(() => {
+    if (target === 0) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !started.current) {
+          started.current = true;
+          const start = Date.now();
+          const tick = () => {
+            const elapsed = Date.now() - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setCount(Math.round(eased * target));
+            if (progress < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        }
+      },
+      { threshold: 0.3 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [target, duration]);
+
+  return { count, ref };
+}
+
+function StatCard({ label, value, unit = "" }: { label: string; value: number; unit?: string }) {
+  const { count, ref } = useCountUp(value);
+  return (
+    <div ref={ref} className="glass-card rounded-xl p-5 text-center text-white" data-testid="stat-card">
+      <div className="text-3xl md:text-4xl font-bold text-yellow-400">
+        {count.toLocaleString()}{unit}
+      </div>
+      <div className="text-sm text-white/80 mt-1">{label}</div>
+    </div>
+  );
+}
+
+export default function Home({ lang }: HomeProps) {
+  const { data: summary } = useGetSiteSummary();
+  const { data: stats } = useGetConstituencyStats();
+  const { data: featuredNews } = useGetFeaturedNews({ limit: 4 });
+  const { data: upcomingEvents } = useGetUpcomingEvents({ limit: 3 });
+  const { data: recentActivities } = useGetRecentActivities({ limit: 5 });
+  const { data: gallery } = useListGallery({ limit: 8, type: "photo" });
+
+  return (
+    <div>
+      {/* Hero Section */}
+      <section className="relative min-h-[90vh] flex items-center overflow-hidden tvk-hero-gradient">
+        {/* Background pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-20 left-10 w-72 h-72 rounded-full bg-yellow-400 blur-3xl" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 rounded-full bg-red-400 blur-3xl" />
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-4 py-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="text-white">
+            <Badge className="mb-4 bg-yellow-400/20 text-yellow-300 border-yellow-400/30 text-xs font-medium px-3 py-1">
+              TVK – Tamilaga Vettri Kazhagam
+            </Badge>
+            <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-4">
+              {lang === "ta" ? "சி.டி.ஆர். நிர்மல் குமார்" : "C.T.R. Nirmal Kumar"}
+            </h1>
+            <p className="text-xl md:text-2xl text-yellow-300 font-semibold mb-6">
+              {lang === "ta"
+                ? "சட்டமன்ற உறுப்பினர் – திருப்பரங்குன்றம் தொகுதி"
+                : "MLA – Tirupparankundram Constituency, Tamil Nadu"}
+            </p>
+            <p className="text-white/75 text-base md:text-lg max-w-lg mb-8 leading-relaxed">
+              {lang === "ta"
+                ? "மக்களுக்காக பாடுபடும் தலைவர். வளர்ச்சியில் உறுதிபூண்ட திருப்பரங்குன்றத்தின் குரல்."
+                : "A leader dedicated to the people of Tirupparankundram — committed to development, transparency, and citizen welfare."}
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link href="/grievance">
+                <Button
+                  data-testid="hero-grievance-btn"
+                  className="bg-primary hover:bg-primary/90 text-white px-6 py-3 text-base"
+                >
+                  {t(lang, "submitGrievance")}
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </Link>
+              <Link href="/volunteer">
+                <Button
+                  data-testid="hero-volunteer-btn"
+                  variant="outline"
+                  className="border-white/30 text-white hover:bg-white/10 px-6 py-3 text-base"
+                >
+                  {t(lang, "joinMovement")}
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Volunteer count card */}
+          <div className="hidden lg:flex justify-center">
+            <div className="glass-card rounded-2xl p-8 max-w-sm w-full text-center text-white">
+              <div className="w-16 h-16 rounded-full bg-primary/30 border-2 border-yellow-400 flex items-center justify-center mx-auto mb-4">
+                <Users className="w-8 h-8 text-yellow-400" />
+              </div>
+              <div className="text-5xl font-bold text-yellow-400 mb-2">
+                {summary?.totalVolunteers?.toLocaleString() ?? "—"}+
+              </div>
+              <p className="text-white/80">
+                {lang === "ta" ? "தன்னார்வலர்கள்" : "Volunteers & Supporters"}
+              </p>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <div className="bg-white/10 rounded-lg p-3">
+                  <div className="font-bold text-lg">{summary?.totalEvents ?? "—"}</div>
+                  <div className="text-xs text-white/70">
+                    {lang === "ta" ? "நிகழ்வுகள்" : "Events"}
+                  </div>
+                </div>
+                <div className="bg-white/10 rounded-lg p-3">
+                  <div className="font-bold text-lg">{summary?.totalNews ?? "—"}</div>
+                  <div className="text-xs text-white/70">
+                    {lang === "ta" ? "செய்திகள்" : "News Items"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Scroll indicator */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-white/50 animate-bounce">
+          <div className="w-px h-8 bg-white/30" />
+          <span className="text-xs">Scroll</span>
+        </div>
+      </section>
+
+      {/* Activity Ticker */}
+      {recentActivities && recentActivities.length > 0 && (
+        <div className="bg-primary text-white py-2 overflow-hidden border-b border-primary/50">
+          <div className="flex items-center">
+            <div className="flex-shrink-0 px-4 py-0.5 bg-yellow-400 text-yellow-900 font-bold text-xs uppercase tracking-wide">
+              {lang === "ta" ? "நேரலை" : "LIVE"}
+            </div>
+            <div className="overflow-hidden flex-1">
+              <div className="animate-ticker flex gap-12 whitespace-nowrap">
+                {[...recentActivities, ...recentActivities].map((a, i) => (
+                  <span key={i} className="text-sm">
+                    <span className="text-yellow-300 mr-2">★</span>
+                    {lang === "ta" && a.titleTa ? a.titleTa : a.title}
+                    {a.location && ` – ${a.location}`}
+                    {" "}
+                    <span className="text-white/60 text-xs">{format(new Date(a.activityDate), "dd MMM")}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Constituency Stats */}
+      {stats && (
+        <section className="py-16 tvk-hero-gradient text-white">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="text-center mb-10">
+              <h2 className="text-2xl md:text-3xl font-bold text-white">
+                {lang === "ta" ? "தொகுதி வளர்ச்சி புள்ளிவிவரம்" : "Constituency Development at a Glance"}
+              </h2>
+              <p className="text-white/70 mt-2">
+                {lang === "ta" ? "திருப்பரங்குன்றத்தில் நடந்த வளர்ச்சி பணிகள்" : "Key development milestones in Tirupparankundram"}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <StatCard label={lang === "ta" ? "சாலை கட்டப்பட்டது (கி.மீ)" : "Roads Built (km)"} value={stats.roadsBuiltKm} />
+              <StatCard label={lang === "ta" ? "நீர் திட்டங்கள்" : "Water Projects"} value={stats.waterProjectsCompleted} />
+              <StatCard label={lang === "ta" ? "மேம்படுத்திய பள்ளிகள்" : "Schools Upgraded"} value={stats.schoolsUpgraded} />
+              <StatCard label={lang === "ta" ? "உருவாக்கிய வேலைகள்" : "Jobs Created"} value={stats.jobsCreated} unit="+" />
+              <StatCard label={lang === "ta" ? "பயனாளிகள்" : "Beneficiaries Served"} value={stats.beneficiariesServed} unit="+" />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Latest News */}
+      <section className="py-16 max-w-7xl mx-auto px-4">
+        <div className="flex items-center justify-between mb-10">
+          <SectionHeader
+            title={lang === "ta" ? "சமீபத்திய செய்திகள்" : "Latest News & Announcements"}
+            centered={false}
+          />
+          <Link href="/news">
+            <Button variant="outline" size="sm" data-testid="view-all-news">
+              {t(lang, "viewAll")} <ChevronRight className="w-3 h-3 ml-1" />
+            </Button>
+          </Link>
+        </div>
+        {!featuredNews ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-64 rounded-xl" />)}
+          </div>
+        ) : featuredNews.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">{t(lang, "noData")}</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {featuredNews.map((article) => (
+              <Link key={article.id} href={`/news/${article.id}`}>
+                <Card
+                  data-testid={`news-card-${article.id}`}
+                  className="group cursor-pointer hover:shadow-lg transition-all hover:-translate-y-1 overflow-hidden"
+                >
+                  {article.imageUrl && (
+                    <div className="h-40 overflow-hidden">
+                      <img
+                        src={article.imageUrl}
+                        alt={article.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                  )}
+                  <CardContent className="p-4">
+                    <Badge variant="secondary" className="text-xs mb-2">{article.category}</Badge>
+                    <h3 className="font-semibold text-sm leading-snug mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                      {lang === "ta" && article.titleTa ? article.titleTa : article.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {article.publishedAt ? format(new Date(article.publishedAt), "dd MMM yyyy") : ""}
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Upcoming Events */}
+      {upcomingEvents && upcomingEvents.length > 0 && (
+        <section className="py-16 bg-muted/30">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex items-center justify-between mb-10">
+              <SectionHeader
+                title={lang === "ta" ? "வரவிருக்கும் நிகழ்வுகள்" : "Upcoming Events"}
+                centered={false}
+              />
+              <Link href="/events">
+                <Button variant="outline" size="sm" data-testid="view-all-events">
+                  {t(lang, "viewAll")} <ChevronRight className="w-3 h-3 ml-1" />
+                </Button>
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {upcomingEvents.map((event) => (
+                <Link key={event.id} href={`/events/${event.id}`}>
+                  <Card
+                    data-testid={`event-card-${event.id}`}
+                    className="group cursor-pointer hover:shadow-md transition-all overflow-hidden"
+                  >
+                    {event.imageUrl && (
+                      <div className="h-36 overflow-hidden">
+                        <img src={event.imageUrl} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      </div>
+                    )}
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Calendar className="w-4 h-4 text-primary" />
+                        <span className="text-xs font-medium text-primary">
+                          {format(new Date(event.eventDate), "dd MMM yyyy, h:mm a")}
+                        </span>
+                      </div>
+                      <h3 className="font-semibold text-sm leading-snug mb-1 group-hover:text-primary transition-colors">
+                        {lang === "ta" && event.titleTa ? event.titleTa : event.title}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">{event.venue}</p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Gallery Strip */}
+      {gallery?.items && gallery.items.length > 0 && (
+        <section className="py-16 max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-10">
+            <SectionHeader title={lang === "ta" ? "படத் தொகுப்பு" : "Photo Gallery"} centered={false} />
+            <Link href="/gallery">
+              <Button variant="outline" size="sm" data-testid="view-all-gallery">
+                {t(lang, "viewAll")} <ChevronRight className="w-3 h-3 ml-1" />
+              </Button>
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {gallery.items.slice(0, 8).map((item) => (
+              <div
+                key={item.id}
+                data-testid={`gallery-item-${item.id}`}
+                className="aspect-square rounded-lg overflow-hidden group cursor-pointer"
+              >
+                <img
+                  src={item.mediaUrl}
+                  alt={item.title}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Grievance CTA */}
+      <section className="py-20 bg-primary text-white">
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <Megaphone className="w-12 h-12 text-yellow-300 mx-auto mb-4" />
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            {lang === "ta" ? "உங்கள் குரல் முக்கியம்" : "Your Voice Matters"}
+          </h2>
+          <p className="text-white/80 text-lg mb-8 max-w-2xl mx-auto">
+            {lang === "ta"
+              ? "உங்கள் பகுதியில் உள்ள பிரச்சினைகளை நேரடியாக தெரிவியுங்கள். புகார் அனுப்பி நிலையை கண்காணியுங்கள்."
+              : "Report issues in your area directly to the MLA's office. Submit your grievance and track its resolution in real time."}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/grievance">
+              <Button
+                data-testid="cta-submit-grievance"
+                className="bg-white text-primary hover:bg-yellow-50 font-semibold px-8 py-3"
+              >
+                {t(lang, "submitGrievance")}
+              </Button>
+            </Link>
+            <Link href="/grievance">
+              <Button
+                data-testid="cta-track-grievance"
+                variant="outline"
+                className="border-white/40 text-white hover:bg-white/10 px-8 py-3"
+              >
+                {t(lang, "trackGrievance")}
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Volunteer CTA */}
+      <section className="py-16 max-w-7xl mx-auto px-4">
+        <div className="rounded-2xl overflow-hidden bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold mb-2">
+              {lang === "ta" ? "இயக்கத்தில் இணையுங்கள்" : "Join the Movement"}
+            </h2>
+            <p className="text-muted-foreground max-w-md">
+              {lang === "ta"
+                ? "திருப்பரங்குன்றத்தின் வளர்ச்சிக்கு பங்காற்றுங்கள். தன்னார்வலராக பதிவு செய்யுங்கள்."
+                : "Be part of positive change in Tirupparankundram. Register as a volunteer and contribute to our community."}
+            </p>
+          </div>
+          <Link href="/volunteer">
+            <Button
+              data-testid="cta-volunteer"
+              className="bg-primary text-white hover:bg-primary/90 px-8 py-3 text-base font-semibold flex-shrink-0"
+            >
+              {t(lang, "registerNow")}
+            </Button>
+          </Link>
+        </div>
+      </section>
+    </div>
+  );
+}
