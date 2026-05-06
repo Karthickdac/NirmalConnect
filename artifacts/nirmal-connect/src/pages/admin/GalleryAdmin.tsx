@@ -1,0 +1,175 @@
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Plus, Trash2, Image, Film, ExternalLink } from "lucide-react";
+import { adminApi } from "./api";
+
+interface GalleryItem {
+  id: number;
+  title: string;
+  mediaUrl: string;
+  thumbnailUrl?: string | null;
+  mediaType: "photo" | "video";
+  album?: string | null;
+  createdAt: string;
+}
+
+const emptyForm = { title: "", mediaUrl: "", thumbnailUrl: "", mediaType: "photo" as "photo" | "video", album: "" };
+
+export default function GalleryAdmin() {
+  const [items, setItems] = useState<GalleryItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = (p = page) => {
+    setLoading(true);
+    adminApi.getGallery(p, 24)
+      .then((d: { items: GalleryItem[]; total: number }) => { setItems(d.items); setTotal(d.total); })
+      .catch(() => setError("Failed to load gallery"))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, [page]);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await adminApi.createGallery({
+        ...form, thumbnailUrl: form.thumbnailUrl || null, album: form.album || null,
+      });
+      setOpen(false);
+      setForm(emptyForm);
+      load(1);
+      setPage(1);
+    } catch (e: unknown) { setError((e as Error).message); }
+    finally { setSaving(false); }
+  }
+
+  async function handleDelete(id: number) {
+    if (!confirm("Remove this item from the gallery?")) return;
+    await adminApi.deleteGallery(id).catch(() => null);
+    load();
+  }
+
+  const totalPages = Math.ceil(total / 24);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold">Media Gallery</h2>
+          <p className="text-sm text-muted-foreground">{total} items</p>
+        </div>
+        <Button onClick={() => setOpen(true)} className="gap-2 bg-primary hover:bg-primary/90">
+          <Plus className="w-4 h-4" /> Add Media
+        </Button>
+      </div>
+
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+
+      {loading ? (
+        <p className="text-muted-foreground text-sm py-8 text-center">Loading…</p>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          {items.map((item) => (
+            <div key={item.id} className="relative group rounded-lg overflow-hidden border bg-muted/30 aspect-square">
+              {item.mediaType === "photo" ? (
+                <img
+                  src={item.thumbnailUrl ?? item.mediaUrl}
+                  alt={item.title}
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                  onError={e => { (e.target as HTMLImageElement).src = ""; }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-900">
+                  <Film className="w-8 h-8 text-gray-400" />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 p-2">
+                <p className="text-white text-xs text-center font-medium leading-tight line-clamp-2">{item.title}</p>
+                {item.album && <p className="text-gray-300 text-xs">{item.album}</p>}
+                <div className="flex gap-1 mt-1">
+                  <a href={item.mediaUrl} target="_blank" rel="noreferrer">
+                    <Button size="icon" variant="ghost" className="h-6 w-6 text-white hover:bg-white/20">
+                      <ExternalLink className="w-3 h-3" />
+                    </Button>
+                  </a>
+                  <Button size="icon" variant="ghost" className="h-6 w-6 text-red-400 hover:bg-red-900/40" onClick={() => handleDelete(item.id)}>
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+              <div className="absolute top-1 left-1">
+                <Badge className={`text-xs px-1 py-0 ${item.mediaType === "video" ? "bg-blue-600" : "bg-primary"}`}>
+                  {item.mediaType === "video" ? <Film className="w-2.5 h-2.5" /> : <Image className="w-2.5 h-2.5" />}
+                </Badge>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}>Previous</Button>
+          <span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span>
+          <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>Next</Button>
+        </div>
+      )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Media</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-xs">Title *</Label>
+              <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className="mt-1 text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs">Media URL *</Label>
+              <Input value={form.mediaUrl} onChange={e => setForm(f => ({ ...f, mediaUrl: e.target.value }))} placeholder="https://…" className="mt-1 text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs">Thumbnail URL</Label>
+              <Input value={form.thumbnailUrl} onChange={e => setForm(f => ({ ...f, thumbnailUrl: e.target.value }))} placeholder="https://… (optional)" className="mt-1 text-sm" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Type</Label>
+                <select
+                  value={form.mediaType}
+                  onChange={e => setForm(f => ({ ...f, mediaType: e.target.value as "photo" | "video" }))}
+                  className="mt-1 w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="photo">Photo</option>
+                  <option value="video">Video</option>
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs">Album</Label>
+                <Input value={form.album} onChange={e => setForm(f => ({ ...f, album: e.target.value }))} placeholder="Optional" className="mt-1 text-sm" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave} disabled={saving || !form.title || !form.mediaUrl} className="bg-primary hover:bg-primary/90">
+              {saving ? "Adding…" : "Add to Gallery"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

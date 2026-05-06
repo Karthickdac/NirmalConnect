@@ -5,6 +5,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageLayout } from "@/components/PageLayout";
 import type { Language } from "@/lib/i18n";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { getToken } from "@/lib/auth";
+
+// Wire up JWT so all generated API hooks include Authorization: Bearer <token>
+setAuthTokenGetter(() => getToken());
 
 import Home from "@/pages/Home";
 import About from "@/pages/About";
