@@ -17,12 +17,35 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import {
   CheckCircle, Search, FileText, Phone, MessageSquare,
   Copy, AlertCircle, TrendingUp, Clock, CheckCheck, Loader2,
+  Paperclip, X,
 } from "lucide-react";
 import type { Language } from "@/lib/i18n";
 import { submitGrievance, trackGrievance, getGrievanceHeatmap } from "@workspace/api-client-react";
 import type { GrievanceTrackResponse } from "@workspace/api-client-react";
 
 interface GrievanceProps { lang: Language; }
+
+/** Submit grievance as multipart/form-data when files are attached. */
+async function submitGrievanceWithFiles(
+  data: { name: string; phone: string; category: string; description: string; address?: string | null; ward?: string | null; anonymous?: boolean },
+  files: File[]
+): Promise<{ ticketNo: string }> {
+  const fd = new globalThis.FormData();
+  fd.append("name", data.name);
+  fd.append("phone", data.phone);
+  fd.append("category", data.category);
+  fd.append("description", data.description);
+  if (data.address) fd.append("address", data.address);
+  if (data.ward) fd.append("ward", data.ward);
+  fd.append("anonymous", String(data.anonymous ?? false));
+  files.forEach((f) => fd.append("attachments", f));
+  const res = await fetch("/api/grievances/submit", { method: "POST", body: fd });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? "Submit failed");
+  }
+  return res.json() as Promise<{ ticketNo: string }>;
+}
 
 const CATEGORIES = [
   "Roads", "Water Supply", "EB / Electricity Issues", "Sewage",
@@ -154,6 +177,7 @@ export default function Grievance({ lang }: GrievanceProps) {
   const [trackError, setTrackError] = useState("");
   const [copied, setCopied] = useState(false);
   const [isTracking, setIsTracking] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -161,8 +185,8 @@ export default function Grievance({ lang }: GrievanceProps) {
   });
 
   const submitMutation = useMutation({
-    mutationFn: (data: FormData) =>
-      submitGrievance({
+    mutationFn: (data: FormData) => {
+      const payload = {
         name: data.name,
         phone: data.phone,
         category: data.category,
@@ -170,10 +194,16 @@ export default function Grievance({ lang }: GrievanceProps) {
         address: data.address || null,
         ward: data.ward || null,
         anonymous: data.anonymous ?? false,
-      }),
+      };
+      if (attachedFiles.length > 0) {
+        return submitGrievanceWithFiles(payload, attachedFiles);
+      }
+      return submitGrievance(payload);
+    },
     onSuccess: (result) => {
       setTicketNo(result.ticketNo);
       setSubmitted(true);
+      setAttachedFiles([]);
     },
     onError: () => {
       form.setError("root", { message: lang === "ta" ? "சேவை தடைபட்டது. மீண்டும் முயற்சிக்கவும்." : "Service error. Please try again." });
@@ -372,6 +402,46 @@ export default function Grievance({ lang }: GrievanceProps) {
                         </FormLabel>
                       </FormItem>
                     )} />
+
+                    {/* Photo attachments */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">
+                        {lang === "ta" ? "புகைப்படங்கள் (விரும்பினால், அதிகபட்சம் 3)" : "Photos (optional, up to 3)"}
+                      </p>
+                      <label className="flex items-center gap-2 cursor-pointer border border-dashed rounded-lg p-3 hover:bg-muted/40 transition-colors">
+                        <Paperclip className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm text-muted-foreground">
+                          {lang === "ta" ? "படங்களை தேர்வு செய்யவும்" : "Choose images"}
+                        </span>
+                        <input
+                          data-testid="grievance-attachments"
+                          type="file"
+                          accept="image/*,.pdf"
+                          multiple
+                          className="sr-only"
+                          onChange={(e) => {
+                            const picked = Array.from(e.target.files ?? []).slice(0, 3);
+                            setAttachedFiles(picked);
+                          }}
+                        />
+                      </label>
+                      {attachedFiles.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {attachedFiles.map((f, i) => (
+                            <span key={i} className="flex items-center gap-1.5 text-xs bg-muted rounded-full px-3 py-1">
+                              <Paperclip className="w-3 h-3" />{f.name}
+                              <button
+                                type="button"
+                                onClick={() => setAttachedFiles((prev) => prev.filter((_, j) => j !== i))}
+                                className="ml-1 hover:text-destructive"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
 
                     {form.formState.errors.root && (
                       <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 rounded-lg p-3">

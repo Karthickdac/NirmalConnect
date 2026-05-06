@@ -1,6 +1,7 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
+import path from "path";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -30,5 +31,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+// Serve uploaded grievance attachments (constrained to uploads dir)
+const uploadsRoot = path.resolve(process.cwd(), "uploads");
+app.use("/uploads", express.static(uploadsRoot, { dotfiles: "deny" }));
 
 export default app;

@@ -12,13 +12,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { SectionHeader } from "@/components/SectionHeader";
 import {
   ChevronLeft, ChevronRight, RefreshCw, Loader2, CheckCircle,
-  Clock, AlertTriangle, MessageSquare, Filter, X, Paperclip,
+  Clock, AlertTriangle, MessageSquare, Filter, X, Paperclip, Users,
 } from "lucide-react";
 import type { Language } from "@/lib/i18n";
 import {
   listGrievances,
   updateGrievanceStatus,
   addGrievanceRemark,
+  assignGrievance,
 } from "@workspace/api-client-react";
 import type { GrievanceListItem } from "@workspace/api-client-react";
 
@@ -122,6 +123,8 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
   const [statusNote, setStatusNote] = useState("");
   const [remarkText, setRemarkText] = useState("");
   const [remarkPublic, setRemarkPublic] = useState(true);
+  const [assignOfficerName, setAssignOfficerName] = useState("");
+  const [assignNote, setAssignNote] = useState("");
 
   const params = {
     page,
@@ -155,6 +158,8 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
     setNewStatus(item.status);
     setStatusNote("");
     setRemarkText("");
+    setAssignOfficerName("");
+    setAssignNote("");
     try {
       const d = await fetchStaffDetail(item.id, token);
       setDetail(d);
@@ -185,6 +190,21 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
         { headers: makeAuthHeaders(token) }),
     onSuccess: () => {
       setRemarkText("");
+      refreshDetail(selected!.id);
+    },
+  });
+
+  const assignMutation = useMutation({
+    mutationFn: () =>
+      assignGrievance(selected!.id,
+        { officerId: 0, officerName: assignOfficerName.trim(), note: assignNote.trim() || null },
+        { headers: makeAuthHeaders(token) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["grievances-list"] });
+      const updated = { ...selected!, status: "Assigned" };
+      setSelected(updated as GrievanceListItem);
+      setAssignOfficerName("");
+      setAssignNote("");
       refreshDetail(selected!.id);
     },
   });
@@ -457,6 +477,32 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
                     {remarkMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : lang === "ta" ? "சேர்" : "Add"}
                   </Button>
                 </div>
+              </div>
+
+              {/* Assign to Officer */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <h4 className="font-semibold text-sm flex items-center gap-2">
+                  <Users className="w-4 h-4 text-primary" />
+                  {lang === "ta" ? "அலுவலருக்கு ஒதுக்கு" : "Assign to Officer"}
+                </h4>
+                <Input
+                  placeholder={lang === "ta" ? "அலுவலர் பெயர்..." : "Officer name..."}
+                  value={assignOfficerName}
+                  onChange={(e) => setAssignOfficerName(e.target.value)}
+                />
+                <Input
+                  placeholder={lang === "ta" ? "குறிப்பு (விரும்பினால்)..." : "Note (optional)..."}
+                  value={assignNote}
+                  onChange={(e) => setAssignNote(e.target.value)}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => assignMutation.mutate()}
+                  disabled={assignMutation.isPending || !assignOfficerName.trim()}
+                >
+                  {assignMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : lang === "ta" ? "ஒதுக்கு" : "Assign"}
+                </Button>
               </div>
 
               {/* Status History */}
