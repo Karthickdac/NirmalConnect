@@ -42,7 +42,7 @@ router.get("/events/:id", async (req, res) => {
   }
 });
 
-// Upcoming events wow endpoint
+// GET /api/events/upcoming/list
 router.get("/events/upcoming/list", async (req, res) => {
   try {
     const limit = Number(req.query.limit) || 3;

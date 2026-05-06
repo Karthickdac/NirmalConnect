@@ -46,7 +46,7 @@ router.get("/news/:id", async (req, res) => {
   }
 });
 
-// GET /api/news/featured/latest (wow endpoint)
+// GET /api/news/featured/latest
 router.get("/news/featured/latest", async (req, res) => {
   try {
     const limit = Number(req.query.limit) || 5;

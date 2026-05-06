@@ -156,7 +156,7 @@ export default function Home({ lang }: HomeProps) {
         {/* Scroll indicator */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-white/50 animate-bounce">
           <div className="w-px h-8 bg-white/30" />
-          <span className="text-xs">Scroll</span>
+          <span className="text-xs">{lang === "ta" ? "கீழே" : "Scroll"}</span>
         </div>
       </section>
 

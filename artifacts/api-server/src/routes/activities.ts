@@ -26,7 +26,7 @@ router.get("/activities", async (req, res) => {
   }
 });
 
-// Recent activities wow endpoint
+// GET /api/activities/recent
 router.get("/activities/recent", async (req, res) => {
   try {
     const limit = Number(req.query.limit) || 5;

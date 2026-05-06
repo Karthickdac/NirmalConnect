@@ -21,7 +21,7 @@ export function Footer({ lang }: FooterProps) {
               <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">N</div>
               <div>
                 <p className="font-bold text-white text-sm">Nirmal Connect</p>
-                <p className="text-xs text-gray-400">Official Platform</p>
+                <p className="text-xs text-gray-400">{lang === "ta" ? "அதிகாரப்பூர்வ தளம்" : "Official Platform"}</p>
               </div>
             </div>
             <p className="text-sm text-gray-400 leading-relaxed">
@@ -38,7 +38,7 @@ export function Footer({ lang }: FooterProps) {
 
           {/* Quick links */}
           <div>
-            <h3 className="font-semibold text-white mb-4 text-sm uppercase tracking-wider">Quick Links</h3>
+            <h3 className="font-semibold text-white mb-4 text-sm uppercase tracking-wider">{lang === "ta" ? "விரைவு இணைப்புகள்" : "Quick Links"}</h3>
             <ul className="space-y-2">
               {[
                 { href: "/", label: lang === "ta" ? "முகப்பு" : "Home" },
@@ -61,7 +61,7 @@ export function Footer({ lang }: FooterProps) {
 
           {/* Services */}
           <div>
-            <h3 className="font-semibold text-white mb-4 text-sm uppercase tracking-wider">Public Services</h3>
+            <h3 className="font-semibold text-white mb-4 text-sm uppercase tracking-wider">{lang === "ta" ? "பொது சேவைகள்" : "Public Services"}</h3>
             <ul className="space-y-2">
               {[
                 { href: "/grievance", label: lang === "ta" ? "புகார் மையம்" : "Grievance Portal" },
@@ -84,12 +84,12 @@ export function Footer({ lang }: FooterProps) {
 
           {/* Contact */}
           <div>
-            <h3 className="font-semibold text-white mb-4 text-sm uppercase tracking-wider">Contact</h3>
+            <h3 className="font-semibold text-white mb-4 text-sm uppercase tracking-wider">{lang === "ta" ? "தொடர்பு" : "Contact"}</h3>
             <ul className="space-y-3">
               <li className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                 <span className="text-sm text-gray-400">
-                  MLA Office, Tirupparankundram,<br />Madurai – 625005, Tamil Nadu
+                  {lang === "ta" ? <>சட்டமன்ற உறுப்பினர் அலுவலகம், திருப்பரங்குன்றம்,<br />மதுரை – 625005, தமிழ்நாடு</> : <>MLA Office, Tirupparankundram,<br />Madurai – 625005, Tamil Nadu</>}
                 </span>
               </li>
               <li className="flex items-center gap-2">
@@ -106,14 +106,14 @@ export function Footer({ lang }: FooterProps) {
 
         <div className="mt-10 pt-6 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs text-gray-500">
-            &copy; {new Date().getFullYear()} Nirmal Connect. Official platform of C.T.R. Nirmal Kumar.
+            &copy; {new Date().getFullYear()} Nirmal Connect. {lang === "ta" ? "சி.டி.ஆர். நிர்மல் குமார் அவர்களின் அதிகாரப்பூர்வ தளம்." : "Official platform of C.T.R. Nirmal Kumar."}
           </p>
           <div className="flex items-center gap-4">
             <Link href="/login">
-              <span className="text-xs text-gray-500 hover:text-gray-300 transition-colors cursor-pointer">Admin Login</span>
+              <span className="text-xs text-gray-500 hover:text-gray-300 transition-colors cursor-pointer">{lang === "ta" ? "நிர்வாகி உள்நுழைவு" : "Admin Login"}</span>
             </Link>
             <span className="text-xs text-gray-600">|</span>
-            <span className="text-xs text-gray-500">Privacy Policy</span>
+            <span className="text-xs text-gray-500">{lang === "ta" ? "தனியுரிமைக் கொள்கை" : "Privacy Policy"}</span>
           </div>
         </div>
       </div>
