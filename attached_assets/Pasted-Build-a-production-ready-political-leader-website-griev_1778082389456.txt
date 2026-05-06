@@ -1,0 +1,278 @@
+Build a production-ready political leader website + grievance management web application for Hon. C.T.R. Nirmal Kumar (MLA – Tirupparankundram Constituency, Tamil Nadu), designed for future scalability as a minister-level public service platform.
+
+Tech Stack:
+- Frontend: Next.js 15 + TypeScript + Tailwind CSS + ShadCN UI
+- Backend: Node.js + Express or Next.js API Routes
+- Database: PostgreSQL
+- ORM: Prisma
+- Authentication: JWT + Role Based Access
+- File Storage: Cloudinary or AWS S3
+- Deployment Ready
+- Mobile Responsive
+- SEO Optimized
+- Multi-language support (Tamil + English)
+- Dark/Light mode
+- CMS Driven Architecture
+
+Brand Style:
+- Modern political/public governance theme
+- Premium government-grade UI
+- Clean typography
+- Tamil Nadu inspired accent colors
+- Fast loading and secure
+- Trust-building design
+- Professional hero banners and public communication sections
+
+Project Modules:
+
+1. Public Website
+--------------------------------
+Pages:
+- Home
+- About Leader
+- Political Journey
+- Constituency Development Works
+- News & Announcements
+- Daily Activities
+- Events & Campaigns
+- Press Releases
+- Media Gallery
+- Videos
+- Achievements
+- Welfare Schemes
+- Public Grievance Portal
+- Contact Office
+- Volunteer Registration
+- Donate/Support
+- Social Media Integration
+- Emergency Contacts
+- FAQ
+
+Homepage Features:
+- Dynamic hero banner
+- Latest activities ticker
+- Quick grievance submission
+- Live updates section
+- Achievements counter
+- Upcoming events
+- Photo gallery
+- Video highlights
+- Public announcements
+- Constituency statistics dashboard
+- Ministerial updates section
+- Floating WhatsApp connect button
+
+2. Public Grievance Management System
+--------------------------------
+Features:
+- Citizen grievance submission
+- Category based complaints
+- Upload documents/images/videos
+- Track grievance status using ticket number
+- SMS/Email notifications
+- Escalation workflow
+- Priority tagging
+- Constituency-wise filtering
+- Geo-location support
+- Anonymous complaint option
+- Public issue heatmap dashboard
+- Internal remarks system
+- Timeline tracking
+
+Complaint Categories:
+- Roads
+- Water
+- EB Issues
+- Sewage
+- Healthcare
+- Education
+- Women Safety
+- Corruption
+- Ration
+- Transport
+- Pension
+- Housing
+- Agriculture
+- Employment
+- Others
+
+Status Flow:
+Submitted → Under Review → Assigned → In Progress → Resolved → Closed
+
+3. Admin CMS Panel
+--------------------------------
+Create a super dynamic backend admin panel.
+
+Roles:
+- Super Admin
+- Minister/MLA
+- PA/Office Staff
+- Constituency Coordinator
+- Media Team
+- Grievance Officer
+
+Admin Features:
+- Dashboard analytics
+- Content Management System
+- Manage homepage sections dynamically
+- Add/edit/delete news
+- Upload photos/videos
+- Publish activities
+- Manage banners
+- Manage grievance tickets
+- Assign grievances to officers
+- Add constituency updates
+- Push notifications
+- Bulk SMS/email system
+- Volunteer management
+- Event management
+- Analytics reports
+- Export reports to PDF/Excel
+- SEO management
+- Social media auto-post integration
+- Audit logs
+- Admin activity tracking
+
+4. Constituency Management Module
+--------------------------------
+Features:
+- Ward-wise management
+- Booth-level data
+- Area coordinators
+- Public issue tracking
+- Volunteer database
+- Voter outreach records
+- Event attendance tracking
+- Survey forms
+- Public feedback collection
+
+5. AI Features
+--------------------------------
+Add AI-powered modules:
+- AI grievance categorization
+- AI sentiment analysis
+- Tamil voice-to-text grievance input
+- AI chatbot assistant
+- Smart issue prioritization
+- Auto summary generation
+- AI-powered analytics dashboard
+
+6. Dashboard Analytics
+--------------------------------
+Visual analytics:
+- Complaints by category
+- Resolution time
+- Area-wise issue mapping
+- Monthly grievance statistics
+- Engagement analytics
+- Website traffic
+- Volunteer growth
+- Social media analytics
+
+Use:
+- Recharts or Chart.js
+- Interactive maps
+- Tamil Nadu constituency map integration
+
+7. Security
+--------------------------------
+Implement:
+- Rate limiting
+- CSRF protection
+- Secure authentication
+- Role-based access control
+- Encrypted passwords
+- Audit logs
+- Input validation
+- SQL injection prevention
+- File upload validation
+
+8. Database Schema
+--------------------------------
+Create Prisma schema for:
+- Users
+- Roles
+- Activities
+- News
+- Events
+- Grievances
+- Attachments
+- Volunteers
+- Constituencies
+- Notifications
+- Media Gallery
+- Analytics
+- Admin Logs
+- Social Links
+- FAQs
+
+9. UI/UX Requirements
+--------------------------------
+- Fully responsive mobile-first design
+- Sticky navigation
+- Animated dashboards
+- Elegant cards
+- Timeline components
+- Modern government/public service UI
+- Accessibility friendly
+- Fast performance
+- Progressive Web App support
+
+10. Additional Features
+--------------------------------
+- WhatsApp grievance integration
+- Telegram broadcast integration
+- Tamil typing support
+- PDF generation
+- QR-based grievance tracking
+- Auto ticket generation
+- Visitor analytics
+- Search system
+- Advanced filtering
+- Real-time notifications
+
+11. Deployment & DevOps
+--------------------------------
+Setup:
+- Docker support
+- Environment variables
+- Production-ready folder structure
+- CI/CD friendly
+- Seed database
+- Dummy data
+- API documentation using Swagger
+
+12. Generate:
+--------------------------------
+- Full frontend
+- Full backend
+- Database schema
+- Admin dashboard
+- API routes
+- Authentication flow
+- Reusable components
+- Sample data
+- Deployment instructions
+- README documentation
+
+Important:
+- Code should be modular and scalable
+- Use clean architecture
+- Follow enterprise-grade coding standards
+- Create reusable components
+- Add comments where necessary
+- Optimize for future minister-level expansion
+- UI should look premium and highly professional
+- Include Tamil Nadu political/public service aesthetics
+- Build like a real-world enterprise governance platform
+
+Project Name Suggestions:
+- Nirmal Connect
+- CTR Connect
+- Makkal Sevai Portal
+- Thiruparankundram Connect
+- Nirmal Governance Platform
+- Makkal Voice
+- People First Tamil Nadu
+
+Now generate the complete application step-by-step with production-ready codebase.

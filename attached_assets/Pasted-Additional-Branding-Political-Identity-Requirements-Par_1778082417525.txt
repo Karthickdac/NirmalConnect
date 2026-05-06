@@ -1,0 +1,65 @@
+Additional Branding & Political Identity Requirements:
+
+Party Branding:
+- Integrate official Tamilaga Vettri Kazhagam (TVK) party-inspired color palette throughout the application UI.
+- Use TVK-style visual identity carefully and professionally.
+- Include TVK-inspired gradients, accents, and banner styling.
+- Add support for official party logo placement in:
+  - Header
+  - Footer
+  - Login page
+  - Admin dashboard
+  - Splash sections
+  - Campaign/event banners
+
+Color Palette:
+- Primary: Red
+- Secondary: Yellow
+- Accent: White & Black
+- Use premium modern shades matching TVK political branding aesthetics.
+- Maintain accessibility and readability.
+
+Design Theme:
+- Modern Tamil Nadu political movement style
+- Strong public leadership identity
+- Youth-focused digital campaign aesthetics
+- Minister-grade professional government appearance
+- Blend governance + political outreach + citizen engagement
+
+Homepage Visual Sections:
+- Hero section with dynamic political campaign banners
+- Leader image carousel
+- TVK-themed animated background accents
+- Public welfare highlights
+- “Voice of the People” grievance CTA section
+- Constituency development showcase
+- Volunteer movement section
+- Party ideology / vision section
+
+Media & Campaign Features:
+- Campaign poster management
+- Rally/event gallery
+- Public speech video section
+- Social media reels integration
+- Live stream embed support
+- Election campaign updates
+
+Admin CMS Branding Controls:
+- Change logo dynamically
+- Theme customization
+- Campaign theme switching
+- Festival/event banner scheduling
+- Emergency announcement banners
+
+UI Styling Requirements:
+- Elegant gradients inspired by TVK branding
+- Modern glassmorphism cards
+- Smooth animations
+- Political campaign style typography
+- Sticky action buttons
+- Mobile-first responsive layout
+- High engagement UI
+
+Important:
+- Keep the UI premium and governance-oriented, not overly flashy.
+- Ensure branding is respectful, professional, and scalable for future minister-level public administration use.
