@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Serif+Tamil:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Tamil:wght@300;400;500;600;700;800&family=Noto+Serif+Tamil:wght@400;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -124,7 +124,7 @@
   --chart-4: 142 71% 45%;
   --chart-5: 280 65% 55%;
 
-  --app-font-sans: 'Inter', sans-serif;
+  --app-font-sans: 'Inter', 'Noto Sans Tamil', sans-serif;
   --app-font-serif: 'Noto Serif Tamil', Georgia, serif;
   --app-font-mono: Menlo, monospace;
   --radius: 0.5rem;
@@ -231,6 +231,38 @@
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold tracking-tight;
+  }
+
+  /* Tamil typography: Tamil script needs more vertical room because of
+     stacked vowel marks. Use Noto Sans Tamil as the primary face and
+     bump line-height when the document language is Tamil. */
+  html[lang="ta"] body,
+  html[lang="ta"] {
+    font-family: 'Noto Sans Tamil', 'Inter', sans-serif;
+    line-height: 1.7;
+  }
+  html[lang="ta"] h1,
+  html[lang="ta"] h2,
+  html[lang="ta"] h3,
+  html[lang="ta"] h4,
+  html[lang="ta"] h5,
+  html[lang="ta"] h6 {
+    line-height: 1.4;
+    letter-spacing: 0;
+    word-spacing: 0.05em;
+  }
+  html[lang="ta"] p,
+  html[lang="ta"] li,
+  html[lang="ta"] span,
+  html[lang="ta"] a,
+  html[lang="ta"] button,
+  html[lang="ta"] label,
+  html[lang="ta"] input,
+  html[lang="ta"] textarea {
+    line-height: 1.7;
+  }
+  html[lang="ta"] .uppercase {
+    text-transform: none;
   }
 }
 

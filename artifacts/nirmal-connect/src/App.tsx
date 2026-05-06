@@ -106,6 +106,10 @@ export default function App() {
     localStorage.setItem("nirmal_theme", darkMode ? "dark" : "light");
   }, [darkMode]);
 
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
