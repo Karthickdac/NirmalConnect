@@ -8,7 +8,7 @@ import {
   usersTable,
 } from "@workspace/db/schema";
 import { requireStaff, type AuthRequest } from "../lib/auth.js";
-import { eq, desc, and, count } from "drizzle-orm";
+import { eq, desc, and, count, gte, lte } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -236,6 +236,14 @@ router.get("/grievances", requireStaff, async (req: AuthRequest, res) => {
     if (req.query.priority) conditions.push(eq(grievancesTable.priority, String(req.query.priority)));
     if (req.query.ward) conditions.push(eq(grievancesTable.ward, String(req.query.ward)));
     if (req.query.constituency) conditions.push(eq(grievancesTable.constituency, String(req.query.constituency)));
+    if (req.query.dateFrom) {
+      const from = new Date(String(req.query.dateFrom));
+      if (!isNaN(from.getTime())) conditions.push(gte(grievancesTable.createdAt, from));
+    }
+    if (req.query.dateTo) {
+      const to = new Date(String(req.query.dateTo));
+      if (!isNaN(to.getTime())) { to.setHours(23, 59, 59, 999); conditions.push(lte(grievancesTable.createdAt, to)); }
+    }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 

@@ -70,6 +70,8 @@ export const adminApi = {
   getGrievances: (page = 1, status?: string) =>
     authFetch(`/grievances?page=${page}&limit=20${status ? `&status=${status}` : ""}`),
   exportGrievancesCSV: () => authFetch("/admin/grievances/export"),
+  bulkGrievanceStatus: (ids: number[], status: string) =>
+    authFetch("/admin/grievances/bulk-status", { method: "POST", body: JSON.stringify({ ids, status }) }),
   // Audit log
   getAuditLog: (limit = 50) => authFetch(`/admin/audit-log?limit=${limit}`),
 };

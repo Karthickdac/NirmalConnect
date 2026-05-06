@@ -18,6 +18,7 @@ interface DashboardData {
     openGrievances: number;
     resolvedGrievances: number;
     resolutionRate: number;
+    avgResolutionHours: number;
     totalVolunteers: number;
     pendingVolunteers: number;
     approvedVolunteers: number;
@@ -56,6 +57,7 @@ export default function Dashboard() {
     { label: "Open Grievances", value: kpi.openGrievances, icon: Clock, color: "text-amber-500", bg: "bg-amber-50" },
     { label: "Resolved", value: kpi.resolvedGrievances, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50" },
     { label: "Resolution Rate", value: `${kpi.resolutionRate}%`, icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Avg Resolution", value: `${kpi.avgResolutionHours}h`, icon: Clock, color: "text-teal-600", bg: "bg-teal-50" },
     { label: "Volunteers", value: kpi.totalVolunteers, icon: Users, color: "text-purple-600", bg: "bg-purple-50" },
     { label: "Pending Volunteers", value: kpi.pendingVolunteers, icon: Users, color: "text-orange-600", bg: "bg-orange-50" },
     { label: "News Articles", value: kpi.totalNews, icon: Newspaper, color: "text-cyan-600", bg: "bg-cyan-50" },

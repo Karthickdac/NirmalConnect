@@ -5,8 +5,8 @@ import {
   volunteersTable, faqsTable, grievancesTable, usersTable,
   siteConfigTable, auditLogTable, bannersTable, constituencyStatsTable,
 } from "@workspace/db/schema";
-import { requireStaff, type AuthRequest } from "../lib/auth.js";
-import { eq, desc, asc, sql, gte, and } from "drizzle-orm";
+import { requireStaff, requireRole, type AuthRequest } from "../lib/auth.js";
+import { eq, desc, asc, sql, gte, lte, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 const router = Router();
@@ -46,6 +46,7 @@ router.get("/admin/dashboard", async (_req, res) => {
       [{ totalNews }],
       [{ totalActivities }],
       [{ totalGallery }],
+      [{ avgResolutionHours }],
       grievancesByCategory,
       grievancesByStatus,
       grievancesByPriority,
@@ -66,6 +67,17 @@ router.get("/admin/dashboard", async (_req, res) => {
       db.select({ totalNews: sql<number>`count(*)::int` }).from(newsTable),
       db.select({ totalActivities: sql<number>`count(*)::int` }).from(activitiesTable),
       db.select({ totalGallery: sql<number>`count(*)::int` }).from(galleryTable),
+      // Avg resolution time in hours for resolved/closed grievances
+      db.select({
+        avgResolutionHours: sql<number>`
+          coalesce(
+            round(
+              avg(extract(epoch from (resolved_at - created_at)) / 3600)::numeric, 1
+            )::float, 0
+          )
+        `,
+      }).from(grievancesTable)
+        .where(sql`status IN ('Resolved','Closed') AND resolved_at IS NOT NULL`),
       db.select({ category: grievancesTable.category, count: sql<number>`count(*)::int` })
         .from(grievancesTable).groupBy(grievancesTable.category).orderBy(desc(sql`count(*)`)).limit(10),
       db.select({ status: grievancesTable.status, count: sql<number>`count(*)::int` })
@@ -93,6 +105,7 @@ router.get("/admin/dashboard", async (_req, res) => {
         openGrievances,
         resolvedGrievances,
         resolutionRate,
+        avgResolutionHours,
         totalVolunteers,
         pendingVolunteers,
         approvedVolunteers,
@@ -309,7 +322,7 @@ router.delete("/admin/activities/:id", async (req: AuthRequest, res) => {
 });
 
 // ──────────────────────────────────────────────────────────
-// GALLERY CRUD
+// GALLERY CRUD + REORDER
 // ──────────────────────────────────────────────────────────
 const GalleryBody = z.object({
   title: z.string().min(1),
@@ -317,6 +330,7 @@ const GalleryBody = z.object({
   thumbnailUrl: z.string().url().optional().nullable().or(z.literal("")),
   mediaType: z.enum(["photo", "video"]).default("photo"),
   album: z.string().optional().nullable(),
+  displayOrder: z.number().int().default(0),
 });
 
 router.post("/admin/gallery", async (req: AuthRequest, res) => {
@@ -332,6 +346,25 @@ router.post("/admin/gallery", async (req: AuthRequest, res) => {
     res.status(201).json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
   } catch (err) {
     console.error("[admin] gallery create:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/admin/gallery/:id", async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    const body = GalleryBody.partial().safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const { thumbnailUrl, ...rest } = body.data;
+    const [item] = await db.update(galleryTable).set({
+      ...rest,
+      ...(thumbnailUrl !== undefined && { thumbnailUrl: thumbnailUrl || null }),
+    }).where(eq(galleryTable.id, id)).returning();
+    if (!item) { res.status(404).json({ error: "Not found" }); return; }
+    await logAudit(req, "UPDATE", `gallery:${id}`, item.title);
+    res.json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] gallery update:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -456,6 +489,29 @@ router.delete("/admin/faqs/:id", async (req: AuthRequest, res) => {
 });
 
 // ──────────────────────────────────────────────────────────
+// BULK GRIEVANCE ACTIONS
+// ──────────────────────────────────────────────────────────
+router.post("/admin/grievances/bulk-status", requireRole("super_admin", "admin", "grievance_officer"), async (req: AuthRequest, res) => {
+  try {
+    const body = z.object({
+      ids: z.array(z.number().int()).min(1).max(200),
+      status: z.enum(["Submitted", "Under Review", "Assigned", "In Progress", "Resolved", "Closed"]),
+    }).safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const { ids, status } = body.data;
+    const updated = await db.update(grievancesTable)
+      .set({ status, ...(status === "Resolved" ? { resolvedAt: new Date() } : {}) })
+      .where(inArray(grievancesTable.id, ids))
+      .returning({ id: grievancesTable.id });
+    await logAudit(req, "BULK_UPDATE", `grievances:${ids.join(",")}`, `→ ${status}`);
+    res.json({ updated: updated.length });
+  } catch (err) {
+    console.error("[admin] bulk grievance status:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ──────────────────────────────────────────────────────────
 // ABOUT CMS (site_config key-value store)
 // ──────────────────────────────────────────────────────────
 router.get("/admin/about", async (_req, res) => {
@@ -469,7 +525,7 @@ router.get("/admin/about", async (_req, res) => {
   }
 });
 
-router.put("/admin/about", async (req: AuthRequest, res) => {
+router.put("/admin/about", requireRole("super_admin", "admin", "pa_staff"), async (req: AuthRequest, res) => {
   try {
     const value = JSON.stringify(req.body);
     const existing = await db.select({ id: siteConfigTable.id }).from(siteConfigTable)
@@ -505,7 +561,7 @@ router.get("/admin/settings", async (_req, res) => {
   }
 });
 
-router.put("/admin/settings/:key", async (req: AuthRequest, res) => {
+router.put("/admin/settings/:key", requireRole("super_admin", "admin"), async (req: AuthRequest, res) => {
   try {
     const key = req.params["key"] as string;
     const allowed = ["social_links", "contact_info", "emergency_contacts"];
@@ -529,7 +585,7 @@ router.put("/admin/settings/:key", async (req: AuthRequest, res) => {
 // ──────────────────────────────────────────────────────────
 // AUDIT LOG (paginated)
 // ──────────────────────────────────────────────────────────
-router.get("/admin/audit-log", async (req, res) => {
+router.get("/admin/audit-log", requireRole("super_admin", "admin"), async (req, res) => {
   try {
     const limit = Math.min(500, Math.max(1, parseInt(String(req.query.limit ?? "50"))));
     const logs = await db.select().from(auditLogTable).orderBy(desc(auditLogTable.createdAt)).limit(limit);
@@ -630,7 +686,7 @@ const ConstituencyStatsBody = z.object({
   ongoingProjects: z.number().int().default(0),
 });
 
-router.put("/admin/constituency-stats", async (req: AuthRequest, res) => {
+router.put("/admin/constituency-stats", requireRole("super_admin", "admin", "constituency_coordinator"), async (req: AuthRequest, res) => {
   try {
     const body = ConstituencyStatsBody.safeParse(req.body);
     if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }

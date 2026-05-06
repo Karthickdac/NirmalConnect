@@ -13,6 +13,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import {
   ChevronLeft, ChevronRight, RefreshCw, Loader2, CheckCircle,
   Clock, AlertTriangle, MessageSquare, Filter, X, Paperclip, Users,
+  ListChecks, CalendarRange,
 } from "lucide-react";
 import type { Language } from "@/lib/i18n";
 import {
@@ -118,6 +119,11 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
   const [filterPriority, setFilterPriority] = useState("");
   const [filterWard, setFilterWard] = useState("");
   const [filterConstituency, setFilterConstituency] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState("");
+  const [bulkLoading, setBulkLoading] = useState(false);
   const [selected, setSelected] = useState<GrievanceListItem | null>(null);
   const [detail, setDetail] = useState<StaffGrievanceDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -143,6 +149,8 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
     ...(filterPriority && { priority: filterPriority }),
     ...(filterWard && { ward: filterWard }),
     ...(filterConstituency && { constituency: filterConstituency }),
+    ...(filterDateFrom && { dateFrom: filterDateFrom }),
+    ...(filterDateTo && { dateTo: filterDateTo }),
   };
 
   const { data, isFetching, refetch } = useQuery({
@@ -240,9 +248,46 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
 
   function clearFilters() {
     setFilterStatus(""); setFilterCategory(""); setFilterPriority("");
-    setFilterWard(""); setFilterConstituency(""); setPage(1);
+    setFilterWard(""); setFilterConstituency(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(1);
   }
-  const hasFilters = filterStatus || filterCategory || filterPriority || filterWard || filterConstituency;
+  const hasFilters = filterStatus || filterCategory || filterPriority || filterWard || filterConstituency || filterDateFrom || filterDateTo;
+
+  function toggleSelect(id: number) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    const pageIds = (data?.items ?? []).map(i => i.id);
+    if (pageIds.every(id => selectedIds.has(id))) {
+      setSelectedIds(prev => { const n = new Set(prev); pageIds.forEach(id => n.delete(id)); return n; });
+    } else {
+      setSelectedIds(prev => { const n = new Set(prev); pageIds.forEach(id => n.add(id)); return n; });
+    }
+  }
+
+  async function applyBulkStatus() {
+    if (!bulkStatus || selectedIds.size === 0) return;
+    setBulkLoading(true);
+    try {
+      const res = await fetch("/api/admin/grievances/bulk-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ids: Array.from(selectedIds), status: bulkStatus }),
+      });
+      if (!res.ok) throw new Error("Bulk update failed");
+      setSelectedIds(new Set());
+      setBulkStatus("");
+      qc.invalidateQueries({ queryKey: ["grievances-list"] });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setBulkLoading(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -253,7 +298,7 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4">
+        <CardContent className="p-4 space-y-3">
           <div className="flex flex-wrap gap-3 items-end">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <Filter className="w-4 h-4" />
@@ -305,8 +350,62 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
               <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
             </Button>
           </div>
+          {/* Date-range filter */}
+          <div className="flex flex-wrap gap-3 items-center border-t pt-3">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CalendarRange className="w-3.5 h-3.5" />
+              {lang === "ta" ? "தேதி வரம்பு:" : "Date range:"}
+            </div>
+            <Input
+              type="date"
+              className="w-36 h-8 text-sm"
+              value={filterDateFrom}
+              onChange={(e) => { setFilterDateFrom(e.target.value); setPage(1); }}
+            />
+            <span className="text-xs text-muted-foreground">{lang === "ta" ? "முதல்" : "to"}</span>
+            <Input
+              type="date"
+              className="w-36 h-8 text-sm"
+              value={filterDateTo}
+              onChange={(e) => { setFilterDateTo(e.target.value); setPage(1); }}
+            />
+          </div>
         </CardContent>
       </Card>
+
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="p-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                <ListChecks className="w-4 h-4" />
+                {selectedIds.size} {lang === "ta" ? "புகார்கள் தேர்ந்தெடுக்கப்பட்டன" : "selected"}
+              </div>
+              <Select value={bulkStatus} onValueChange={setBulkStatus}>
+                <SelectTrigger className="w-40 h-8 text-sm">
+                  <SelectValue placeholder={lang === "ta" ? "நிலை தேர்வு" : "Set status…"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTS.filter(Boolean).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                className="h-8 bg-primary text-white hover:bg-primary/90 gap-1"
+                onClick={applyBulkStatus}
+                disabled={!bulkStatus || bulkLoading}
+              >
+                {bulkLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                {lang === "ta" ? "பயன்படுத்து" : "Apply"}
+              </Button>
+              <Button variant="ghost" size="sm" className="h-8" onClick={() => setSelectedIds(new Set())}>
+                <X className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Table */}
       <Card>
@@ -320,6 +419,14 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
               <table className="w-full text-sm">
                 <thead className="border-b bg-muted/40">
                   <tr>
+                    <th className="px-4 py-3 w-8">
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={(data?.items ?? []).length > 0 && (data?.items ?? []).every(i => selectedIds.has(i.id))}
+                        onChange={toggleSelectAll}
+                      />
+                    </th>
                     {["Ticket", "Category", "Ward", "Priority", "Status", "Filed", ""].map((h) => (
                       <th key={h} className="text-left px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wider">{h}</th>
                     ))}
@@ -327,7 +434,15 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
                 </thead>
                 <tbody className="divide-y">
                   {(data?.items ?? []).map((item) => (
-                    <tr key={item.id} className="hover:bg-muted/20 transition-colors">
+                    <tr key={item.id} className={`hover:bg-muted/20 transition-colors ${selectedIds.has(item.id) ? "bg-primary/5" : ""}`}>
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          className="rounded"
+                          checked={selectedIds.has(item.id)}
+                          onChange={() => toggleSelect(item.id)}
+                        />
+                      </td>
                       <td className="px-4 py-3 font-mono text-primary font-semibold text-xs">{item.ticketNo}</td>
                       <td className="px-4 py-3">{item.category}</td>
                       <td className="px-4 py-3 text-muted-foreground">{item.ward || "–"}</td>
@@ -353,7 +468,7 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
                   ))}
                   {data?.items.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="text-center text-muted-foreground py-16">
+                      <td colSpan={8} className="text-center text-muted-foreground py-16">
                         {lang === "ta" ? "புகார்கள் இல்லை" : "No grievances found"}
                       </td>
                     </tr>

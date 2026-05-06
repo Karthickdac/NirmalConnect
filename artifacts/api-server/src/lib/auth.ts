@@ -93,15 +93,33 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
   next();
 }
 
-/** Allow admin, grievance_officer, and staff roles only. */
+/** All recognized staff roles that may access the admin panel. */
+export const STAFF_ROLES = [
+  "super_admin", "admin", "minister",
+  "pa_staff", "constituency_coordinator", "media_team", "grievance_officer",
+  "staff",
+];
+
+/** Allow any recognized staff role. */
 export function requireStaff(req: AuthRequest, res: Response, next: NextFunction): void {
   requireAuth(req, res, () => {
     const role = req.user?.role;
-    const allowed = ["admin", "super_admin", "grievance_officer", "staff"];
-    if (!role || !allowed.includes(role)) {
-      res.status(403).json({ error: "Forbidden: requires admin or grievance_officer role" });
+    if (!role || !STAFF_ROLES.includes(role)) {
+      res.status(403).json({ error: "Forbidden: staff access required" });
       return;
     }
     next();
   });
+}
+
+/** Factory: allow only the listed roles (apply per-route for privilege escalation). */
+export function requireRole(...roles: string[]): (req: AuthRequest, res: Response, next: NextFunction) => void {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    const role = req.user?.role;
+    if (!role || !roles.includes(role)) {
+      res.status(403).json({ error: `Forbidden: requires one of [${roles.join(", ")}]` });
+      return;
+    }
+    next();
+  };
 }
