@@ -1,7 +1,10 @@
 import { type Request, type Response, type NextFunction } from "express";
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 
-const JWT_SECRET = process.env["JWT_SECRET"] ?? "nirmal-connect-dev-secret-2024";
+const JWT_SECRET = process.env["JWT_SECRET"];
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET environment variable is required");
+}
 
 function base64url(str: string): string {
   return Buffer.from(str).toString("base64url");

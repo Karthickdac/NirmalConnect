@@ -90,6 +90,8 @@ export interface Activity {
   /** @nullable */
   description?: string | null;
   /** @nullable */
+  descriptionTa?: string | null;
+  /** @nullable */
   imageUrl?: string | null;
   activityDate: string;
   /** @nullable */
