@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell, Legend,
+  LineChart, Line, PieChart, Pie, Cell, Legend, RadialBarChart, RadialBar,
 } from "recharts";
 import {
   MessageSquare, Users, Newspaper, Calendar, Image,
@@ -135,28 +135,47 @@ export default function Dashboard() {
 
       {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Resolution rate gauge + status donut */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Grievances by Status</CardTitle>
+            <CardTitle className="text-sm font-semibold">Resolution Overview</CardTitle>
           </CardHeader>
-          <CardContent className="flex items-center justify-center">
-            <ResponsiveContainer width="100%" height={200}>
+          <CardContent className="flex gap-4 items-center justify-center flex-wrap">
+            {/* Gauge: resolved vs open */}
+            <div className="flex flex-col items-center">
+              <ResponsiveContainer width={140} height={140}>
+                <RadialBarChart
+                  cx="50%" cy="50%"
+                  innerRadius="60%" outerRadius="100%"
+                  startAngle={180} endAngle={0}
+                  data={[
+                    { name: "Resolved", value: kpi.resolutionRate, fill: "#16a34a" },
+                    { name: "Open", value: 100 - kpi.resolutionRate, fill: "#e5e7eb" },
+                  ]}
+                >
+                  <RadialBar dataKey="value" cornerRadius={4} />
+                </RadialBarChart>
+              </ResponsiveContainer>
+              <p className="text-xl font-bold text-green-600 -mt-6">{kpi.resolutionRate}%</p>
+              <p className="text-xs text-muted-foreground">Resolution Rate</p>
+            </div>
+            {/* Status breakdown donut */}
+            <ResponsiveContainer width={180} height={160}>
               <PieChart>
                 <Pie
                   data={grievancesByStatus}
                   dataKey="count"
                   nameKey="status"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={75}
-                  label={({ status, percent }) => `${status} ${(percent * 100).toFixed(0)}%`}
-                  labelLine={false}
+                  cx="50%" cy="50%"
+                  innerRadius={35} outerRadius={60}
+                  label={false}
                 >
                   {grievancesByStatus.map((_, i) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(v) => [v, "Count"]} />
+                <Legend iconSize={8} formatter={(v) => <span className="text-xs">{v}</span>} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>

@@ -3,11 +3,18 @@ import { db } from "@workspace/db";
 import {
   newsTable, eventsTable, activitiesTable, galleryTable,
   volunteersTable, faqsTable, grievancesTable, usersTable,
-  siteConfigTable, auditLogTable, bannersTable, constituencyStatsTable,
+  siteConfigTable, auditLogTable, bannersTable, constituencyStatsTable, wardsTable,
 } from "@workspace/db/schema";
+
 import { requireStaff, requireRole, type AuthRequest } from "../lib/auth.js";
 import { eq, desc, asc, sql, gte, lte, and, inArray } from "drizzle-orm";
 import { z } from "zod";
+
+// ── Role constants used across routes ──────────────────────
+const CMS_ROLES       = ["super_admin", "admin", "pa_staff", "media_team"] as const;
+const EVENTS_ROLES    = ["super_admin", "admin", "pa_staff", "media_team", "constituency_coordinator"] as const;
+const VOLUNTEER_ROLES = ["super_admin", "admin", "grievance_officer", "constituency_coordinator"] as const;
+const WARD_ROLES      = ["super_admin", "admin", "constituency_coordinator"] as const;
 
 const router = Router();
 
@@ -140,7 +147,7 @@ const NewsBody = z.object({
   publishedAt: z.string().optional().nullable(),
 });
 
-router.post("/admin/news", async (req: AuthRequest, res) => {
+router.post("/admin/news", requireRole(...CMS_ROLES), async (req: AuthRequest, res) => {
   try {
     const body = NewsBody.safeParse(req.body);
     if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
@@ -158,7 +165,7 @@ router.post("/admin/news", async (req: AuthRequest, res) => {
   }
 });
 
-router.put("/admin/news/:id", async (req: AuthRequest, res) => {
+router.put("/admin/news/:id", requireRole(...CMS_ROLES), async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params["id"] as string);
     const body = NewsBody.partial().safeParse(req.body);
@@ -178,7 +185,7 @@ router.put("/admin/news/:id", async (req: AuthRequest, res) => {
   }
 });
 
-router.delete("/admin/news/:id", async (req: AuthRequest, res) => {
+router.delete("/admin/news/:id", requireRole(...CMS_ROLES), async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params["id"] as string);
     await db.delete(newsTable).where(eq(newsTable.id, id));
@@ -205,7 +212,7 @@ const EventBody = z.object({
   category: z.string().default("general"),
 });
 
-router.post("/admin/events", async (req: AuthRequest, res) => {
+router.post("/admin/events", requireRole(...EVENTS_ROLES), async (req: AuthRequest, res) => {
   try {
     const body = EventBody.safeParse(req.body);
     if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
@@ -224,7 +231,7 @@ router.post("/admin/events", async (req: AuthRequest, res) => {
   }
 });
 
-router.put("/admin/events/:id", async (req: AuthRequest, res) => {
+router.put("/admin/events/:id", requireRole(...EVENTS_ROLES), async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params["id"] as string);
     const body = EventBody.partial().safeParse(req.body);
@@ -245,7 +252,7 @@ router.put("/admin/events/:id", async (req: AuthRequest, res) => {
   }
 });
 
-router.delete("/admin/events/:id", async (req: AuthRequest, res) => {
+router.delete("/admin/events/:id", requireRole(...EVENTS_ROLES), async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params["id"] as string);
     await db.delete(eventsTable).where(eq(eventsTable.id, id));
@@ -271,7 +278,7 @@ const ActivityBody = z.object({
   category: z.string().default("general"),
 });
 
-router.post("/admin/activities", async (req: AuthRequest, res) => {
+router.post("/admin/activities", requireRole(...EVENTS_ROLES), async (req: AuthRequest, res) => {
   try {
     const body = ActivityBody.safeParse(req.body);
     if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
@@ -289,7 +296,7 @@ router.post("/admin/activities", async (req: AuthRequest, res) => {
   }
 });
 
-router.put("/admin/activities/:id", async (req: AuthRequest, res) => {
+router.put("/admin/activities/:id", requireRole(...EVENTS_ROLES), async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params["id"] as string);
     const body = ActivityBody.partial().safeParse(req.body);
@@ -309,7 +316,7 @@ router.put("/admin/activities/:id", async (req: AuthRequest, res) => {
   }
 });
 
-router.delete("/admin/activities/:id", async (req: AuthRequest, res) => {
+router.delete("/admin/activities/:id", requireRole(...EVENTS_ROLES), async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params["id"] as string);
     await db.delete(activitiesTable).where(eq(activitiesTable.id, id));
@@ -333,7 +340,7 @@ const GalleryBody = z.object({
   displayOrder: z.number().int().default(0),
 });
 
-router.post("/admin/gallery", async (req: AuthRequest, res) => {
+router.post("/admin/gallery", requireRole(...CMS_ROLES), async (req: AuthRequest, res) => {
   try {
     const body = GalleryBody.safeParse(req.body);
     if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
@@ -350,7 +357,7 @@ router.post("/admin/gallery", async (req: AuthRequest, res) => {
   }
 });
 
-router.put("/admin/gallery/:id", async (req: AuthRequest, res) => {
+router.put("/admin/gallery/:id", requireRole(...CMS_ROLES), async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params["id"] as string);
     const body = GalleryBody.partial().safeParse(req.body);
@@ -369,7 +376,7 @@ router.put("/admin/gallery/:id", async (req: AuthRequest, res) => {
   }
 });
 
-router.delete("/admin/gallery/:id", async (req: AuthRequest, res) => {
+router.delete("/admin/gallery/:id", requireRole(...CMS_ROLES), async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params["id"] as string);
     await db.delete(galleryTable).where(eq(galleryTable.id, id));
@@ -411,7 +418,7 @@ router.get("/admin/volunteers", async (req, res) => {
   }
 });
 
-router.patch("/admin/volunteers/:id/status", async (req: AuthRequest, res) => {
+router.patch("/admin/volunteers/:id/status", requireRole(...VOLUNTEER_ROLES), async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params["id"] as string);
     const body = z.object({ status: z.enum(["approved", "rejected", "pending"]) }).safeParse(req.body);
@@ -448,7 +455,7 @@ router.get("/admin/faqs", async (_req, res) => {
   }
 });
 
-router.post("/admin/faqs", async (req: AuthRequest, res) => {
+router.post("/admin/faqs", requireRole(...CMS_ROLES), async (req: AuthRequest, res) => {
   try {
     const body = FaqBody.safeParse(req.body);
     if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
@@ -461,7 +468,7 @@ router.post("/admin/faqs", async (req: AuthRequest, res) => {
   }
 });
 
-router.put("/admin/faqs/:id", async (req: AuthRequest, res) => {
+router.put("/admin/faqs/:id", requireRole(...CMS_ROLES), async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params["id"] as string);
     const body = FaqBody.partial().safeParse(req.body);
@@ -476,7 +483,7 @@ router.put("/admin/faqs/:id", async (req: AuthRequest, res) => {
   }
 });
 
-router.delete("/admin/faqs/:id", async (req: AuthRequest, res) => {
+router.delete("/admin/faqs/:id", requireRole(...CMS_ROLES), async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params["id"] as string);
     await db.delete(faqsTable).where(eq(faqsTable.id, id));
@@ -621,7 +628,7 @@ router.get("/admin/banners", async (_req, res) => {
   }
 });
 
-router.post("/admin/banners", async (req: AuthRequest, res) => {
+router.post("/admin/banners", requireRole(...CMS_ROLES), async (req: AuthRequest, res) => {
   try {
     const body = BannerBody.safeParse(req.body);
     if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
@@ -634,7 +641,7 @@ router.post("/admin/banners", async (req: AuthRequest, res) => {
   }
 });
 
-router.put("/admin/banners/:id", async (req: AuthRequest, res) => {
+router.put("/admin/banners/:id", requireRole(...CMS_ROLES), async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params["id"] as string);
     const body = BannerBody.partial().safeParse(req.body);
@@ -649,7 +656,7 @@ router.put("/admin/banners/:id", async (req: AuthRequest, res) => {
   }
 });
 
-router.delete("/admin/banners/:id", async (req: AuthRequest, res) => {
+router.delete("/admin/banners/:id", requireRole(...CMS_ROLES), async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params["id"] as string);
     await db.delete(bannersTable).where(eq(bannersTable.id, id));
@@ -701,6 +708,94 @@ router.put("/admin/constituency-stats", requireRole("super_admin", "admin", "con
     res.json(row);
   } catch (err) {
     console.error("[admin] constituency-stats update:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ──────────────────────────────────────────────────────────
+// WARDS CRUD
+// ──────────────────────────────────────────────────────────
+const WardBody = z.object({
+  name: z.string().min(1),
+  area: z.string().optional().nullable(),
+  coordinatorName: z.string().optional().nullable(),
+  coordinatorPhone: z.string().optional().nullable(),
+  coordinatorEmail: z.string().optional().nullable(),
+  population: z.number().int().optional().nullable(),
+  households: z.number().int().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+router.get("/admin/wards", async (_req, res) => {
+  try {
+    const wards = await db.select().from(wardsTable).orderBy(wardsTable.name);
+    res.json(wards.map(w => ({ ...w, createdAt: w.createdAt.toISOString(), updatedAt: w.updatedAt.toISOString() })));
+  } catch (err) {
+    console.error("[admin] wards list:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/admin/wards", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const body = WardBody.safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const [item] = await db.insert(wardsTable).values(body.data).returning();
+    await logAudit(req, "CREATE", `ward:${item.id}`, item.name);
+    res.status(201).json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] ward create:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/admin/wards/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    const body = WardBody.partial().safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const [item] = await db.update(wardsTable).set(body.data).where(eq(wardsTable.id, id)).returning();
+    if (!item) { res.status(404).json({ error: "Not found" }); return; }
+    await logAudit(req, "UPDATE", `ward:${id}`, item.name);
+    res.json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] ward update:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/admin/wards/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    await db.delete(wardsTable).where(eq(wardsTable.id, id));
+    await logAudit(req, "DELETE", `ward:${id}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[admin] ward delete:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ──────────────────────────────────────────────────────────
+// BULK GRIEVANCE ASSIGN
+// ──────────────────────────────────────────────────────────
+router.post("/admin/grievances/bulk-assign", requireRole("super_admin", "admin", "grievance_officer"), async (req: AuthRequest, res) => {
+  try {
+    const body = z.object({
+      ids: z.array(z.number().int()).min(1).max(200),
+      officerId: z.number().int(),
+      officerName: z.string().min(1),
+    }).safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const { ids, officerId, officerName } = body.data;
+    const updated = await db.update(grievancesTable)
+      .set({ assignedTo: officerId, status: "Assigned" })
+      .where(inArray(grievancesTable.id, ids))
+      .returning({ id: grievancesTable.id });
+    await logAudit(req, "BULK_ASSIGN", `grievances:${ids.join(",")}`, `→ ${officerName}`);
+    res.json({ updated: updated.length });
+  } catch (err) {
+    console.error("[admin] bulk grievance assign:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

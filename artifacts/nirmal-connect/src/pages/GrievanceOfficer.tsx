@@ -123,6 +123,7 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
   const [filterDateTo, setFilterDateTo] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkStatus, setBulkStatus] = useState("");
+  const [bulkAssignId, setBulkAssignId] = useState("");
   const [bulkLoading, setBulkLoading] = useState(false);
   const [selected, setSelected] = useState<GrievanceListItem | null>(null);
   const [detail, setDetail] = useState<StaffGrievanceDetail | null>(null);
@@ -289,6 +290,28 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
     }
   }
 
+  async function applyBulkAssign() {
+    if (!bulkAssignId || selectedIds.size === 0) return;
+    const officer = officersData?.officers.find(o => String(o.id) === bulkAssignId);
+    if (!officer) return;
+    setBulkLoading(true);
+    try {
+      const res = await fetch("/api/admin/grievances/bulk-assign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ids: Array.from(selectedIds), officerId: officer.id, officerName: officer.name }),
+      });
+      if (!res.ok) throw new Error("Bulk assign failed");
+      setSelectedIds(new Set());
+      setBulkAssignId("");
+      qc.invalidateQueries({ queryKey: ["grievances-list"] });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <SectionHeader
@@ -382,6 +405,7 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
                 <ListChecks className="w-4 h-4" />
                 {selectedIds.size} {lang === "ta" ? "புகார்கள் தேர்ந்தெடுக்கப்பட்டன" : "selected"}
               </div>
+              {/* Bulk Status */}
               <Select value={bulkStatus} onValueChange={setBulkStatus}>
                 <SelectTrigger className="w-40 h-8 text-sm">
                   <SelectValue placeholder={lang === "ta" ? "நிலை தேர்வு" : "Set status…"} />
@@ -397,9 +421,35 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
                 disabled={!bulkStatus || bulkLoading}
               >
                 {bulkLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
-                {lang === "ta" ? "பயன்படுத்து" : "Apply"}
+                {lang === "ta" ? "பயன்படுத்து" : "Apply Status"}
               </Button>
-              <Button variant="ghost" size="sm" className="h-8" onClick={() => setSelectedIds(new Set())}>
+              {/* Bulk Assign */}
+              {officersData && officersData.officers.length > 0 && (
+                <>
+                  <div className="w-px h-6 bg-border mx-1" />
+                  <Select value={bulkAssignId} onValueChange={setBulkAssignId}>
+                    <SelectTrigger className="w-44 h-8 text-sm">
+                      <SelectValue placeholder={lang === "ta" ? "அலுவலர் ஒதுக்கு" : "Assign officer…"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {officersData.officers.map(o => (
+                        <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 gap-1"
+                    onClick={applyBulkAssign}
+                    disabled={!bulkAssignId || bulkLoading}
+                  >
+                    {bulkLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Users className="w-3.5 h-3.5" />}
+                    {lang === "ta" ? "ஒதுக்கு" : "Assign"}
+                  </Button>
+                </>
+              )}
+              <Button variant="ghost" size="sm" className="h-8 ml-auto" onClick={() => setSelectedIds(new Set())}>
                 <X className="w-3.5 h-3.5" />
               </Button>
             </div>

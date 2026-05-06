@@ -74,4 +74,12 @@ export const adminApi = {
     authFetch("/admin/grievances/bulk-status", { method: "POST", body: JSON.stringify({ ids, status }) }),
   // Audit log
   getAuditLog: (limit = 50) => authFetch(`/admin/audit-log?limit=${limit}`),
+  // Wards
+  getWards: () => authFetch("/admin/wards"),
+  createWard: (data: unknown) => authFetch("/admin/wards", { method: "POST", body: JSON.stringify(data) }),
+  updateWard: (id: number, data: unknown) => authFetch(`/admin/wards/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteWard: (id: number) => authFetch(`/admin/wards/${id}`, { method: "DELETE" }),
+  // Grievance bulk assign
+  bulkGrievanceAssign: (ids: number[], officerId: number, officerName: string) =>
+    authFetch("/admin/grievances/bulk-assign", { method: "POST", body: JSON.stringify({ ids, officerId, officerName }) }),
 };

@@ -21,6 +21,7 @@ import SiteSettingsAdmin from "./admin/SiteSettingsAdmin";
 import AuditLogAdmin from "./admin/AuditLogAdmin";
 import BannersAdmin from "./admin/BannersAdmin";
 import ConstituencyAdmin from "./admin/ConstituencyAdmin";
+import WardAdmin from "./admin/WardAdmin";
 import PressReleasesAdmin from "./admin/PressReleasesAdmin";
 import type { Language } from "@/lib/i18n";
 
@@ -44,7 +45,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "gallery",      label: "Gallery",            icon: Image,        roles: ["super_admin", "admin", "pa_staff", "media_team"] },
   { id: "banners",      label: "Banners",            icon: Megaphone,    roles: ["super_admin", "admin", "pa_staff"] },
   { id: "volunteers",   label: "Volunteers",         icon: Users,        roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator"] },
-  { id: "constituency", label: "Constituency Stats", icon: MapPin,       roles: ["super_admin", "admin", "pa_staff"] },
+  { id: "constituency", label: "Constituency & Wards", icon: MapPin,      roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator"] },
   { id: "faqs",         label: "FAQs",               icon: HelpCircle,   roles: ["super_admin", "admin", "pa_staff"] },
   { id: "about",        label: "About CMS",          icon: UserCircle,   roles: ["super_admin", "admin"] },
   { id: "settings",     label: "Site Settings",      icon: Settings,     roles: ["super_admin", "admin"] },
@@ -189,7 +190,14 @@ export default function Admin({ lang = "ta" }: AdminProps) {
           {active === "gallery"      && <GalleryAdmin />}
           {active === "banners"      && <BannersAdmin />}
           {active === "volunteers"   && <VolunteersAdmin />}
-          {active === "constituency" && <ConstituencyAdmin />}
+          {active === "constituency" && (
+            <div className="space-y-6">
+              <ConstituencyAdmin />
+              <div className="border-t pt-4">
+                <WardAdmin />
+              </div>
+            </div>
+          )}
           {active === "faqs"         && <FaqsAdmin />}
           {active === "about"        && <AboutAdmin />}
           {active === "settings"     && <SiteSettingsAdmin />}
