@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Phone, MapPin, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Phone, MapPin, CheckCircle, XCircle, Clock, Download } from "lucide-react";
 import { adminApi } from "./api";
 
 interface VolunteerItem {
@@ -27,14 +27,26 @@ function statusBadge(status: string) {
   return <Badge className="bg-amber-100 text-amber-700 border-amber-200">Pending</Badge>;
 }
 
+function toCSV(items: VolunteerItem[]): string {
+  const headers = ["ID", "Name", "Name (Tamil)", "Email", "Phone", "Ward", "Constituency", "Skills", "Message", "Status", "Registered"];
+  const rows = items.map(v => [
+    String(v.id), v.name, v.nameTa ?? "", v.email ?? "", v.phone,
+    v.ward ?? "", v.constituency, v.skills ?? "", v.message ?? "",
+    v.status, new Date(v.createdAt).toLocaleDateString("en-IN"),
+  ]);
+  return [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+}
+
 export default function VolunteersAdmin() {
   const [items, setItems] = useState<VolunteerItem[]>([]);
+  const [allItems, setAllItems] = useState<VolunteerItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const load = (p = page, f = filter) => {
     setLoading(true);
@@ -58,16 +70,45 @@ export default function VolunteersAdmin() {
     }
   }
 
+  async function exportCSV() {
+    setExporting(true);
+    try {
+      // Fetch up to 1000 volunteers for export
+      const d = await adminApi.getVolunteers(1, filter === "all" ? undefined : filter) as { items: VolunteerItem[]; total: number };
+      // Fetch all pages
+      const pages = Math.min(Math.ceil(d.total / 20), 10);
+      const allData: VolunteerItem[] = [...d.items];
+      for (let p = 2; p <= pages; p++) {
+        const pd = await adminApi.getVolunteers(p, filter === "all" ? undefined : filter) as { items: VolunteerItem[] };
+        allData.push(...pd.items);
+      }
+      const csv = toCSV(allData);
+      const blob = new Blob([csv], { type: "text/csv" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `volunteers-${filter}-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+    } catch (e: unknown) {
+      setError((e as Error).message);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const totalPages = Math.ceil(total / 20);
-  const pendingCount = items.filter(v => v.status === "pending").length;
+  const pendingCount = filter === "all" ? items.filter(v => v.status === "pending").length : 0;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-xl font-bold">Volunteer Management</h2>
           <p className="text-sm text-muted-foreground">{total} volunteers{pendingCount > 0 && ` • ${pendingCount} pending review`}</p>
         </div>
+        <Button size="sm" variant="outline" className="gap-1.5" disabled={exporting} onClick={exportCSV}>
+          <Download className="w-3.5 h-3.5" />
+          {exporting ? "Exporting…" : "Export CSV"}
+        </Button>
       </div>
 
       {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -106,6 +147,7 @@ export default function VolunteersAdmin() {
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Phone className="w-3 h-3" /> {v.phone}
                       </div>
+                      {v.email && <span className="text-xs text-muted-foreground">{v.email}</span>}
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <MapPin className="w-3 h-3" /> {v.constituency}{v.ward ? `, Ward ${v.ward}` : ""}
                       </div>
@@ -116,39 +158,24 @@ export default function VolunteersAdmin() {
                   </div>
                   <div className="flex gap-1 shrink-0">
                     {v.status !== "approved" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
+                      <Button size="sm" variant="outline"
                         className="h-8 text-xs text-green-600 border-green-200 hover:bg-green-50 gap-1"
-                        disabled={updating === v.id}
-                        onClick={() => updateStatus(v.id, "approved")}
-                      >
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        Approve
+                        disabled={updating === v.id} onClick={() => updateStatus(v.id, "approved")}>
+                        <CheckCircle className="w-3.5 h-3.5" /> Approve
                       </Button>
                     )}
                     {v.status !== "rejected" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
+                      <Button size="sm" variant="outline"
                         className="h-8 text-xs text-red-500 border-red-200 hover:bg-red-50 gap-1"
-                        disabled={updating === v.id}
-                        onClick={() => updateStatus(v.id, "rejected")}
-                      >
-                        <XCircle className="w-3.5 h-3.5" />
-                        Reject
+                        disabled={updating === v.id} onClick={() => updateStatus(v.id, "rejected")}>
+                        <XCircle className="w-3.5 h-3.5" /> Reject
                       </Button>
                     )}
                     {v.status !== "pending" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
+                      <Button size="sm" variant="outline"
                         className="h-8 text-xs text-amber-600 border-amber-200 hover:bg-amber-50 gap-1"
-                        disabled={updating === v.id}
-                        onClick={() => updateStatus(v.id, "pending")}
-                      >
-                        <Clock className="w-3.5 h-3.5" />
-                        Pending
+                        disabled={updating === v.id} onClick={() => updateStatus(v.id, "pending")}>
+                        <Clock className="w-3.5 h-3.5" /> Pending
                       </Button>
                     )}
                   </div>

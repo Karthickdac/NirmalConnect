@@ -73,7 +73,7 @@ export default function About({ lang }: AboutProps) {
   const [config, setConfig] = useState<AboutConfig>(DEFAULT_CONFIG);
 
   useEffect(() => {
-    fetch(`${BASE}/admin/about`)
+    fetch(`${BASE}/about`)
       .then(r => r.ok ? r.json() : null)
       .then((d: AboutConfig | null) => { if (d) setConfig(prev => ({ ...prev, ...d })); })
       .catch(() => {/* use defaults */});

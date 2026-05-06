@@ -9,8 +9,8 @@ Bilingual (Tamil-default) political leader website + grievance management platfo
 - `pnpm --filter @workspace/db run push` — push DB schema (dev only)
 - `npx tsx lib/db/src/seed.ts` — seed sample content (admin: admin@nirmalconnect.in / Admin@2024)
 - `pnpm --filter @workspace/api-spec run codegen` — regen API hooks + Zod from OpenAPI
-- `cd lib/db && npx tsc -p tsconfig.json` — must run after adding new schema tables to update `.d.ts` files
-- Required env: `DATABASE_URL`, `JWT_SECRET` (auto-generated if absent in dev)
+- `cd lib/db && npx tsc -p tsconfig.json` — must run after adding new schema tables
+- Required env: `DATABASE_URL`, `JWT_SECRET` (auto-generated ephemerally if absent in dev)
 
 ## Stack
 
@@ -25,8 +25,9 @@ Bilingual (Tamil-default) political leader website + grievance management platfo
 
 - DB schema: `lib/db/src/schema/` (source of truth — index.ts re-exports all tables)
 - Seed data: `lib/db/src/seed.ts`
-- API contract: `lib/api-spec/openapi.yaml` (source of truth for public routes)
+- API contract: `lib/api-spec/openapi.yaml` (public routes only)
 - Admin API routes: `artifacts/api-server/src/routes/admin.ts` (protected by `requireStaff`)
+- Public site routes: `artifacts/api-server/src/routes/site.ts` (GET /about)
 - Frontend pages: `artifacts/nirmal-connect/src/pages/*`
 - Admin CMS pages: `artifacts/nirmal-connect/src/pages/admin/*`
 - i18n strings: `artifacts/nirmal-connect/src/lib/i18n.ts`
@@ -36,21 +37,24 @@ Bilingual (Tamil-default) political leader website + grievance management platfo
 
 - Bilingual content stored as twin columns (`title`/`titleTa`, `content`/`contentTa`).
 - Default language is Tamil (`ta`); English is opt-in via navbar toggle.
-- 3-segment "special" paths (`/news/featured/latest`) avoid Express v5 collisions with `/:id`.
-- Admin CRUD routes live in `admin.ts` (not OpenAPI spec) — use direct `authFetch()` from `admin/api.ts`.
+- 3-segment "special" paths (`/news/featured/latest`) avoid Express v5 `:id` collisions.
+- Admin CRUD routes live in `admin.ts` (not OpenAPI spec) — called via direct `authFetch()` from `admin/api.ts`.
+- Public CMS reads split from admin writes: GET /api/about is public; PUT /api/admin/about requires staff auth.
 - `setAuthTokenGetter(() => getToken())` called at module level in `App.tsx` — wires JWT to all generated hooks.
-- CMS-editable content (About page bio, social links) stored in `site_config` table as JSON key-value pairs.
-- Audit log table (`admin_audit_log`) records all admin CREATE/UPDATE/DELETE actions with actor + target.
+- CMS-editable content stored in `site_config` table as JSON key-value pairs (keys: `about`, `social_links`, `contact_info`, `emergency_contacts`).
+- Audit log table (`admin_audit_log`) records all admin CREATE/UPDATE/DELETE with actor + target.
 - After new schema tables: run `cd lib/db && npx tsc -p tsconfig.json` to regenerate `.d.ts` for api-server typecheck.
 
 ## Product
 
-Public site (home, about [CMS-editable], news, events, gallery, activities, achievements, FAQ, contact, donate, emergency, volunteer, grievance submission) + grievance lifecycle management + full admin CMS panel (News/Events/Activities/Gallery CRUD, volunteer approve/reject, FAQ editor, About CMS, Recharts analytics dashboard, audit log).
+Public site (home, about [CMS-driven], news, events, gallery, activities, achievements, FAQ, contact, donate, emergency, volunteer, grievance submission) + grievance lifecycle management + full admin CMS panel with role-based access:
+- 14 nav sections: Dashboard (Recharts KPIs), Grievances, News, Press Releases, Events, Activities, Gallery, Banners, Volunteers (+CSV export), Constituency Stats, FAQs, About CMS, Site Settings, Audit Log (+CSV export)
+- Role gating: super_admin/admin=all; grievance_officer=dashboard+grievances; pa_staff=most; constituency_coordinator=limited; media_team=content only
 
 ## User preferences
 
 - Content defaults to Tamil. Keep Tamil translations populated for all new content.
-- About page should be CMS-editable from the admin panel (implemented via site_config table).
+- About page is CMS-editable from admin panel (stored in site_config, served publicly).
 
 ## Gotchas
 

@@ -3,10 +3,10 @@ import { db } from "@workspace/db";
 import {
   newsTable, eventsTable, activitiesTable, galleryTable,
   volunteersTable, faqsTable, grievancesTable, usersTable,
-  siteConfigTable, auditLogTable,
+  siteConfigTable, auditLogTable, bannersTable, constituencyStatsTable,
 } from "@workspace/db/schema";
 import { requireStaff, type AuthRequest } from "../lib/auth.js";
-import { eq, desc, asc, sql, gte, lte, and, count } from "drizzle-orm";
+import { eq, desc, asc, sql, gte, and } from "drizzle-orm";
 import { z } from "zod";
 
 const router = Router();
@@ -527,15 +527,147 @@ router.put("/admin/settings/:key", async (req: AuthRequest, res) => {
 });
 
 // ──────────────────────────────────────────────────────────
-// AUDIT LOG
+// AUDIT LOG (paginated)
 // ──────────────────────────────────────────────────────────
 router.get("/admin/audit-log", async (req, res) => {
   try {
-    const limit = Math.min(100, parseInt(String(req.query.limit ?? "50")));
+    const limit = Math.min(500, Math.max(1, parseInt(String(req.query.limit ?? "50"))));
     const logs = await db.select().from(auditLogTable).orderBy(desc(auditLogTable.createdAt)).limit(limit);
     res.json(logs.map(l => ({ ...l, createdAt: l.createdAt.toISOString() })));
   } catch (err) {
     console.error("[admin] audit-log:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ──────────────────────────────────────────────────────────
+// BANNERS CRUD
+// ──────────────────────────────────────────────────────────
+const BannerBody = z.object({
+  title: z.string().min(1),
+  titleTa: z.string().optional().nullable(),
+  subtitle: z.string().optional().nullable(),
+  subtitleTa: z.string().optional().nullable(),
+  ctaText: z.string().optional().nullable(),
+  ctaUrl: z.string().optional().nullable(),
+  imageUrl: z.string().optional().nullable(),
+  isActive: z.boolean().default(true),
+  displayOrder: z.number().int().default(0),
+});
+
+router.get("/admin/banners", async (_req, res) => {
+  try {
+    const items = await db.select().from(bannersTable).orderBy(bannersTable.displayOrder, desc(bannersTable.createdAt));
+    res.json(items.map(b => ({ ...b, createdAt: b.createdAt.toISOString(), updatedAt: b.updatedAt.toISOString() })));
+  } catch (err) {
+    console.error("[admin] banners list:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/admin/banners", async (req: AuthRequest, res) => {
+  try {
+    const body = BannerBody.safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const [item] = await db.insert(bannersTable).values(body.data).returning();
+    await logAudit(req, "CREATE", `banner:${item.id}`, item.title);
+    res.status(201).json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] banner create:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/admin/banners/:id", async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    const body = BannerBody.partial().safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const [item] = await db.update(bannersTable).set(body.data).where(eq(bannersTable.id, id)).returning();
+    if (!item) { res.status(404).json({ error: "Not found" }); return; }
+    await logAudit(req, "UPDATE", `banner:${id}`, item.title);
+    res.json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] banner update:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/admin/banners/:id", async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    await db.delete(bannersTable).where(eq(bannersTable.id, id));
+    await logAudit(req, "DELETE", `banner:${id}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[admin] banner delete:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ──────────────────────────────────────────────────────────
+// CONSTITUENCY STATS
+// ──────────────────────────────────────────────────────────
+router.get("/admin/constituency-stats", async (_req, res) => {
+  try {
+    const [row] = await db.select().from(constituencyStatsTable).orderBy(asc(constituencyStatsTable.id)).limit(1);
+    res.json(row ?? null);
+  } catch (err) {
+    console.error("[admin] constituency-stats get:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const ConstituencyStatsBody = z.object({
+  roadsBuiltKm: z.number().default(0),
+  waterProjectsCompleted: z.number().int().default(0),
+  schoolsUpgraded: z.number().int().default(0),
+  healthClinicsOpened: z.number().int().default(0),
+  jobsCreated: z.number().int().default(0),
+  beneficiariesServed: z.number().int().default(0),
+  totalProjects: z.number().int().default(0),
+  completedProjects: z.number().int().default(0),
+  ongoingProjects: z.number().int().default(0),
+});
+
+router.put("/admin/constituency-stats", async (req: AuthRequest, res) => {
+  try {
+    const body = ConstituencyStatsBody.safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const existing = await db.select({ id: constituencyStatsTable.id }).from(constituencyStatsTable).limit(1);
+    let row;
+    if (existing.length > 0) {
+      [row] = await db.update(constituencyStatsTable).set(body.data).where(eq(constituencyStatsTable.id, existing[0].id)).returning();
+    } else {
+      [row] = await db.insert(constituencyStatsTable).values(body.data).returning();
+    }
+    await logAudit(req, "UPDATE", "constituency_stats");
+    res.json(row);
+  } catch (err) {
+    console.error("[admin] constituency-stats update:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ──────────────────────────────────────────────────────────
+// GRIEVANCES CSV EXPORT
+// ──────────────────────────────────────────────────────────
+router.get("/admin/grievances/export", async (_req, res) => {
+  try {
+    const rows = await db.select().from(grievancesTable).orderBy(desc(grievancesTable.createdAt)).limit(2000);
+    const headers = ["ID", "Ticket No", "Name", "Phone", "Category", "Priority", "Status", "Ward", "Description", "Submitted"];
+    const csv = [
+      headers.map(h => `"${h}"`).join(","),
+      ...rows.map(r => [
+        r.id, r.ticketNo ?? "", r.name, r.phone, r.category, r.priority, r.status,
+        r.ward ?? "", (r.description ?? "").replace(/"/g, '""'), new Date(r.createdAt).toLocaleDateString("en-IN"),
+      ].map(v => `"${v}"`).join(",")),
+    ].join("\n");
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename="grievances-${new Date().toISOString().slice(0,10)}.csv"`);
+    res.send(csv);
+  } catch (err) {
+    console.error("[admin] grievances export:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

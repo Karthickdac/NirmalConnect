@@ -10,6 +10,7 @@ import faqsRouter from "./faqs.js";
 import statsRouter from "./stats.js";
 import grievancesRouter from "./grievances.js";
 import adminRouter from "./admin.js";
+import siteRouter from "./site.js";
 
 const router: IRouter = Router();
 
@@ -23,6 +24,7 @@ router.use(volunteersRouter);
 router.use(faqsRouter);
 router.use(statsRouter);
 router.use(grievancesRouter);
+router.use(siteRouter);
 router.use(adminRouter);
 
 export default router;

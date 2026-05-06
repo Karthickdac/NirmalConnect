@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Star, StarOff } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { adminApi } from "./api";
 
 interface NewsItem {
@@ -24,25 +24,27 @@ interface NewsItem {
   createdAt: string;
 }
 
-const emptyForm = {
-  title: "", titleTa: "", content: "", contentTa: "",
-  imageUrl: "", category: "general", featured: false, publishedAt: "",
-};
+interface NewsAdminProps {
+  fixedCategory?: string;
+  categoryLabel?: string;
+  sectionTitle?: string;
+}
 
-export default function NewsAdmin() {
+export default function NewsAdmin({ fixedCategory, categoryLabel = "Article", sectionTitle = "News & Announcements" }: NewsAdminProps) {
+  const defaultCategory = fixedCategory ?? "general";
   const [items, setItems] = useState<NewsItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<NewsItem | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState({ title: "", titleTa: "", content: "", contentTa: "", imageUrl: "", category: defaultCategory, featured: false, publishedAt: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = (p = page) => {
     setLoading(true);
-    adminApi.getNews(p, 15)
+    adminApi.getNews(p, 15, fixedCategory)
       .then((d: { items: NewsItem[]; total: number }) => { setItems(d.items); setTotal(d.total); })
       .catch(() => setError("Failed to load news"))
       .finally(() => setLoading(false));
@@ -52,7 +54,7 @@ export default function NewsAdmin() {
 
   function openCreate() {
     setEditing(null);
-    setForm(emptyForm);
+    setForm({ title: "", titleTa: "", content: "", contentTa: "", imageUrl: "", category: defaultCategory, featured: false, publishedAt: "" });
     setOpen(true);
   }
 
@@ -70,7 +72,13 @@ export default function NewsAdmin() {
   async function handleSave() {
     setSaving(true);
     try {
-      const payload = { ...form, imageUrl: form.imageUrl || null, titleTa: form.titleTa || null, contentTa: form.contentTa || null, publishedAt: form.publishedAt || null };
+      const payload = {
+        ...form,
+        imageUrl: form.imageUrl || null,
+        titleTa: form.titleTa || null,
+        contentTa: form.contentTa || null,
+        publishedAt: form.publishedAt || null,
+      };
       if (editing) {
         await adminApi.updateNews(editing.id, payload);
       } else {
@@ -87,7 +95,7 @@ export default function NewsAdmin() {
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Delete this news article?")) return;
+    if (!confirm("Delete this article?")) return;
     await adminApi.deleteNews(id).catch(() => null);
     load();
   }
@@ -98,11 +106,11 @@ export default function NewsAdmin() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold">News & Announcements</h2>
-          <p className="text-sm text-muted-foreground">{total} articles</p>
+          <h2 className="text-xl font-bold">{sectionTitle}</h2>
+          <p className="text-sm text-muted-foreground">{total} articles{fixedCategory ? ` (${fixedCategory})` : ""}</p>
         </div>
         <Button onClick={openCreate} className="gap-2 bg-primary hover:bg-primary/90">
-          <Plus className="w-4 h-4" /> Add Article
+          <Plus className="w-4 h-4" /> Add {categoryLabel || "Article"}
         </Button>
       </div>
 
@@ -110,6 +118,8 @@ export default function NewsAdmin() {
 
       {loading ? (
         <p className="text-muted-foreground text-sm py-8 text-center">Loading…</p>
+      ) : items.length === 0 ? (
+        <p className="text-muted-foreground text-sm py-8 text-center">No articles yet</p>
       ) : (
         <div className="space-y-2">
           {items.map((item) => (
@@ -154,7 +164,7 @@ export default function NewsAdmin() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit Article" : "New Article"}</DialogTitle>
+            <DialogTitle>{editing ? `Edit ${categoryLabel || "Article"}` : `New ${categoryLabel || "Article"}`}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="grid grid-cols-2 gap-3">
@@ -181,8 +191,10 @@ export default function NewsAdmin() {
                 <Input value={form.imageUrl} onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))} placeholder="https://…" className="mt-1 text-sm" />
               </div>
               <div>
-                <Label className="text-xs">Category</Label>
-                <Input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="mt-1 text-sm" />
+                <Label className="text-xs">{categoryLabel ? "Category" : "Category"}</Label>
+                <Input value={form.category} readOnly={!!fixedCategory}
+                  onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                  className={`mt-1 text-sm ${fixedCategory ? "bg-muted" : ""}`} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">

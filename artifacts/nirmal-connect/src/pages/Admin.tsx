@@ -3,7 +3,8 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Newspaper, Calendar, Activity, Image,
-  Users, MessageSquare, HelpCircle, UserCircle, LogOut, Menu, X, ChevronRight,
+  Users, MessageSquare, HelpCircle, UserCircle, LogOut, Menu, X,
+  ChevronRight, Settings, Megaphone, FileText, MapPin, ClipboardList,
 } from "lucide-react";
 import { isAuthenticated, removeToken, getToken } from "@/lib/auth";
 import { useGetMe } from "@workspace/api-client-react";
@@ -16,20 +17,38 @@ import GalleryAdmin from "./admin/GalleryAdmin";
 import VolunteersAdmin from "./admin/VolunteersAdmin";
 import FaqsAdmin from "./admin/FaqsAdmin";
 import AboutAdmin from "./admin/AboutAdmin";
+import SiteSettingsAdmin from "./admin/SiteSettingsAdmin";
+import AuditLogAdmin from "./admin/AuditLogAdmin";
+import BannersAdmin from "./admin/BannersAdmin";
+import ConstituencyAdmin from "./admin/ConstituencyAdmin";
+import PressReleasesAdmin from "./admin/PressReleasesAdmin";
 import type { Language } from "@/lib/i18n";
 
 interface AdminProps { lang?: Language }
 
-const NAV_ITEMS = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "news", label: "News", icon: Newspaper },
-  { id: "events", label: "Events", icon: Calendar },
-  { id: "activities", label: "Activities", icon: Activity },
-  { id: "gallery", label: "Gallery", icon: Image },
-  { id: "volunteers", label: "Volunteers", icon: Users },
-  { id: "grievances", label: "Grievances", icon: MessageSquare },
-  { id: "faqs", label: "FAQs", icon: HelpCircle },
-  { id: "about", label: "About CMS", icon: UserCircle },
+interface NavItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  roles?: string[];
+}
+
+// roles: undefined = all staff; listed = only those roles
+const NAV_ITEMS: NavItem[] = [
+  { id: "dashboard",    label: "Dashboard",         icon: LayoutDashboard },
+  { id: "grievances",   label: "Grievances",        icon: MessageSquare },
+  { id: "news",         label: "News",               icon: Newspaper,    roles: ["super_admin", "admin", "pa_staff", "media_team"] },
+  { id: "press",        label: "Press Releases",    icon: FileText,     roles: ["super_admin", "admin", "pa_staff", "media_team"] },
+  { id: "events",       label: "Events",             icon: Calendar,     roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator", "media_team"] },
+  { id: "activities",   label: "Activities",         icon: Activity,     roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator", "media_team"] },
+  { id: "gallery",      label: "Gallery",            icon: Image,        roles: ["super_admin", "admin", "pa_staff", "media_team"] },
+  { id: "banners",      label: "Banners",            icon: Megaphone,    roles: ["super_admin", "admin", "pa_staff"] },
+  { id: "volunteers",   label: "Volunteers",         icon: Users,        roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator"] },
+  { id: "constituency", label: "Constituency Stats", icon: MapPin,       roles: ["super_admin", "admin", "pa_staff"] },
+  { id: "faqs",         label: "FAQs",               icon: HelpCircle,   roles: ["super_admin", "admin", "pa_staff"] },
+  { id: "about",        label: "About CMS",          icon: UserCircle,   roles: ["super_admin", "admin"] },
+  { id: "settings",     label: "Site Settings",      icon: Settings,     roles: ["super_admin", "admin"] },
+  { id: "audit",        label: "Audit Log",          icon: ClipboardList, roles: ["super_admin", "admin"] },
 ];
 
 export default function Admin({ lang = "ta" }: AdminProps) {
@@ -44,14 +63,19 @@ export default function Admin({ lang = "ta" }: AdminProps) {
   function logout() { removeToken(); setLocation("/login"); }
 
   const token = getToken() ?? "";
-
   const role = me?.role ?? "";
-  const isAdmin = ["super_admin", "admin"].includes(role);
 
   const visibleNav = NAV_ITEMS.filter(item => {
-    if (item.id === "about") return isAdmin;
-    return true;
+    if (!item.roles) return true;
+    return item.roles.includes(role);
   });
+
+  // Ensure active tab is accessible; reset to dashboard if not
+  useEffect(() => {
+    if (role && !visibleNav.find(n => n.id === active)) {
+      setActive("dashboard");
+    }
+  }, [role]);
 
   function navigate(id: string) {
     setActive(id);
@@ -83,7 +107,7 @@ export default function Admin({ lang = "ta" }: AdminProps) {
         {me && (
           <div className="px-4 py-3 border-b border-white/10">
             <p className="text-sm font-medium truncate">{me.name}</p>
-            <p className="text-xs text-gray-400 capitalize truncate">{me.role.replace("_", " ")}</p>
+            <p className="text-xs text-gray-400 capitalize truncate">{me.role.replace(/_/g, " ")}</p>
           </div>
         )}
 
@@ -143,10 +167,12 @@ export default function Admin({ lang = "ta" }: AdminProps) {
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
-          <div className="flex items-center gap-2">
-            <currentItem.icon className="w-4 h-4 text-primary" />
-            <h1 className="font-semibold text-sm text-gray-900">{currentItem.label}</h1>
-          </div>
+          {currentItem && (
+            <div className="flex items-center gap-2">
+              <currentItem.icon className="w-4 h-4 text-primary" />
+              <h1 className="font-semibold text-sm text-gray-900">{currentItem.label}</h1>
+            </div>
+          )}
           <div className="ml-auto">
             <span className="text-xs text-muted-foreground hidden sm:inline">Tirupparankundram Constituency</span>
           </div>
@@ -154,15 +180,20 @@ export default function Admin({ lang = "ta" }: AdminProps) {
 
         {/* Page content */}
         <main className="flex-1 p-4 sm:p-6 overflow-auto">
-          {active === "dashboard" && <Dashboard />}
-          {active === "news" && <NewsAdmin />}
-          {active === "events" && <EventsAdmin />}
-          {active === "activities" && <ActivitiesAdmin />}
-          {active === "gallery" && <GalleryAdmin />}
-          {active === "volunteers" && <VolunteersAdmin />}
-          {active === "grievances" && <GrievanceOfficer lang={lang} token={token} />}
-          {active === "faqs" && <FaqsAdmin />}
-          {active === "about" && isAdmin && <AboutAdmin />}
+          {active === "dashboard"    && <Dashboard />}
+          {active === "grievances"   && <GrievanceOfficer lang={lang} token={token} />}
+          {active === "news"         && <NewsAdmin />}
+          {active === "press"        && <PressReleasesAdmin />}
+          {active === "events"       && <EventsAdmin />}
+          {active === "activities"   && <ActivitiesAdmin />}
+          {active === "gallery"      && <GalleryAdmin />}
+          {active === "banners"      && <BannersAdmin />}
+          {active === "volunteers"   && <VolunteersAdmin />}
+          {active === "constituency" && <ConstituencyAdmin />}
+          {active === "faqs"         && <FaqsAdmin />}
+          {active === "about"        && <AboutAdmin />}
+          {active === "settings"     && <SiteSettingsAdmin />}
+          {active === "audit"        && <AuditLogAdmin />}
         </main>
       </div>
     </div>

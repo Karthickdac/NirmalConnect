@@ -20,7 +20,8 @@ async function authFetch(path: string, init?: RequestInit) {
 export const adminApi = {
   getDashboard: () => authFetch("/admin/dashboard"),
   // News
-  getNews: (page = 1, limit = 20) => authFetch(`/news?page=${page}&limit=${limit}`),
+  getNews: (page = 1, limit = 20, category?: string) =>
+    authFetch(`/news?page=${page}&limit=${limit}${category ? `&category=${encodeURIComponent(category)}` : ""}`),
   createNews: (data: unknown) => authFetch("/admin/news", { method: "POST", body: JSON.stringify(data) }),
   updateNews: (id: number, data: unknown) => authFetch(`/admin/news/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteNews: (id: number) => authFetch(`/admin/news/${id}`, { method: "DELETE" }),
@@ -35,14 +36,17 @@ export const adminApi = {
   updateActivity: (id: number, data: unknown) => authFetch(`/admin/activities/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteActivity: (id: number) => authFetch(`/admin/activities/${id}`, { method: "DELETE" }),
   // Gallery
-  getGallery: (page = 1, limit = 30) => authFetch(`/gallery?page=${page}&limit=${limit}`),
+  getGallery: (page = 1, limit = 30, album?: string) =>
+    authFetch(`/gallery?page=${page}&limit=${limit}${album ? `&album=${encodeURIComponent(album)}` : ""}`),
   createGallery: (data: unknown) => authFetch("/admin/gallery", { method: "POST", body: JSON.stringify(data) }),
+  updateGallery: (id: number, data: unknown) => authFetch(`/admin/gallery/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteGallery: (id: number) => authFetch(`/admin/gallery/${id}`, { method: "DELETE" }),
   // Volunteers
   getVolunteers: (page = 1, status?: string) =>
     authFetch(`/admin/volunteers?page=${page}&limit=20${status ? `&status=${status}` : ""}`),
   updateVolunteerStatus: (id: number, status: string) =>
     authFetch(`/admin/volunteers/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  exportVolunteersCSV: () => authFetch("/admin/volunteers/export"),
   // FAQs
   getFaqs: () => authFetch("/admin/faqs"),
   createFaq: (data: unknown) => authFetch("/admin/faqs", { method: "POST", body: JSON.stringify(data) }),
@@ -51,6 +55,21 @@ export const adminApi = {
   // About CMS
   getAbout: () => authFetch("/admin/about"),
   updateAbout: (data: unknown) => authFetch("/admin/about", { method: "PUT", body: JSON.stringify(data) }),
+  // Site Settings
+  getSettings: () => authFetch("/admin/settings"),
+  updateSetting: (key: string, value: unknown) => authFetch(`/admin/settings/${key}`, { method: "PUT", body: JSON.stringify(value) }),
+  // Banners
+  getBanners: () => authFetch("/admin/banners"),
+  createBanner: (data: unknown) => authFetch("/admin/banners", { method: "POST", body: JSON.stringify(data) }),
+  updateBanner: (id: number, data: unknown) => authFetch(`/admin/banners/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteBanner: (id: number) => authFetch(`/admin/banners/${id}`, { method: "DELETE" }),
+  // Constituency Stats
+  getConstituencyStats: () => authFetch("/admin/constituency-stats"),
+  updateConstituencyStats: (data: unknown) => authFetch("/admin/constituency-stats", { method: "PUT", body: JSON.stringify(data) }),
+  // Grievances
+  getGrievances: (page = 1, status?: string) =>
+    authFetch(`/grievances?page=${page}&limit=20${status ? `&status=${status}` : ""}`),
+  exportGrievancesCSV: () => authFetch("/admin/grievances/export"),
   // Audit log
-  getAuditLog: () => authFetch("/admin/audit-log?limit=50"),
+  getAuditLog: (limit = 50) => authFetch(`/admin/audit-log?limit=${limit}`),
 };
