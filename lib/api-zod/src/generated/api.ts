@@ -1486,7 +1486,10 @@ export const AdminGrievanceAnalyticsQueryParams = zod.object({
   to: zod.date().optional(),
   category: zod.coerce.string().optional(),
   status: zod.coerce.string().optional(),
-  officerId: zod.coerce.number().optional(),
+  officerIds: zod.coerce
+    .string()
+    .optional()
+    .describe("Comma-separated officer user IDs"),
 });
 
 export const AdminGrievanceAnalyticsResponse = zod.object({

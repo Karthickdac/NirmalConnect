@@ -15,7 +15,7 @@ const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 const COLORS = ["#c9181e", "#d4af37", "#2563eb", "#16a34a", "#9333ea", "#ea580c", "#0891b2", "#db2777", "#65a30d", "#7c3aed"];
 
 interface AnalyticsResponse {
-  filters: { from?: string; to?: string; category?: string; status?: string; officerId?: number };
+  filters: { from?: string; to?: string; category?: string; status?: string; officerIds?: number[] };
   totals: { grievances: number; mapped: number; unmapped: number };
   heatPoints: Array<{ lat: number; lng: number; weight: number }>;
   byWard: Array<{ wardId: number; name: string; nameTa: string | null; count: number; avgResolutionHours: number | null }>;
@@ -37,8 +37,8 @@ interface AnalyticsProps {
   officerPollingStationIds?: number[];
 }
 
-const STATUS_OPTIONS = ["Submitted", "In Progress", "Resolved", "Closed", "Rejected"];
-const CATEGORY_OPTIONS = ["Roads", "Water", "Electricity", "Sanitation", "Healthcare", "Education", "Public Safety", "Other"];
+const STATUS_OPTIONS = ["Submitted", "Under Review", "Assigned", "In Progress", "Resolved", "Closed"] as const;
+const CATEGORY_OPTIONS = ["Roads", "Water Supply", "EB / Electricity Issues", "Sewage", "Healthcare", "Education", "Women Safety", "Corruption", "Ration", "Transport", "Pension", "Housing", "Agriculture", "Employment", "Others"] as const;
 
 export default function Analytics({ lang, officerWardIds, officerAreaIds, officerPollingStationIds }: AnalyticsProps) {
   const t = (k: Parameters<typeof tAnalytics>[1]) => tAnalytics(lang, k);
@@ -47,7 +47,7 @@ export default function Analytics({ lang, officerWardIds, officerAreaIds, office
   const [to, setTo] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
-  const [officerId, setOfficerId] = useState("");
+  const [officerIds, setOfficerIds] = useState<number[]>([]);
 
   const [data, setData] = useState<AnalyticsResponse | null>(null);
   const [officers, setOfficers] = useState<OfficersResponse["items"]>([]);
@@ -60,9 +60,9 @@ export default function Analytics({ lang, officerWardIds, officerAreaIds, office
     if (to) p.set("to", to);
     if (category) p.set("category", category);
     if (status) p.set("status", status);
-    if (officerId) p.set("officerId", officerId);
+    if (officerIds.length > 0) p.set("officerIds", officerIds.join(","));
     return p.toString();
-  }, [from, to, category, status, officerId]);
+  }, [from, to, category, status, officerIds]);
 
   useEffect(() => {
     const token = getToken();
@@ -166,22 +166,28 @@ export default function Analytics({ lang, officerWardIds, officerAreaIds, office
               </select>
             </div>
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">{t("officer")}</label>
+              <label className="block text-xs text-muted-foreground mb-1">
+                {t("officer")} {officerIds.length > 0 && <span className="text-primary">({officerIds.length})</span>}
+              </label>
               <select
-                value={officerId}
-                onChange={e => setOfficerId(e.target.value)}
+                multiple
+                value={officerIds.map(String)}
+                onChange={e => {
+                  const selected = Array.from(e.target.selectedOptions).map(o => parseInt(o.value, 10));
+                  setOfficerIds(selected);
+                }}
                 data-testid="analytics-filter-officer"
-                className="w-full text-sm border rounded px-2 py-1.5"
+                className="w-full text-sm border rounded px-2 py-1.5 h-[80px]"
+                size={4}
               >
-                <option value="">{t("any")}</option>
                 {officers.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
               </select>
             </div>
           </div>
-          {(from || to || category || status || officerId) && (
+          {(from || to || category || status || officerIds.length > 0) && (
             <div className="mt-3">
               <button
-                onClick={() => { setFrom(""); setTo(""); setCategory(""); setStatus(""); setOfficerId(""); }}
+                onClick={() => { setFrom(""); setTo(""); setCategory(""); setStatus(""); setOfficerIds([]); }}
                 className="text-xs text-primary hover:underline"
                 data-testid="analytics-filter-clear"
               >

@@ -1432,7 +1432,7 @@ paths:
         - { name: to, in: query, schema: { type: string, format: date-time } }
         - { name: category, in: query, schema: { type: string } }
         - { name: status, in: query, schema: { type: string } }
-        - { name: officerId, in: query, schema: { type: integer } }
+        - { name: officerIds, in: query, description: "Comma-separated officer user IDs", schema: { type: string } }
       responses:
         "200":
           description: Aggregated analytics

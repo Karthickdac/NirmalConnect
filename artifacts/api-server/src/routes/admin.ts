@@ -1940,7 +1940,9 @@ router.get(
         to: z.string().optional(),
         category: z.string().optional(),
         status: z.string().optional(),
-        officerId: z.coerce.number().int().optional(),
+        officerIds: z.string()
+          .optional()
+          .transform(v => v ? v.split(',').map(s => parseInt(s.trim(), 10)).filter(n => Number.isFinite(n)) : undefined),
       }).safeParse(req.query);
       if (!q.success) { res.status(400).json({ error: "Invalid filters" }); return; }
       const f = q.data;
@@ -1958,7 +1960,7 @@ router.get(
       if (toDate && !isNaN(toDate.getTime())) conds.push(lte(grievancesTable.createdAt, toDate));
       if (f.category) conds.push(eq(grievancesTable.category, f.category));
       if (f.status) conds.push(eq(grievancesTable.status, f.status));
-      if (f.officerId != null) conds.push(eq(grievancesTable.assignedTo, f.officerId));
+      if (f.officerIds && f.officerIds.length > 0) conds.push(inArray(grievancesTable.assignedTo, f.officerIds));
       const where = conds.length > 0 ? and(...conds) : undefined;
 
       // Resolve effective ward via polling_station -> area fallback,

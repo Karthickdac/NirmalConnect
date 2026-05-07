@@ -1058,5 +1058,8 @@ export type AdminGrievanceAnalyticsParams = {
   to?: string;
   category?: string;
   status?: string;
-  officerId?: number;
+  /**
+   * Comma-separated officer user IDs
+   */
+  officerIds?: string;
 };
