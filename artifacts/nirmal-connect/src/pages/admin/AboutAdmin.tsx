@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, RefreshCw, Eye, EyeOff } from "lucide-react";
+import { Save, RefreshCw, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { adminApi } from "./api";
 import { AboutView, DEFAULT_ABOUT_CONFIG, type AboutConfig } from "@/components/AboutView";
 
@@ -50,13 +50,45 @@ export default function AboutAdmin() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showPreview, setShowPreview] = useState(true);
   const [previewLang, setPreviewLang] = useState<"en" | "ta">("en");
+  // Snapshot of the last saved (or freshly loaded) config, used to detect
+  // unsaved edits. Compared via JSON serialization for value equality.
+  const [savedSnapshot, setSavedSnapshot] = useState<string>(() => JSON.stringify(DEFAULT_CONFIG));
 
   useEffect(() => {
     adminApi.getAbout()
-      .then((d: AboutConfig | null) => { if (d) setConfig({ ...DEFAULT_CONFIG, ...d }); })
+      .then((d: AboutConfig | null) => {
+        const next = d ? { ...DEFAULT_CONFIG, ...d } : DEFAULT_CONFIG;
+        setConfig(next);
+        setSavedSnapshot(JSON.stringify(next));
+      })
       .catch(() => setError("Failed to load about config"))
       .finally(() => setLoading(false));
   }, []);
+
+  const isDirty = useMemo(() => JSON.stringify(config) !== savedSnapshot, [config, savedSnapshot]);
+
+  // Auto-clear the green "saved" toast after 3 seconds, with proper cleanup
+  // so it can't fire after unmount or stack across rapid saves.
+  useEffect(() => {
+    if (!saved) return;
+    const t = setTimeout(() => setSaved(false), 3000);
+    return () => clearTimeout(t);
+  }, [saved]);
+
+  // Browser-native confirm dialog before reload/close while there are
+  // unsaved edits. Only attached when dirty so the prompt doesn't fire
+  // during clean navigation.
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Most modern browsers ignore the custom string but require returnValue
+      // to be set for the prompt to show.
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
   const set = <K extends keyof AboutConfig>(key: K, value: AboutConfig[K]) =>
     setConfig(c => ({ ...c, [key]: value }));
@@ -84,8 +116,9 @@ export default function AboutAdmin() {
     setError(null);
     try {
       await adminApi.updateAbout(config);
+      // Refresh the dirty baseline so the unsaved-changes banner clears.
+      setSavedSnapshot(JSON.stringify(config));
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
     } catch (e: unknown) {
       setError((e as Error).message);
     } finally {
@@ -128,8 +161,17 @@ export default function AboutAdmin() {
         </div>
       </div>
 
+      {isDirty && (
+        <p
+          data-testid="about-unsaved-banner"
+          className="text-amber-700 text-sm bg-amber-50 border border-amber-200 rounded-md px-3 py-2 flex items-center gap-2"
+        >
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>You have unsaved changes. Don't forget to click <strong>Save Changes</strong> before leaving this page.</span>
+        </p>
+      )}
       {error && <p className="text-red-500 text-sm bg-red-50 border border-red-200 rounded-md px-3 py-2">{error}</p>}
-      {saved && <p className="text-green-600 text-sm bg-green-50 border border-green-200 rounded-md px-3 py-2">Changes saved successfully.</p>}
+      {saved && !isDirty && <p className="text-green-600 text-sm bg-green-50 border border-green-200 rounded-md px-3 py-2">Changes saved successfully.</p>}
 
       <div className={showPreview ? "grid grid-cols-1 xl:grid-cols-2 gap-6 items-start" : ""}>
         <div className={`space-y-6 ${showPreview ? "" : "max-w-3xl"}`}>
