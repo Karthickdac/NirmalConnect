@@ -1243,6 +1243,7 @@ router.put("/admin/voters/:id/notes/:noteId", requireStaff, async (req: AuthRequ
     if (!existing) { res.status(404).json({ error: "Not found" }); return; }
     const isOwner = existing.authorId === req.user.id;
     if (!isOwner && !ADMIN_NOTE_ROLES.has(req.user.role)) {
+      await logVoterAudit(req, "VOTER_NOTE_DENIED", `voter:${voter.epicNumber}`, `note_id=${noteId};op=update`);
       res.status(403).json({ error: "Only the author or an admin can edit this note" });
       return;
     }
@@ -1281,6 +1282,7 @@ router.delete("/admin/voters/:id/notes/:noteId", requireStaff, async (req: AuthR
     if (!existing) { res.status(404).json({ error: "Not found" }); return; }
     const isOwner = existing.authorId === req.user.id;
     if (!isOwner && !ADMIN_NOTE_ROLES.has(req.user.role)) {
+      await logVoterAudit(req, "VOTER_NOTE_DENIED", `voter:${voter.epicNumber}`, `note_id=${noteId};op=delete`);
       res.status(403).json({ error: "Only the author or an admin can delete this note" });
       return;
     }
