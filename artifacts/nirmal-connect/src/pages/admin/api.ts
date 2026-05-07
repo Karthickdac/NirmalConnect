@@ -82,4 +82,18 @@ export const adminApi = {
   // Grievance bulk assign
   bulkGrievanceAssign: (ids: number[], officerId: number, officerName: string) =>
     authFetch("/admin/grievances/bulk-assign", { method: "POST", body: JSON.stringify({ ids, officerId, officerName }) }),
+  // Image upload (multipart)
+  uploadImage: async (file: File): Promise<{ url: string; filename: string }> => {
+    const token = getToken();
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`${BASE}/admin/upload`, {
+      method: "POST",
+      body: fd,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error ?? `Upload failed (${res.status})`);
+    return data;
+  },
 };

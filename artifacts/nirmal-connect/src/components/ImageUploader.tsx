@@ -1,0 +1,120 @@
+import { useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Upload, X, Loader2 } from "lucide-react";
+import { getToken } from "@/lib/auth";
+
+const API_BASE = (import.meta.env.VITE_API_URL ?? "/api") as string;
+
+interface ImageUploaderProps {
+  value: string;
+  onChange: (url: string) => void;
+  label?: string;
+  placeholder?: string;
+  accept?: string;
+  className?: string;
+}
+
+export default function ImageUploader({
+  value,
+  onChange,
+  label = "Image",
+  placeholder = "https://… or upload below",
+  accept = "image/*",
+  className = "",
+}: ImageUploaderProps) {
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleFile(file: File) {
+    setError(null);
+    setUploading(true);
+    try {
+      const token = getToken();
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`${API_BASE}/admin/upload`, {
+        method: "POST",
+        body: fd,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? `Upload failed (${res.status})`);
+      onChange(data.url as string);
+    } catch (e: unknown) {
+      setError((e as Error).message);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  const previewSrc = value
+    ? value.startsWith("http") ||
+      value.startsWith("/uploads/") ||
+      value.startsWith("/api/uploads/")
+      ? value
+      : null
+    : null;
+
+  return (
+    <div className={`space-y-1.5 ${className}`}>
+      <Label className="text-xs">{label}</Label>
+      <div className="flex items-start gap-2">
+        {previewSrc && (
+          <div className="relative shrink-0">
+            <img
+              src={previewSrc}
+              alt="preview"
+              className="w-16 h-16 rounded-md object-cover border bg-muted"
+              onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.3"; }}
+            />
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="absolute -top-1.5 -right-1.5 bg-white border rounded-full p-0.5 shadow hover:bg-red-50"
+              title="Remove image"
+            >
+              <X className="w-3 h-3 text-red-500" />
+            </button>
+          </div>
+        )}
+        <div className="flex-1 space-y-1.5">
+          <Input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            className="text-sm"
+          />
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileRef}
+              type="file"
+              accept={accept}
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleFile(f);
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+              className="gap-1.5 h-8 text-xs"
+            >
+              {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+              {uploading ? "Uploading…" : "Upload from device"}
+            </Button>
+            <span className="text-xs text-muted-foreground">PNG/JPG/GIF/WebP up to 8 MB</span>
+          </div>
+          {error && <p className="text-xs text-red-500">{error}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}

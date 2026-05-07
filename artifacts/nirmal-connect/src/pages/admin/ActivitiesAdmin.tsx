@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Plus, Pencil, Trash2, MapPin } from "lucide-react";
 import { adminApi } from "./api";
 import RichTextEditor from "@/components/RichTextEditor";
+import ImageUploader from "@/components/ImageUploader";
 
 interface ActivityItem {
   id: number;
@@ -177,16 +178,15 @@ export default function ActivitiesAdmin() {
                 <Input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} className="mt-1 text-sm" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Category</Label>
-                <Input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="mt-1 text-sm" />
-              </div>
-              <div>
-                <Label className="text-xs">Image URL</Label>
-                <Input value={form.imageUrl} onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))} placeholder="https://…" className="mt-1 text-sm" />
-              </div>
+            <div>
+              <Label className="text-xs">Category</Label>
+              <Input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="mt-1 text-sm" />
             </div>
+            <ImageUploader
+              label="Image"
+              value={form.imageUrl}
+              onChange={(url) => setForm(f => ({ ...f, imageUrl: url }))}
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>

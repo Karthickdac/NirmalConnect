@@ -11,6 +11,7 @@ import {
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { adminApi } from "./api";
 import RichTextEditor from "@/components/RichTextEditor";
+import ImageUploader from "@/components/ImageUploader";
 
 interface NewsItem {
   id: number;
@@ -196,17 +197,16 @@ export default function NewsAdmin({ fixedCategory, categoryLabel = "Article", se
                 minHeight={100}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Image URL</Label>
-                <Input value={form.imageUrl} onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))} placeholder="https://…" className="mt-1 text-sm" />
-              </div>
-              <div>
-                <Label className="text-xs">{categoryLabel ? "Category" : "Category"}</Label>
-                <Input value={form.category} readOnly={!!fixedCategory}
-                  onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                  className={`mt-1 text-sm ${fixedCategory ? "bg-muted" : ""}`} />
-              </div>
+            <ImageUploader
+              label="Image"
+              value={form.imageUrl}
+              onChange={(url) => setForm(f => ({ ...f, imageUrl: url }))}
+            />
+            <div>
+              <Label className="text-xs">{categoryLabel ? "Category" : "Category"}</Label>
+              <Input value={form.category} readOnly={!!fixedCategory}
+                onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                className={`mt-1 text-sm ${fixedCategory ? "bg-muted" : ""}`} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>

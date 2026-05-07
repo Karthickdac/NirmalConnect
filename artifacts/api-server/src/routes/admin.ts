@@ -9,6 +9,41 @@ import {
 import { requireStaff, requireRole, type AuthRequest } from "../lib/auth.js";
 import { eq, desc, asc, sql, gte, lte, and, inArray } from "drizzle-orm";
 import { z } from "zod";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+// ── Image upload config (CMS forms) ────────────────────────
+const adminUploadsDir = path.join(process.cwd(), "uploads", "admin");
+if (!fs.existsSync(adminUploadsDir)) fs.mkdirSync(adminUploadsDir, { recursive: true });
+
+const adminUploadStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, adminUploadsDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+  },
+});
+const adminUpload = multer({
+  storage: adminUploadStorage,
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /^\.(jpe?g|png|gif|webp|svg)$/i;
+    cb(null, allowed.test(path.extname(file.originalname)));
+  },
+});
+
+/** Accepts an http(s) URL OR a server-relative path under /uploads or /api/uploads. */
+const ImageRef = z
+  .string()
+  .refine(
+    (v) =>
+      v === "" ||
+      /^https?:\/\//i.test(v) ||
+      v.startsWith("/uploads/") ||
+      v.startsWith("/api/uploads/"),
+    { message: "Must be a URL or an /uploads/ path" },
+  );
 
 // ── Role constants used across routes ──────────────────────
 const CMS_ROLES       = ["super_admin", "admin", "pa_staff", "media_team"] as const;
@@ -134,6 +169,39 @@ router.get("/admin/dashboard", async (_req, res) => {
 });
 
 // ──────────────────────────────────────────────────────────
+// POST /api/admin/upload — image upload for CMS forms
+// ──────────────────────────────────────────────────────────
+router.post(
+  "/admin/upload",
+  requireRole(...CMS_ROLES, "constituency_coordinator"),
+  (req: AuthRequest, res, next) => {
+    adminUpload.single("file")(req, res, (err) => {
+      if (err) {
+        const msg = err instanceof Error ? err.message : "Upload failed";
+        res.status(400).json({ error: msg });
+        return;
+      }
+      if (!req.file) {
+        res.status(400).json({ error: "No file uploaded (field name: 'file')" });
+        return;
+      }
+      // Use /api/uploads so the dev/prod path-based proxy (which only routes /api
+      // to this service) can serve the file directly from <web origin>/api/uploads/…
+      const url = `/api/uploads/admin/${req.file.filename}`;
+      logAudit(req, "UPLOAD", `image:${req.file.filename}`, req.file.originalname).catch(() => null);
+      res.status(201).json({
+        url,
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        mimeType: req.file.mimetype,
+      });
+      next?.();
+    });
+  },
+);
+
+// ──────────────────────────────────────────────────────────
 // NEWS CRUD
 // ──────────────────────────────────────────────────────────
 const NewsBody = z.object({
@@ -141,7 +209,7 @@ const NewsBody = z.object({
   titleTa: z.string().optional().nullable(),
   content: z.string().min(10),
   contentTa: z.string().optional().nullable(),
-  imageUrl: z.string().url().optional().nullable().or(z.literal("")),
+  imageUrl: ImageRef.optional().nullable(),
   category: z.string().default("general"),
   featured: z.boolean().default(false),
   publishedAt: z.string().optional().nullable(),
@@ -205,7 +273,7 @@ const EventBody = z.object({
   titleTa: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   descriptionTa: z.string().optional().nullable(),
-  imageUrl: z.string().url().optional().nullable().or(z.literal("")),
+  imageUrl: ImageRef.optional().nullable(),
   venue: z.string().min(2),
   eventDate: z.string(),
   endDate: z.string().optional().nullable(),
@@ -272,7 +340,7 @@ const ActivityBody = z.object({
   titleTa: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   descriptionTa: z.string().optional().nullable(),
-  imageUrl: z.string().url().optional().nullable().or(z.literal("")),
+  imageUrl: ImageRef.optional().nullable(),
   activityDate: z.string(),
   location: z.string().optional().nullable(),
   category: z.string().default("general"),
@@ -333,8 +401,8 @@ router.delete("/admin/activities/:id", requireRole(...EVENTS_ROLES), async (req:
 // ──────────────────────────────────────────────────────────
 const GalleryBody = z.object({
   title: z.string().min(1),
-  mediaUrl: z.string().url(),
-  thumbnailUrl: z.string().url().optional().nullable().or(z.literal("")),
+  mediaUrl: ImageRef,
+  thumbnailUrl: ImageRef.optional().nullable(),
   mediaType: z.enum(["photo", "video"]).default("photo"),
   album: z.string().optional().nullable(),
   displayOrder: z.number().int().default(0),

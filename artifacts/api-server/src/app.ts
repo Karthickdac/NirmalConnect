@@ -30,10 +30,16 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use("/api", router);
-
-// Serve uploaded grievance attachments (constrained to uploads dir)
+// Serve uploaded files (grievance attachments + admin CMS images).
+// Mounted at both /uploads (legacy) and /api/uploads so the dev/prod proxy,
+// which only routes /api to this service, can reach them from the browser.
+// Must be registered BEFORE the /api router so static files bypass the
+// admin router's auth middleware.
 const uploadsRoot = path.resolve(process.cwd(), "uploads");
-app.use("/uploads", express.static(uploadsRoot, { dotfiles: "deny" }));
+const uploadsStatic = express.static(uploadsRoot, { dotfiles: "deny" });
+app.use("/uploads", uploadsStatic);
+app.use("/api/uploads", uploadsStatic);
+
+app.use("/api", router);
 
 export default app;

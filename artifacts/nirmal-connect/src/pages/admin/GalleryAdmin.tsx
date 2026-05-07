@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Trash2, Image, Film, ExternalLink, ChevronUp, ChevronDown, Filter } from "lucide-react";
 import { adminApi } from "./api";
+import ImageUploader from "@/components/ImageUploader";
 
 interface GalleryItem {
   id: number;
@@ -200,14 +201,18 @@ export default function GalleryAdmin() {
               <Label className="text-xs">Title *</Label>
               <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className="mt-1 text-sm" />
             </div>
-            <div>
-              <Label className="text-xs">Media URL *</Label>
-              <Input value={form.mediaUrl} onChange={e => setForm(f => ({ ...f, mediaUrl: e.target.value }))} placeholder="https://…" className="mt-1 text-sm" />
-            </div>
-            <div>
-              <Label className="text-xs">Thumbnail URL</Label>
-              <Input value={form.thumbnailUrl} onChange={e => setForm(f => ({ ...f, thumbnailUrl: e.target.value }))} placeholder="https://… (optional)" className="mt-1 text-sm" />
-            </div>
+            <ImageUploader
+              label="Media URL *"
+              value={form.mediaUrl}
+              onChange={(url) => setForm(f => ({ ...f, mediaUrl: url }))}
+              placeholder="https://… or upload below"
+            />
+            <ImageUploader
+              label="Thumbnail (optional)"
+              value={form.thumbnailUrl}
+              onChange={(url) => setForm(f => ({ ...f, thumbnailUrl: url }))}
+              placeholder="https://… (optional)"
+            />
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">Type</Label>
