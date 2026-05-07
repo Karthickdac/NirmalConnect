@@ -4,6 +4,7 @@ import {
 import { sql } from "drizzle-orm";
 import { pollingStationsTable } from "./hierarchy";
 import { usersTable } from "./users";
+import { householdsTable } from "./households";
 
 // ── Voters (electoral roll) ──────────────────────────────
 //
@@ -48,6 +49,13 @@ export const votersTable = pgTable("voters", {
   sourceImportId: integer("source_import_id"),
   sourcePdf: text("source_pdf"),       // Original filename
   sourcePage: integer("source_page"),  // Page within the PDF
+  // Family/household grouping (task #46). Auto-detected on import,
+  // overridable via split/merge in the admin. ON DELETE SET NULL so
+  // voter rows survive household deletion.
+  householdId: integer("household_id").references(
+    () => householdsTable.id,
+    { onDelete: "set null" },
+  ),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => ({
@@ -62,6 +70,7 @@ export const votersTable = pgTable("voters", {
     sql`lower(${t.fullName}) gin_trgm_ops`,
   ),
   partIdx: index("voters_part_idx").on(t.partNumber, t.serialInPart),
+  householdIdx: index("voters_household_idx").on(t.householdId),
 }));
 
 // ── Import batches (audit + dedupe + status tracking) ────

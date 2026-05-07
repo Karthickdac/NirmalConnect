@@ -19,6 +19,7 @@ import {
   parseVoterRollPdf, type ParsedVoter, type ParseResult,
 } from "../lib/voterRollParser.js";
 import { getVoterScopeForUser, resolveScopeBoothIds } from "../lib/voterScope.js";
+import { regroupHouseholds } from "../lib/households.js";
 
 const router = Router();
 
@@ -502,6 +503,23 @@ router.post(
         `${batch.filename} (+${insertedCount} new, ~${updatedCount} updated)`,
       );
 
+      // Refresh household groupings for the booth this batch landed
+      // in. Idempotent + scoped to one booth, so it's cheap. Failure
+      // here must not roll back the commit — staff can re-run via
+      // POST /admin/households/regroup if needed.
+      try {
+        if (pollingStationId != null) {
+          const r = await regroupHouseholds({ pollingStationId });
+          await logVoterAudit(
+            req, "HOUSEHOLD_AUTOGROUP",
+            `voter_imports:${id}`,
+            `booth=${pollingStationId} scanned=${r.scannedVoters} +${r.householdsCreated}/~${r.householdsUpdated} assigned=${r.votersAssigned}`,
+          );
+        }
+      } catch (e) {
+        console.error("[voters] post-commit regroup failed:", e);
+      }
+
       res.json({ ok: true, insertedCount, updatedCount, pollingStationId });
     } catch (err) {
       console.error("[voters] commit:", err);
@@ -801,6 +819,7 @@ router.get("/admin/voters/:id", requireStaff, async (req: AuthRequest, res) => {
         sourceImportId: votersTable.sourceImportId,
         sourcePdf: votersTable.sourcePdf,
         sourcePage: votersTable.sourcePage,
+        householdId: votersTable.householdId,
         createdAt: votersTable.createdAt,
         updatedAt: votersTable.updatedAt,
       })

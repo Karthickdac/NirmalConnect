@@ -20,6 +20,8 @@ import { useGetMe } from "@workspace/api-client-react";
 import { Loader2, Search, ChevronLeft, ChevronRight, FileText, Tag as TagIcon, Plus, Pencil, Trash2, X } from "lucide-react";
 import type { Language } from "@/lib/i18n";
 import { useVoterTags, type VoterTag } from "./VoterTagsAdmin";
+import HouseholdsTab from "./HouseholdsTab";
+import { Home as HomeIcon } from "lucide-react";
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 
@@ -47,6 +49,7 @@ interface VoterDetail extends VoterRow {
   sourceImportId: number | null;
   sourcePdf: string | null;
   sourcePage: number | null;
+  householdId: number | null;
   createdAt: string;
   updatedAt: string;
   tags: VoterTag[];
@@ -183,14 +186,32 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
 
   // Detail panel
   const [detailId, setDetailId] = useState<number | null>(null);
+  // Tab + deep-link state. Voters can pivot to Households via the
+  // "View household" link inside the voter detail; that path stashes
+  // the household id in sessionStorage and switches the active tab.
+  const [activeTab, setActiveTab] = useState<"voters" | "households">("voters");
+  const [pendingHouseholdId, setPendingHouseholdId] = useState<number | null>(null);
   // Deep-link from GrievanceOfficer: clicking a linked-voter chip
   // stashes the voter id in sessionStorage and navigates here.
   useEffect(() => {
     const pending = sessionStorage.getItem("openVoterId");
-    if (!pending) return;
-    sessionStorage.removeItem("openVoterId");
-    const vid = parseInt(pending, 10);
-    if (Number.isFinite(vid) && vid > 0) setDetailId(vid);
+    if (pending) {
+      sessionStorage.removeItem("openVoterId");
+      const vid = parseInt(pending, 10);
+      if (Number.isFinite(vid) && vid > 0) {
+        setActiveTab("voters");
+        setDetailId(vid);
+      }
+    }
+    const pendingHh = sessionStorage.getItem("openHouseholdId");
+    if (pendingHh) {
+      sessionStorage.removeItem("openHouseholdId");
+      const hid = parseInt(pendingHh, 10);
+      if (Number.isFinite(hid) && hid > 0) {
+        setActiveTab("households");
+        setPendingHouseholdId(hid);
+      }
+    }
   }, []);
   const { data: detail, isFetching: detailLoading, error: detailError } = useQuery<VoterDetail>({
     queryKey: ["voter-detail", detailId],
@@ -253,6 +274,37 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
         </div>
       </div>
 
+      {/* Tabs: Voters / Households */}
+      <div className="flex gap-1 border-b">
+        <button
+          type="button"
+          onClick={() => setActiveTab("voters")}
+          data-testid="tab-voters"
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${activeTab === "voters" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          <Search className="w-3.5 h-3.5 inline mr-1.5" />
+          Voters
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("households")}
+          data-testid="tab-households"
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${activeTab === "households" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          <HomeIcon className="w-3.5 h-3.5 inline mr-1.5" />
+          Households
+        </button>
+      </div>
+
+      {activeTab === "households" && (
+        <HouseholdsTab
+          lang={displayLang}
+          initialOpenId={pendingHouseholdId}
+          onInitialOpenConsumed={() => setPendingHouseholdId(null)}
+        />
+      )}
+
+      {activeTab === "voters" && <>
       {/* Filters */}
       <Card>
         <CardContent className="p-4 space-y-3">
@@ -533,6 +585,25 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
                   )}
                 </Field>
               )}
+              {detail.householdId != null && (
+                <div className="border-t pt-3">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Household</div>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                    data-testid="link-voter-household"
+                    onClick={() => {
+                      sessionStorage.setItem("openHouseholdId", String(detail.householdId));
+                      setActiveTab("households");
+                      setPendingHouseholdId(detail.householdId);
+                      setDetailId(null);
+                    }}
+                  >
+                    <HomeIcon className="w-3.5 h-3.5" />
+                    View household & members
+                  </button>
+                </div>
+              )}
               <TagsPanel voterId={detail.id} initialTags={detail.tags} allTags={allTags} displayLang={displayLang} />
               <NotesPanel voterId={detail.id} me={me} isAdminRole={isAdminRole} />
               <GrievancesPanel voterId={detail.id} />
@@ -546,6 +617,7 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
           )}
         </SheetContent>
       </Sheet>
+      </>}
     </div>
   );
 }
