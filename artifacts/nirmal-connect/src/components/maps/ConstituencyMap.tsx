@@ -18,7 +18,7 @@ import {
   useMap,
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
-import type { Feature, Geometry } from "geojson";
+import type { Feature, FeatureCollection, Geometry } from "geojson";
 import type { Language } from "@/lib/i18n";
 import { mapTranslations, tMap } from "@/lib/mapI18n";
 
@@ -81,13 +81,15 @@ interface MapData {
   zones: Zone[];
   wards: Ward[];
   pollingStations: Booth[];
+  constituencyOutlines?: FeatureCollection;
 }
 
-type LayerKey = "zones" | "wards" | "booths" | "grievances";
+type LayerKey = "zones" | "wards" | "booths" | "grievances" | "outline";
 const LAYER_STORAGE_KEY = "nirmal_map_layers_v1";
 
 function loadLayerPrefs(): Record<LayerKey, boolean> {
   const def: Record<LayerKey, boolean> = {
+    outline: true,
     zones: true,
     wards: true,
     booths: true,
@@ -213,16 +215,21 @@ export default function ConstituencyMap({
   const filteredBooths = useMemo(() => {
     if (!data) return [] as Booth[];
     if (!mineOnly) return data.pollingStations;
-    const wardSet = new Set(officerWardIds ?? []);
     const stationSet = new Set(officerPollingStationIds ?? []);
-    if (wardSet.size === 0 && stationSet.size === 0) return data.pollingStations;
-    // A booth is "mine" if it sits in one of my wards OR is one of the
-    // specific polling stations I'm assigned to.
-    return data.pollingStations.filter(
-      (b) =>
-        (b.wardId != null && wardSet.has(b.wardId)) ||
-        stationSet.has(b.id),
-    );
+    const wardSet = new Set(officerWardIds ?? []);
+    // Honour the most specific assignment available: when an officer has
+    // explicit polling-station assignments, the booth layer is restricted
+    // to exactly those booths instead of being widened to "every booth in
+    // the parent ward". This prevents over-broad visibility for booth- or
+    // area-scoped officers (the parent ward still appears in the wards
+    // layer, but only the assigned booths render).
+    if (stationSet.size > 0) {
+      return data.pollingStations.filter((b) => stationSet.has(b.id));
+    }
+    if (wardSet.size > 0) {
+      return data.pollingStations.filter((b) => b.wardId != null && wardSet.has(b.wardId));
+    }
+    return data.pollingStations;
   }, [data, mineOnly, officerWardIds, officerPollingStationIds]);
 
   const filteredPins = useMemo(() => {
@@ -255,7 +262,7 @@ export default function ConstituencyMap({
         <div>
           <h3 className="text-sm font-semibold text-gray-900">{tr.layers}</h3>
           <ul className="mt-2 space-y-1.5">
-            {(["zones", "wards", "booths", "grievances"] as LayerKey[]).map((k) => (
+            {(["outline", "zones", "wards", "booths", "grievances"] as LayerKey[]).map((k) => (
               <li key={k} className="flex items-center gap-2">
                 <input
                   id={`layer-${k}`}
@@ -326,6 +333,23 @@ export default function ConstituencyMap({
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             maxZoom={19}
           />
+
+          {data?.constituencyOutlines && layers.outline && data.constituencyOutlines.features.length > 0 && (
+            <GeoJSON
+              key="constituency-outline"
+              data={data.constituencyOutlines}
+              style={{ color: "#0f172a", weight: 2, fillColor: "#1e293b", fillOpacity: 0.04, dashArray: "6 4" }}
+            >
+              <Popup>
+                <div className="text-sm">
+                  <div className="font-semibold">{tr.constituencyOutline}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {tr.osmAttribution}
+                  </div>
+                </div>
+              </Popup>
+            </GeoJSON>
+          )}
 
           {data && layers.zones && (
             <LayerGroup>

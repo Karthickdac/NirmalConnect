@@ -1,5 +1,8 @@
 import type { Language } from "./i18n";
 
+// Bilingual labels for the constituency map. Tamil keys are first-class
+// (no English fall-through) so the public Tamil view never leaks English.
+
 // Map-only translations are kept in a separate module so the public-site
 // bundle does not pay for them on pages that never render the Leaflet map.
 export const mapTranslations = {
@@ -23,6 +26,9 @@ export const mapTranslations = {
     loading: "Loading map…",
     failed: "Could not load map data",
     attribution: "Map data © OpenStreetMap contributors. Boundary data: see lib/db/data/data-sources.md.",
+    outline: "Constituency outline",
+    constituencyOutline: "Madurai Municipal Corporation",
+    osmAttribution: "Source: OpenStreetMap (ODbL-1.0).",
   },
   ta: {
     pageTitle: "தொகுதி வரைபடம்",
@@ -44,6 +50,9 @@ export const mapTranslations = {
     loading: "வரைபடம் ஏற்றப்படுகிறது…",
     failed: "வரைபடத் தகவலை ஏற்ற முடியவில்லை",
     attribution: "வரைபடத் தகவல் © OpenStreetMap பங்களிப்பாளர்கள். எல்லைத் தகவல்: lib/db/data/data-sources.md.",
+    outline: "தொகுதி எல்லை",
+    constituencyOutline: "மதுரை மாநகராட்சி",
+    osmAttribution: "மூலம்: OpenStreetMap (ODbL-1.0).",
   },
 } as const;
 

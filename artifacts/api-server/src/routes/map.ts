@@ -18,10 +18,17 @@ const router: IRouter = Router();
 // FeatureCollection where each feature's `properties.wardId` matches a
 // row in the `wards` table. Wards without a matching feature fall back
 // to a centroid pin on the public map.
+// IMPORTANT: at runtime this module lives in `artifacts/api-server/dist/`
+// (esbuild bundles to a single file). So __dirname is the dist folder
+// and the workspace root is three levels up — NOT four.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BOUNDARIES_PATH = path.resolve(
   __dirname,
-  "../../../../lib/db/data/ward-boundaries.geojson",
+  "../../../lib/db/data/ward-boundaries.geojson",
+);
+const OUTLINES_PATH = path.resolve(
+  __dirname,
+  "../../../lib/db/data/constituency-outlines.geojson",
 );
 
 interface GeoJsonFeature {
@@ -50,6 +57,23 @@ function loadBoundaryFeatures(): BoundaryEntry[] {
     result = [];
   }
   cachedBoundaries = result;
+  return result;
+}
+
+let cachedOutlines: GeoJsonFeatureCollection | null = null;
+function loadConstituencyOutlines(): GeoJsonFeatureCollection {
+  if (cachedOutlines) return cachedOutlines;
+  let result: GeoJsonFeatureCollection = { type: "FeatureCollection", features: [] };
+  try {
+    const raw = fs.readFileSync(OUTLINES_PATH, "utf8");
+    const parsed = JSON.parse(raw) as GeoJsonFeatureCollection;
+    if (parsed?.type === "FeatureCollection" && Array.isArray(parsed.features)) {
+      result = parsed;
+    }
+  } catch {
+    /* file is optional */
+  }
+  cachedOutlines = result;
   return result;
 }
 
@@ -120,7 +144,12 @@ router.get("/map/data", async (_req, res) => {
       };
     });
 
-    res.json({ zones, wards: wardsOut, pollingStations: booths });
+    res.json({
+      zones,
+      wards: wardsOut,
+      pollingStations: booths,
+      constituencyOutlines: loadConstituencyOutlines(),
+    });
   } catch (err) {
     console.error("[map] data error:", err);
     res.status(500).json({ error: "Failed to load map data" });
