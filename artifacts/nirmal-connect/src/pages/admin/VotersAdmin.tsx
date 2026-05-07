@@ -22,6 +22,10 @@ import type { Language } from "@/lib/i18n";
 import { useVoterTags, type VoterTag } from "./VoterTagsAdmin";
 import HouseholdsTab from "./HouseholdsTab";
 import { Home as HomeIcon } from "lucide-react";
+import {
+  TimelinePanel, ContactLogPanel, RelationsPanel, ContactInfoDisplay,
+  BulkAdvancedActions, VotersAdvancedToolbar,
+} from "./VotersAdvancedPanels";
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 
@@ -50,6 +54,10 @@ interface VoterDetail extends VoterRow {
   sourcePdf: string | null;
   sourcePage: number | null;
   householdId: number | null;
+  phone: string | null;
+  whatsappOptIn: boolean;
+  email: string | null;
+  altContact: string | null;
   createdAt: string;
   updatedAt: string;
   tags: VoterTag[];
@@ -262,6 +270,24 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
             area; admins see all. Every search and detail view is audited.
           </p>
         </div>
+        {isSuperAdmin && (
+          <VotersAdvancedToolbar
+            onJumpToVoter={(id) => { setActiveTab("voters"); setDetailId(id); }}
+            currentFilter={(() => {
+              // Sanitize: drop "all"/empty values + cast numerics so the
+              // backend voterFilterSchema (strict) accepts the payload.
+              const out: Record<string, unknown> = {};
+              if (filters.q.trim()) out.q = filters.q.trim();
+              if (filters.wardId !== "all") out.wardId = parseInt(filters.wardId, 10);
+              if (filters.boothId !== "all") out.boothId = parseInt(filters.boothId, 10);
+              if (filters.gender !== "all") out.gender = filters.gender;
+              if (filters.minAge) out.minAge = parseInt(filters.minAge, 10);
+              if (filters.maxAge) out.maxAge = parseInt(filters.maxAge, 10);
+              if (filters.tagIds.length > 0) out.tagIds = filters.tagIds;
+              return out;
+            })()}
+          />
+        )}
         {/* EN/TA presentation toggle (mirrors AboutAdmin pattern) */}
         <div className="flex gap-1 rounded-md border bg-background p-0.5 shrink-0">
           <button
@@ -517,6 +543,13 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
               <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete {selectedIds.size}
             </Button>
           )}
+          {isSuperAdmin && (
+            <BulkAdvancedActions
+              selectedIds={Array.from(selectedIds)}
+              allTags={allTags}
+              onDone={() => { setSelectedIds(new Set()); invalidateAllVoterQueries(qcMain); }}
+            />
+          )}
         </div>
       )}
 
@@ -770,9 +803,25 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
                   </button>
                 </div>
               )}
+              <ContactInfoDisplay
+                phone={detail.phone}
+                whatsappOptIn={detail.whatsappOptIn}
+                email={detail.email}
+                altContact={detail.altContact}
+              />
               <TagsPanel voterId={detail.id} initialTags={detail.tags} allTags={allTags} displayLang={displayLang} />
               <NotesPanel voterId={detail.id} me={me} isAdminRole={isAdminRole} />
               <GrievancesPanel voterId={detail.id} />
+              {isSuperAdmin && (
+                <>
+                  <ContactLogPanel voterId={detail.id} />
+                  <RelationsPanel voterId={detail.id} />
+                  <div className="border-t pt-3">
+                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Activity timeline</div>
+                    <TimelinePanel voterId={detail.id} />
+                  </div>
+                </>
+              )}
               <div className="text-xs text-muted-foreground border-t pt-3">
                 Last updated {new Date(detail.updatedAt).toLocaleString()}
               </div>
@@ -1326,6 +1375,10 @@ function ExportBar({
 // intentionally NOT editable here — use the Households / bulk
 // reassign flows for that, since picking a booth needs a search UI.
 interface VoterDetailForEdit {
+  phone?: string | null;
+  whatsappOptIn?: boolean;
+  email?: string | null;
+  altContact?: string | null;
   id: number;
   epicNumber: string;
   fullName: string;
@@ -1364,6 +1417,10 @@ function EditVoterForm({
     addressLine: voter.addressLine ?? "",
     partNumber: voter.partNumber ?? "",
     serialInPart: voter.serialInPart != null ? String(voter.serialInPart) : "",
+    phone: voter.phone ?? "",
+    whatsappOptIn: voter.whatsappOptIn ?? false,
+    email: voter.email ?? "",
+    altContact: voter.altContact ?? "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1413,6 +1470,12 @@ function EditVoterForm({
       const c = form.serialInPart.trim();
       const orig = voter.serialInPart != null ? String(voter.serialInPart) : "";
       if (c !== orig) patch["serialInPart"] = c === "" ? null : Number.parseInt(c, 10);
+    }
+    diff("phone", form.phone, voter.phone);
+    diff("email", form.email, voter.email);
+    diff("altContact", form.altContact, voter.altContact);
+    if (form.whatsappOptIn !== (voter.whatsappOptIn ?? false)) {
+      patch["whatsappOptIn"] = form.whatsappOptIn;
     }
     return patch;
   }
@@ -1578,6 +1641,37 @@ function EditVoterForm({
             value={form.serialInPart}
             onChange={(e) => setField("serialInPart", e.target.value)}
             className="mt-0.5 h-8 text-sm"
+          />
+        </div>
+      </div>
+      <div className="border-t pt-3 mt-2">
+        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Contact</div>
+        <div className="space-y-2">
+          <Input
+            value={form.phone}
+            onChange={(e) => setField("phone", e.target.value)}
+            placeholder="Phone (e.g. +91 9876543210)"
+            className="h-8 text-sm" maxLength={40}
+            data-testid="input-edit-phone"
+          />
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={form.whatsappOptIn}
+              onChange={(e) => setField("whatsappOptIn", e.target.checked)}
+              data-testid="checkbox-edit-whatsapp"
+            /> WhatsApp opt-in
+          </label>
+          <Input
+            type="email" value={form.email}
+            onChange={(e) => setField("email", e.target.value)}
+            placeholder="Email" className="h-8 text-sm" maxLength={200}
+          />
+          <Input
+            value={form.altContact}
+            onChange={(e) => setField("altContact", e.target.value)}
+            placeholder="Alt contact (relative's number, landline…)"
+            className="h-8 text-sm" maxLength={200}
           />
         </div>
       </div>

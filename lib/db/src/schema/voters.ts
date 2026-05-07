@@ -1,5 +1,5 @@
 import {
-  pgTable, text, serial, integer, timestamp, index, uniqueIndex,
+  pgTable, text, serial, integer, timestamp, index, uniqueIndex, boolean,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { pollingStationsTable } from "./hierarchy";
@@ -56,6 +56,15 @@ export const votersTable = pgTable("voters", {
     () => householdsTable.id,
     { onDelete: "set null" },
   ),
+  // ── Phase 2 contact data ─────────────────────────────────────
+  // Captured by booth coordinators during door-to-door visits and
+  // phone-banking. Personal data — same DPDP scope as the rest of
+  // this row. Phone is the primary number; altContact is a free-text
+  // fallback (relative's number, landline, etc).
+  phone: text("phone"),                           // E.164 or local digits
+  whatsappOptIn: boolean("whatsapp_opt_in").notNull().default(false),
+  email: text("email"),
+  altContact: text("alt_contact"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => ({

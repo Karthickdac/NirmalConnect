@@ -133,6 +133,50 @@ export const adminApi = {
     authFetch(`/admin/voters/bulk-delete`, {
       method: "POST", body: JSON.stringify({ voterIds }),
     }) as Promise<{ ok: boolean; deletedCount: number }>,
+  // Voter advanced — duplicates / merge / bulk-ops / contact / relations / timeline / segments / analytics / callsheet
+  getVoterDuplicates: (limit = 50) =>
+    authFetch(`/admin/voters/duplicates?limit=${limit}`) as Promise<{ groups: Array<{ key: string; nameKey: string; age: number | null; pollingStationId: number | null; count: number; members: Array<Record<string, unknown>> }>; total: number }>,
+  mergeVoters: (primaryId: number, duplicateIds: number[]) =>
+    authFetch(`/admin/voters/merge`, { method: "POST", body: JSON.stringify({ primaryId, duplicateIds }) }) as Promise<{ ok: boolean; primaryId: number; mergedCount: number }>,
+  bulkVoterOp: (body: Record<string, unknown>) =>
+    authFetch(`/admin/voters/bulk`, { method: "POST", body: JSON.stringify(body) }) as Promise<{ ok: boolean; affectedCount: number }>,
+  getVoterContactLog: (voterId: number) =>
+    authFetch(`/admin/voters/${voterId}/contact-log`) as Promise<{ items: Array<Record<string, unknown>> }>,
+  createVoterContactLog: (voterId: number, body: Record<string, unknown>) =>
+    authFetch(`/admin/voters/${voterId}/contact-log`, { method: "POST", body: JSON.stringify(body) }),
+  deleteVoterContactLog: (voterId: number, logId: number) =>
+    authFetch(`/admin/voters/${voterId}/contact-log/${logId}`, { method: "DELETE" }),
+  getVoterRelations: (voterId: number) =>
+    authFetch(`/admin/voters/${voterId}/relations`) as Promise<{ items: Array<Record<string, unknown>> }>,
+  createVoterRelation: (voterId: number, body: Record<string, unknown>) =>
+    authFetch(`/admin/voters/${voterId}/relations`, { method: "POST", body: JSON.stringify(body) }),
+  deleteVoterRelation: (voterId: number, relationId: number) =>
+    authFetch(`/admin/voters/${voterId}/relations/${relationId}`, { method: "DELETE" }),
+  getVoterTimeline: (voterId: number) =>
+    authFetch(`/admin/voters/${voterId}/timeline`) as Promise<{ items: Array<{ kind: string; at: string; data: Record<string, unknown> }> }>,
+  getVoterSegments: () =>
+    authFetch(`/admin/voter-segments`) as Promise<{ items: Array<Record<string, unknown>> }>,
+  createVoterSegment: (body: Record<string, unknown>) =>
+    authFetch(`/admin/voter-segments`, { method: "POST", body: JSON.stringify(body) }),
+  updateVoterSegment: (id: number, body: Record<string, unknown>) =>
+    authFetch(`/admin/voter-segments/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteVoterSegment: (id: number) =>
+    authFetch(`/admin/voter-segments/${id}`, { method: "DELETE" }),
+  refreshVoterSegmentCount: (id: number) =>
+    authFetch(`/admin/voter-segments/${id}/refresh-count`, { method: "POST" }) as Promise<{ count: number; lastCountAt: string }>,
+  getVoterAnalytics: (wardId?: number) =>
+    authFetch(`/admin/voters/analytics${wardId ? `?wardId=${wardId}` : ""}`) as Promise<{
+      totalVoters: number;
+      byGender: Array<{ gender: string; n: number }>;
+      byAgeBand: Array<{ band: string; n: number }>;
+      byBooth: Array<{ polling_station_id: number | null; booth_no: string | null; name: string | null; n: number }>;
+      byTag: Array<{ id: number; name: string; color: string; n: number }>;
+      phoneCoverage: { withPhone: number; total: number; percent: number };
+      whatsappOptIn: number;
+      grievancesByBooth: Array<{ polling_station_id: number | null; booth_no: string | null; n: number }>;
+    }>,
+  getVoterCallsheet: (body: Record<string, unknown>) =>
+    authFetch(`/admin/voters/callsheet`, { method: "POST", body: JSON.stringify(body) }) as Promise<{ groups: Array<{ key: string; label: string; members: Array<Record<string, unknown>> }>; total: number }>,
   // Multipart upload — bypasses authFetch JSON wrapper.
   uploadVoterPdfs: async (files: File[], expectedBoothNo?: string) => {
     const fd = new FormData();

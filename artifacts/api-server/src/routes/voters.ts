@@ -820,6 +820,10 @@ router.get("/admin/voters/:id", requireStaff, async (req: AuthRequest, res) => {
         sourcePdf: votersTable.sourcePdf,
         sourcePage: votersTable.sourcePage,
         householdId: votersTable.householdId,
+        phone: votersTable.phone,
+        whatsappOptIn: votersTable.whatsappOptIn,
+        email: votersTable.email,
+        altContact: votersTable.altContact,
         createdAt: votersTable.createdAt,
         updatedAt: votersTable.updatedAt,
       })
@@ -904,6 +908,11 @@ const voterPatchSchema = z.object({
   pollingStationId: z.number().int().positive().nullable().optional(),
   partNumber: z.string().trim().max(20).nullable().optional(),
   serialInPart: z.coerce.number().int().min(0).max(100000).nullable().optional(),
+  // Phase 2 contact fields — same null-vs-omit semantics as the rest.
+  phone: z.string().trim().max(40).nullable().optional(),
+  whatsappOptIn: z.boolean().optional(),
+  email: z.string().trim().email().max(200).nullable().optional().or(z.literal("").transform(() => null)),
+  altContact: z.string().trim().max(200).nullable().optional(),
 }).strict();
 
 router.patch(
@@ -972,6 +981,8 @@ router.patch(
         ["houseNumber", "houseNumber"], ["addressLine", "addressLine"],
         ["pollingStationId", "pollingStationId"],
         ["partNumber", "partNumber"], ["serialInPart", "serialInPart"],
+        ["phone", "phone"], ["whatsappOptIn", "whatsappOptIn"],
+        ["email", "email"], ["altContact", "altContact"],
       ];
       for (const [k, col] of fieldMap) {
         if (k in patch) {
@@ -995,9 +1006,20 @@ router.patch(
       }
 
       await db.update(votersTable).set(updateSet).where(eq(votersTable.id, id));
+      // Redact contact PII from the audit trail — DPDP minimization:
+      // we record only "changed" / "cleared", never the actual value.
+      const PII_KEYS = new Set(["phone", "email", "altContact"]);
+      const auditDelta: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(delta)) {
+        if (PII_KEYS.has(k)) {
+          auditDelta[k] = { changed: true, cleared: v.new == null };
+        } else {
+          auditDelta[k] = v;
+        }
+      }
       await logVoterAudit(
         req, "VOTER_EDIT", `voter:${nextEpic}`,
-        `voter_id=${id} changed=${JSON.stringify(delta)}`,
+        `voter_id=${id} changed=${JSON.stringify(auditDelta)}`,
       );
       res.json({ ok: true, changedFields: Object.keys(delta), voterId: id });
     } catch (err) {

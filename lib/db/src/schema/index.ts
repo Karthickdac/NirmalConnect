@@ -15,5 +15,8 @@ export * from "./hierarchy";
 export * from "./assignments";
 export * from "./voters";
 export * from "./voter_tags";
+export * from "./voter_contact_log";
+export * from "./voter_relations";
+export * from "./voter_segments";
 export * from "./households";
 export * from "./voter_exports";

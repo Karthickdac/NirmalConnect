@@ -11,6 +11,7 @@ import statsRouter from "./stats.js";
 import grievancesRouter from "./grievances.js";
 import adminRouter from "./admin.js";
 import votersRouter from "./voters.js";
+import votersAdvancedRouter from "./voters_advanced.js";
 import householdsRouter from "./households.js";
 import voterExportsRouter from "./voter_exports.js";
 import siteRouter from "./site.js";
@@ -31,6 +32,10 @@ router.use(grievancesRouter);
 router.use(siteRouter);
 router.use(mapRouter);
 router.use(adminRouter);
+// votersAdvancedRouter MUST be mounted before votersRouter so its
+// specific paths (/admin/voters/duplicates, /analytics, /merge, /bulk,
+// /callsheet) win over votersRouter's catch-all /admin/voters/:id.
+router.use(votersAdvancedRouter);
 router.use(votersRouter);
 router.use(householdsRouter);
 router.use(voterExportsRouter);
