@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import {
   DEFAULT_HOME_HERO,
   type HomeHeroConfig,
 } from "@/components/HomeView";
+import { useUnsavedChangesGuard } from "@/lib/unsavedChanges";
 
 const SAMPLE_SUMMARY = { totalVolunteers: 1240, totalEvents: 32, totalNews: 87 };
 const SAMPLE_STATS = {
@@ -59,13 +60,26 @@ export default function HomeAdmin() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showPreview, setShowPreview] = useState(true);
   const [previewLang, setPreviewLang] = useState<"en" | "ta">("en");
+  // Snapshot of the last loaded/saved config, used to detect unsaved edits.
+  const [savedSnapshot, setSavedSnapshot] = useState<string>(() => JSON.stringify(DEFAULT_HOME_HERO));
 
   useEffect(() => {
     adminApi.getHomeHero()
-      .then((d: Partial<HomeHeroConfig> | null) => { if (d) setConfig({ ...DEFAULT_HOME_HERO, ...d }); })
+      .then((d: Partial<HomeHeroConfig> | null) => {
+        const next = d ? { ...DEFAULT_HOME_HERO, ...d } : DEFAULT_HOME_HERO;
+        setConfig(next);
+        setSavedSnapshot(JSON.stringify(next));
+      })
       .catch(() => setError("Failed to load home hero config"))
       .finally(() => setLoading(false));
   }, []);
+
+  const isDirty = useMemo(() => JSON.stringify(config) !== savedSnapshot, [config, savedSnapshot]);
+
+  // Register with the surrounding admin shell so that switching sidebar
+  // sections, browser back/forward, and reload/close all prompt before
+  // discarding unsaved edits.
+  useUnsavedChangesGuard(isDirty);
 
   const set = <K extends keyof HomeHeroConfig>(key: K, value: HomeHeroConfig[K]) =>
     setConfig((c) => ({ ...c, [key]: value }));
@@ -81,6 +95,8 @@ export default function HomeAdmin() {
     setError(null);
     try {
       await adminApi.updateHomeHero(config);
+      // Refresh the dirty baseline so the unsaved-changes guard clears.
+      setSavedSnapshot(JSON.stringify(config));
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e: unknown) {

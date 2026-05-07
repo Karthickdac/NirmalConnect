@@ -31,6 +31,7 @@ import HierarchyAdmin from "./admin/HierarchyAdmin";
 import PressReleasesAdmin from "./admin/PressReleasesAdmin";
 import AssignmentsAdmin from "./admin/AssignmentsAdmin";
 import type { Language } from "@/lib/i18n";
+import { UnsavedChangesProvider, useConfirmDiscard } from "@/lib/unsavedChanges";
 
 interface AdminProps { lang?: Language }
 
@@ -64,7 +65,16 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export default function Admin({ lang = "ta" }: AdminProps) {
+  return (
+    <UnsavedChangesProvider>
+      <AdminInner lang={lang} />
+    </UnsavedChangesProvider>
+  );
+}
+
+function AdminInner({ lang = "ta" }: AdminProps) {
   const [, setLocation] = useLocation();
+  const confirmDiscard = useConfirmDiscard();
   const { data: me, error } = useGetMe();
   const [active, setActive] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -72,7 +82,11 @@ export default function Admin({ lang = "ta" }: AdminProps) {
   useEffect(() => { if (!isAuthenticated()) setLocation("/login"); }, []);
   useEffect(() => { if (error) { removeToken(); setLocation("/login"); } }, [error]);
 
-  function logout() { removeToken(); setLocation("/login"); }
+  function logout() {
+    if (!confirmDiscard("You have unsaved changes. Discard them and sign out?")) return;
+    removeToken();
+    setLocation("/login");
+  }
 
   const token = getToken() ?? "";
   const role = me?.role ?? "";
@@ -158,6 +172,8 @@ export default function Admin({ lang = "ta" }: AdminProps) {
   }, [role]);
 
   function navigate(id: string) {
+    if (id === active) { setSidebarOpen(false); return; }
+    if (!confirmDiscard()) return;
     setActive(id);
     setSidebarOpen(false);
   }

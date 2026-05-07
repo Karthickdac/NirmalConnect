@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Save, RefreshCw, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { adminApi } from "./api";
 import { AboutView, DEFAULT_ABOUT_CONFIG, type AboutConfig } from "@/components/AboutView";
+import { useUnsavedChangesGuard } from "@/lib/unsavedChanges";
 
 const DEFAULT_CONFIG: AboutConfig = {
   ...DEFAULT_ABOUT_CONFIG,
@@ -75,20 +76,10 @@ export default function AboutAdmin() {
     return () => clearTimeout(t);
   }, [saved]);
 
-  // Browser-native confirm dialog before reload/close while there are
-  // unsaved edits. Only attached when dirty so the prompt doesn't fire
-  // during clean navigation.
-  useEffect(() => {
-    if (!isDirty) return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      // Most modern browsers ignore the custom string but require returnValue
-      // to be set for the prompt to show.
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [isDirty]);
+  // Register with the surrounding admin shell so that switching sidebar
+  // sections, browser back/forward, and reload/close all prompt before
+  // discarding unsaved edits.
+  useUnsavedChangesGuard(isDirty);
 
   const set = <K extends keyof AboutConfig>(key: K, value: AboutConfig[K]) =>
     setConfig(c => ({ ...c, [key]: value }));
