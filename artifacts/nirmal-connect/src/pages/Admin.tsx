@@ -22,6 +22,7 @@ import AuditLogAdmin from "./admin/AuditLogAdmin";
 import BannersAdmin from "./admin/BannersAdmin";
 import ConstituencyAdmin from "./admin/ConstituencyAdmin";
 import WardAdmin from "./admin/WardAdmin";
+import HierarchyAdmin from "./admin/HierarchyAdmin";
 import PressReleasesAdmin from "./admin/PressReleasesAdmin";
 import type { Language } from "@/lib/i18n";
 
@@ -212,8 +213,16 @@ export default function Admin({ lang = "ta" }: AdminProps) {
             <div className="space-y-6">
               <ConstituencyAdmin />
               <div className="border-t pt-4">
-                <WardAdmin />
+                <HierarchyAdmin />
               </div>
+              <details className="border-t pt-4 group">
+                <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground select-none">
+                  Legacy ward coordinator list (flat view)
+                </summary>
+                <div className="mt-3">
+                  <WardAdmin />
+                </div>
+              </details>
             </div>
           )}
           {active === "faqs"         && <FaqsAdmin />}

@@ -4,6 +4,8 @@ import {
   newsTable, eventsTable, activitiesTable, galleryTable,
   volunteersTable, faqsTable, grievancesTable, usersTable,
   siteConfigTable, auditLogTable, bannersTable, constituencyStatsTable, wardsTable,
+  zonesTable, areasTable, streetsTable, pollingStationsTable,
+  pincodesTable, pincodeWardsTable,
 } from "@workspace/db/schema";
 
 import { requireStaff, requireRole, type AuthRequest } from "../lib/auth.js";
@@ -929,6 +931,551 @@ router.get("/admin/grievances/export", async (_req, res) => {
     res.send(csv);
   } catch (err) {
     console.error("[admin] grievances export:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ──────────────────────────────────────────────────────────
+// CONSTITUENCY HIERARCHY (Zones / Wards / Areas / Streets /
+// Polling Stations / Pincodes) — staff CRUD
+// ──────────────────────────────────────────────────────────
+
+// Full tree (Zone → Ward → Area → Street + booth counts per ward)
+router.get("/admin/hierarchy/tree", requireRole(...WARD_ROLES), async (_req, res) => {
+  try {
+    const [zones, wards, areas, streets, boothCountsRows] = await Promise.all([
+      db.select().from(zonesTable).orderBy(asc(zonesTable.name)),
+      db.select().from(wardsTable).orderBy(asc(wardsTable.name)),
+      db.select().from(areasTable).orderBy(asc(areasTable.name)),
+      db.select().from(streetsTable).orderBy(asc(streetsTable.name)),
+      db.select({
+        wardId: pollingStationsTable.wardId,
+        count: sql<number>`count(*)::int`,
+      }).from(pollingStationsTable).groupBy(pollingStationsTable.wardId),
+    ]);
+
+    const boothCounts = new Map<number, number>();
+    for (const r of boothCountsRows) if (r.wardId != null) boothCounts.set(r.wardId, r.count);
+
+    const tree = zones.map(z => ({
+      ...z,
+      createdAt: z.createdAt.toISOString(),
+      updatedAt: z.updatedAt.toISOString(),
+      wards: wards.filter(w => w.zoneId === z.id).map(w => ({
+        ...w,
+        createdAt: w.createdAt.toISOString(),
+        updatedAt: w.updatedAt.toISOString(),
+        boothCount: boothCounts.get(w.id) ?? 0,
+        areas: areas.filter(a => a.wardId === w.id).map(a => ({
+          ...a,
+          createdAt: a.createdAt.toISOString(),
+          updatedAt: a.updatedAt.toISOString(),
+          streets: streets.filter(s => s.areaId === a.id).map(s => ({
+            ...s,
+            createdAt: s.createdAt.toISOString(),
+            updatedAt: s.updatedAt.toISOString(),
+          })),
+        })),
+      })),
+    }));
+
+    // Wards with no zone (orphaned) bucket so staff can re-home them
+    const orphanWards = wards.filter(w => w.zoneId == null);
+
+    res.json({ zones: tree, orphanWards: orphanWards.map(w => ({
+      ...w,
+      createdAt: w.createdAt.toISOString(),
+      updatedAt: w.updatedAt.toISOString(),
+      boothCount: boothCounts.get(w.id) ?? 0,
+      areas: areas.filter(a => a.wardId === w.id).map(a => ({
+        ...a,
+        createdAt: a.createdAt.toISOString(),
+        updatedAt: a.updatedAt.toISOString(),
+        streets: streets.filter(s => s.areaId === a.id).map(s => ({
+          ...s,
+          createdAt: s.createdAt.toISOString(),
+          updatedAt: s.updatedAt.toISOString(),
+        })),
+      })),
+    })) });
+  } catch (err) {
+    console.error("[admin] hierarchy tree:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Polling stations for a single ward (loaded on expand to keep tree light)
+router.get("/admin/hierarchy/wards/:id/polling-stations", requireRole(...WARD_ROLES), async (req, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    if (Number.isNaN(id)) { res.status(400).json({ error: "Invalid ward id" }); return; }
+    const rows = await db.select().from(pollingStationsTable)
+      .where(eq(pollingStationsTable.wardId, id))
+      .orderBy(asc(pollingStationsTable.slNo), asc(pollingStationsTable.boothNo));
+    res.json(rows.map(r => ({
+      ...r,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString(),
+    })));
+  } catch (err) {
+    console.error("[admin] hierarchy ward booths:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Zones CRUD ──
+const ZoneBody = z.object({
+  name: z.string().min(1),
+  nameTa: z.string().optional().nullable(),
+  slug: z.string().min(1),
+  type: z.enum(["corporation", "rural"]).default("corporation"),
+  description: z.string().optional().nullable(),
+});
+
+router.post("/admin/hierarchy/zones", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const body = ZoneBody.safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const [item] = await db.insert(zonesTable).values(body.data).returning();
+    await logAudit(req, "CREATE", `zone:${item.id}`, item.name);
+    res.status(201).json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] zone create:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/admin/hierarchy/zones/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    const body = ZoneBody.partial().safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const [item] = await db.update(zonesTable).set(body.data).where(eq(zonesTable.id, id)).returning();
+    if (!item) { res.status(404).json({ error: "Not found" }); return; }
+    await logAudit(req, "UPDATE", `zone:${id}`, item.name);
+    res.json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] zone update:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/admin/hierarchy/zones/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    // Block delete when wards still reference this zone
+    const [{ count }] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(wardsTable).where(eq(wardsTable.zoneId, id));
+    if (count > 0) {
+      res.status(409).json({ error: `Cannot delete: ${count} ward(s) still in this zone. Move them first.` });
+      return;
+    }
+    await db.delete(zonesTable).where(eq(zonesTable.id, id));
+    await logAudit(req, "DELETE", `zone:${id}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[admin] zone delete:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Hierarchy ward CRUD (extends the older /admin/wards with bilingual + zone fields) ──
+const HWardBody = z.object({
+  name: z.string().min(1),
+  nameTa: z.string().optional().nullable(),
+  slug: z.string().optional().nullable(),
+  wardType: z.string().optional().nullable(),
+  zoneId: z.number().int().optional().nullable(),
+  area: z.string().optional().nullable(),
+  pincode: z.string().optional().nullable(),
+  latitude: z.number().optional().nullable(),
+  longitude: z.number().optional().nullable(),
+  coordinatorName: z.string().optional().nullable(),
+  coordinatorPhone: z.string().optional().nullable(),
+  coordinatorEmail: z.string().optional().nullable(),
+  population: z.number().int().optional().nullable(),
+  households: z.number().int().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+router.post("/admin/hierarchy/wards", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const body = HWardBody.safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    if (body.data.zoneId != null) {
+      const [z] = await db.select({ id: zonesTable.id }).from(zonesTable).where(eq(zonesTable.id, body.data.zoneId));
+      if (!z) { res.status(400).json({ error: "Parent zone does not exist" }); return; }
+    }
+    const [item] = await db.insert(wardsTable).values(body.data).returning();
+    await logAudit(req, "CREATE", `ward:${item.id}`, item.name);
+    res.status(201).json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] hierarchy ward create:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/admin/hierarchy/wards/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    const body = HWardBody.partial().safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    if (body.data.zoneId != null) {
+      const [z] = await db.select({ id: zonesTable.id }).from(zonesTable).where(eq(zonesTable.id, body.data.zoneId));
+      if (!z) { res.status(400).json({ error: "Parent zone does not exist" }); return; }
+    }
+    const [item] = await db.update(wardsTable).set(body.data).where(eq(wardsTable.id, id)).returning();
+    if (!item) { res.status(404).json({ error: "Not found" }); return; }
+    await logAudit(req, "UPDATE", `ward:${id}`, item.name);
+    res.json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] hierarchy ward update:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/admin/hierarchy/wards/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    const [{ areaCount }] = await db.select({ areaCount: sql<number>`count(*)::int` })
+      .from(areasTable).where(eq(areasTable.wardId, id));
+    const [{ boothCount }] = await db.select({ boothCount: sql<number>`count(*)::int` })
+      .from(pollingStationsTable).where(eq(pollingStationsTable.wardId, id));
+    if (areaCount > 0 || boothCount > 0) {
+      res.status(409).json({
+        error: `Cannot delete: ${areaCount} area(s) and ${boothCount} booth(s) still attached. Remove or reassign them first.`,
+      });
+      return;
+    }
+    // Detach pincode mappings (they're descriptive, safe to remove)
+    await db.delete(pincodeWardsTable).where(eq(pincodeWardsTable.wardId, id));
+    await db.delete(wardsTable).where(eq(wardsTable.id, id));
+    await logAudit(req, "DELETE", `ward:${id}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[admin] hierarchy ward delete:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Areas CRUD ──
+const AreaBody = z.object({
+  wardId: z.number().int(),
+  name: z.string().min(1),
+  nameTa: z.string().optional().nullable(),
+  areaType: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+router.post("/admin/hierarchy/areas", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const body = AreaBody.safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const [w] = await db.select({ id: wardsTable.id }).from(wardsTable).where(eq(wardsTable.id, body.data.wardId));
+    if (!w) { res.status(400).json({ error: "Parent ward does not exist" }); return; }
+    const [item] = await db.insert(areasTable).values(body.data).returning();
+    await logAudit(req, "CREATE", `area:${item.id}`, item.name);
+    res.status(201).json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] area create:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/admin/hierarchy/areas/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    const body = AreaBody.partial().safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    if (body.data.wardId != null) {
+      const [w] = await db.select({ id: wardsTable.id }).from(wardsTable).where(eq(wardsTable.id, body.data.wardId));
+      if (!w) { res.status(400).json({ error: "Parent ward does not exist" }); return; }
+    }
+    const [item] = await db.update(areasTable).set(body.data).where(eq(areasTable.id, id)).returning();
+    if (!item) { res.status(404).json({ error: "Not found" }); return; }
+    await logAudit(req, "UPDATE", `area:${id}`, item.name);
+    res.json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] area update:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/admin/hierarchy/areas/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    const [{ count }] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(streetsTable).where(eq(streetsTable.areaId, id));
+    if (count > 0) {
+      res.status(409).json({ error: `Cannot delete: ${count} street(s) still in this area.` });
+      return;
+    }
+    // Detach booths that reference this area (booths still belong to ward)
+    await db.update(pollingStationsTable).set({ areaId: null }).where(eq(pollingStationsTable.areaId, id));
+    await db.delete(areasTable).where(eq(areasTable.id, id));
+    await logAudit(req, "DELETE", `area:${id}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[admin] area delete:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Streets CRUD ──
+const StreetBody = z.object({
+  areaId: z.number().int(),
+  name: z.string().min(1),
+  nameTa: z.string().optional().nullable(),
+  pincode: z.string().optional().nullable(),
+});
+
+router.post("/admin/hierarchy/streets", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const body = StreetBody.safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const [a] = await db.select({ id: areasTable.id }).from(areasTable).where(eq(areasTable.id, body.data.areaId));
+    if (!a) { res.status(400).json({ error: "Parent area does not exist" }); return; }
+    const [item] = await db.insert(streetsTable).values(body.data).returning();
+    await logAudit(req, "CREATE", `street:${item.id}`, item.name);
+    res.status(201).json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] street create:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/admin/hierarchy/streets/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    const body = StreetBody.partial().safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    if (body.data.areaId != null) {
+      const [a] = await db.select({ id: areasTable.id }).from(areasTable).where(eq(areasTable.id, body.data.areaId));
+      if (!a) { res.status(400).json({ error: "Parent area does not exist" }); return; }
+    }
+    const [item] = await db.update(streetsTable).set(body.data).where(eq(streetsTable.id, id)).returning();
+    if (!item) { res.status(404).json({ error: "Not found" }); return; }
+    await logAudit(req, "UPDATE", `street:${id}`, item.name);
+    res.json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] street update:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/admin/hierarchy/streets/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    await db.delete(streetsTable).where(eq(streetsTable.id, id));
+    await logAudit(req, "DELETE", `street:${id}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[admin] street delete:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Polling Stations CRUD ──
+const BoothBody = z.object({
+  boothNo: z.string().min(1),
+  slNo: z.number().int().optional().nullable(),
+  name: z.string().min(1),
+  nameTa: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  addressTa: z.string().optional().nullable(),
+  wardId: z.number().int().optional().nullable(),
+  areaId: z.number().int().optional().nullable(),
+  pincode: z.string().optional().nullable(),
+  voterType: z.enum(["all", "men_only", "women_only"]).default("all"),
+  latitude: z.number().min(-90).max(90).optional().nullable(),
+  longitude: z.number().min(-180).max(180).optional().nullable(),
+  source: z.string().optional().nullable(),
+});
+
+router.post("/admin/hierarchy/polling-stations", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const body = BoothBody.safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    if (body.data.wardId != null) {
+      const [w] = await db.select({ id: wardsTable.id }).from(wardsTable).where(eq(wardsTable.id, body.data.wardId));
+      if (!w) { res.status(400).json({ error: "Parent ward does not exist" }); return; }
+    }
+    if (body.data.areaId != null) {
+      const [a] = await db.select({ id: areasTable.id, wardId: areasTable.wardId }).from(areasTable).where(eq(areasTable.id, body.data.areaId));
+      if (!a) { res.status(400).json({ error: "Parent area does not exist" }); return; }
+      if (body.data.wardId != null && a.wardId !== body.data.wardId) {
+        res.status(400).json({ error: "Area does not belong to the selected ward" }); return;
+      }
+    }
+    const [item] = await db.insert(pollingStationsTable).values(body.data).returning();
+    await logAudit(req, "CREATE", `polling_station:${item.id}`, `Booth ${item.boothNo} – ${item.name}`);
+    res.status(201).json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] booth create:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/admin/hierarchy/polling-stations/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    const body = BoothBody.partial().safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    if (body.data.wardId != null) {
+      const [w] = await db.select({ id: wardsTable.id }).from(wardsTable).where(eq(wardsTable.id, body.data.wardId));
+      if (!w) { res.status(400).json({ error: "Parent ward does not exist" }); return; }
+    }
+    if (body.data.areaId != null) {
+      const [a] = await db.select({ id: areasTable.id, wardId: areasTable.wardId }).from(areasTable).where(eq(areasTable.id, body.data.areaId));
+      if (!a) { res.status(400).json({ error: "Parent area does not exist" }); return; }
+      // Determine the effective wardId for this booth (incoming or existing) and require area to match.
+      let effectiveWardId = body.data.wardId ?? null;
+      if (effectiveWardId == null) {
+        const [existing] = await db.select({ wardId: pollingStationsTable.wardId }).from(pollingStationsTable).where(eq(pollingStationsTable.id, id));
+        effectiveWardId = existing?.wardId ?? null;
+      }
+      if (effectiveWardId != null && a.wardId !== effectiveWardId) {
+        res.status(400).json({ error: "Area does not belong to the booth's ward" }); return;
+      }
+    }
+    const [item] = await db.update(pollingStationsTable).set(body.data).where(eq(pollingStationsTable.id, id)).returning();
+    if (!item) { res.status(404).json({ error: "Not found" }); return; }
+    await logAudit(req, "UPDATE", `polling_station:${id}`, `Booth ${item.boothNo}`);
+    res.json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] booth update:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/admin/hierarchy/polling-stations/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    await db.delete(pollingStationsTable).where(eq(pollingStationsTable.id, id));
+    await logAudit(req, "DELETE", `polling_station:${id}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[admin] booth delete:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Pincodes (with many-to-many ward associations) ──
+router.get("/admin/hierarchy/pincodes", requireRole(...WARD_ROLES), async (_req, res) => {
+  try {
+    const [pincodes, mappings] = await Promise.all([
+      db.select().from(pincodesTable).orderBy(asc(pincodesTable.code)),
+      db.select().from(pincodeWardsTable),
+    ]);
+    res.json(pincodes.map(p => ({
+      ...p,
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
+      wardIds: mappings.filter(m => m.pincodeId === p.id).map(m => m.wardId),
+    })));
+  } catch (err) {
+    console.error("[admin] pincodes list:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const PincodeBody = z.object({
+  code: z.string().regex(/^\d{6}$/, "Pincode must be 6 digits"),
+  label: z.string().optional().nullable(),
+  labelTa: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  wardIds: z.array(z.number().int()).default([]),
+});
+
+// Validate that every wardId in `ids` exists; returns null on success or an error string.
+async function validateWardIds(ids: number[]): Promise<string | null> {
+  if (ids.length === 0) return null;
+  const unique = Array.from(new Set(ids));
+  const found = await db.select({ id: wardsTable.id }).from(wardsTable).where(inArray(wardsTable.id, unique));
+  if (found.length !== unique.length) {
+    const foundSet = new Set(found.map(w => w.id));
+    const missing = unique.filter(id => !foundSet.has(id));
+    return `Unknown ward id(s): ${missing.join(", ")}`;
+  }
+  return null;
+}
+
+router.post("/admin/hierarchy/pincodes", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const body = PincodeBody.safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const { wardIds, ...rest } = body.data;
+    const uniqueWardIds = Array.from(new Set(wardIds));
+    const wardErr = await validateWardIds(uniqueWardIds);
+    if (wardErr) { res.status(400).json({ error: wardErr }); return; }
+    const item = await db.transaction(async (tx) => {
+      const [created] = await tx.insert(pincodesTable).values(rest).returning();
+      if (uniqueWardIds.length > 0) {
+        await tx.insert(pincodeWardsTable).values(uniqueWardIds.map(wid => ({ pincodeId: created.id, wardId: wid })));
+      }
+      return created;
+    });
+    await logAudit(req, "CREATE", `pincode:${item.id}`, item.code);
+    res.status(201).json({
+      ...item,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+      wardIds: uniqueWardIds,
+    });
+  } catch (err: unknown) {
+    const msg = (err as { code?: string })?.code === "23505" ? "Pincode already exists" : "Internal server error";
+    console.error("[admin] pincode create:", err);
+    res.status(msg === "Internal server error" ? 500 : 409).json({ error: msg });
+  }
+});
+
+router.put("/admin/hierarchy/pincodes/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    const body = PincodeBody.partial().safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const { wardIds, ...rest } = body.data;
+    const uniqueWardIds = wardIds === undefined ? undefined : Array.from(new Set(wardIds));
+    if (uniqueWardIds !== undefined) {
+      const wardErr = await validateWardIds(uniqueWardIds);
+      if (wardErr) { res.status(400).json({ error: wardErr }); return; }
+    }
+    const item = await db.transaction(async (tx) => {
+      const [updated] = await tx.update(pincodesTable).set(rest).where(eq(pincodesTable.id, id)).returning();
+      if (!updated) return null;
+      if (uniqueWardIds !== undefined) {
+        await tx.delete(pincodeWardsTable).where(eq(pincodeWardsTable.pincodeId, id));
+        if (uniqueWardIds.length > 0) {
+          await tx.insert(pincodeWardsTable).values(uniqueWardIds.map(wid => ({ pincodeId: id, wardId: wid })));
+        }
+      }
+      return updated;
+    });
+    if (!item) { res.status(404).json({ error: "Not found" }); return; }
+    const finalWardIds = uniqueWardIds ?? (await db.select().from(pincodeWardsTable)
+      .where(eq(pincodeWardsTable.pincodeId, id))).map(m => m.wardId);
+    await logAudit(req, "UPDATE", `pincode:${id}`, item.code);
+    res.json({
+      ...item,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+      wardIds: finalWardIds,
+    });
+  } catch (err) {
+    console.error("[admin] pincode update:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/admin/hierarchy/pincodes/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    await db.delete(pincodeWardsTable).where(eq(pincodeWardsTable.pincodeId, id));
+    await db.delete(pincodesTable).where(eq(pincodesTable.id, id));
+    await logAudit(req, "DELETE", `pincode:${id}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[admin] pincode delete:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
