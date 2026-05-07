@@ -591,13 +591,21 @@ function GrievancesPanel({ voterId }: { voterId: number }) {
       )}
       <div className="space-y-2">
         {items.map((g) => (
-          <div
+          <button
+            type="button"
             key={g.id}
-            className="rounded border bg-muted/20 p-2 text-sm"
+            className="block w-full text-left rounded border bg-muted/20 p-2 text-sm hover:bg-muted/40 hover:border-primary/40 transition-colors cursor-pointer"
             data-testid={`voter-grievance-${g.id}`}
+            title="Open grievance"
+            onClick={() => {
+              // Stash the grievance id and switch the admin shell to the
+              // Grievances tab — GrievanceOfficer reads this on mount.
+              sessionStorage.setItem("openGrievanceId", String(g.id));
+              window.location.hash = "#grievances";
+            }}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="font-mono text-xs">{g.ticketNo}</span>
+              <span className="font-mono text-xs text-primary font-semibold">{g.ticketNo}</span>
               <span className="text-[10px] text-muted-foreground">
                 {new Date(g.createdAt).toLocaleDateString()}
               </span>
@@ -608,7 +616,7 @@ function GrievancesPanel({ voterId }: { voterId: number }) {
               <Badge variant="outline" className="text-[10px]">{g.priority}</Badge>
               {g.ward && <span className="text-[10px] text-muted-foreground">· {g.ward}</span>}
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </div>

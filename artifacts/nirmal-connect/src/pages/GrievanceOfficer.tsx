@@ -13,7 +13,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import {
   ChevronLeft, ChevronRight, RefreshCw, Loader2, CheckCircle,
   Clock, AlertTriangle, MessageSquare, Filter, X, Paperclip, Users,
-  ListChecks, CalendarRange, FileDown, FileText, Inbox, UserCheck, UserX,
+  ListChecks, CalendarRange, FileDown, FileText, Inbox, UserCheck, UserX, Search,
 } from "lucide-react";
 import type { Language } from "@/lib/i18n";
 import {
@@ -183,6 +183,32 @@ export default function GrievanceOfficer({ lang, token, userRole = "" }: Grievan
     queryFn: () => listGrievances(params, { headers: makeAuthHeaders(token) }),
     staleTime: 30_000,
   });
+
+  // Deep-link from VotersAdmin: when a voter's grievance is clicked,
+  // it stashes the grievance id in sessionStorage and navigates to
+  // #grievances. We pick it up on mount and open the detail dialog.
+  useEffect(() => {
+    const pending = sessionStorage.getItem("openGrievanceId");
+    if (!pending) return;
+    sessionStorage.removeItem("openGrievanceId");
+    const gid = parseInt(pending, 10);
+    if (!Number.isFinite(gid) || gid <= 0) return;
+    (async () => {
+      try {
+        const d = await fetchStaffDetail(gid, token);
+        setSelected({
+          id: d.id, ticketNo: d.ticketNo, name: d.name, phone: d.phone,
+          category: d.category, status: d.status, priority: d.priority,
+          ward: d.ward, constituency: d.constituency, anonymous: d.anonymous,
+          createdAt: d.createdAt, updatedAt: d.updatedAt,
+        });
+        setDetail(d);
+      } catch (err) {
+        console.error("Deep-link grievance open failed:", err);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function refreshDetail(id: number) {
     try {
@@ -909,6 +935,14 @@ interface VoterSuggestion {
   sameWard: boolean;
 }
 
+interface VoterSearchHit {
+  id: number;
+  epicNumber: string;
+  fullName: string;
+  boothNo: string | null;
+  boothName: string | null;
+}
+
 function VoterMatchPanel({
   grievanceId, token, voter, lang, onChanged,
 }: {
@@ -922,6 +956,9 @@ function VoterMatchPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<VoterSearchHit[] | null>(null);
+  const [searching, setSearching] = useState(false);
 
   async function loadSuggestions() {
     setLoading(true); setError(null);
@@ -936,6 +973,34 @@ function VoterMatchPanel({
       setError((e as Error).message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Auto-suggest the moment the panel mounts for an unlinked grievance,
+  // so officers see candidates without an extra click. Re-runs if the
+  // grievance changes or if it gets unlinked again.
+  useEffect(() => {
+    if (!voter && suggestions === null && !loading) {
+      loadSuggestions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grievanceId, voter]);
+
+  async function runSearch() {
+    const q = searchQuery.trim();
+    if (q.length < 2) { setSearchResults([]); return; }
+    setSearching(true); setError(null);
+    try {
+      const r = await fetch(`/api/admin/voters?q=${encodeURIComponent(q)}&limit=8`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json() as { items: VoterSearchHit[] };
+      setSearchResults(data.items ?? []);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSearching(false);
     }
   }
 
@@ -1081,6 +1146,70 @@ function VoterMatchPanel({
               </Button>
             </div>
           )}
+          {/* Manual "Find voter…" search — for cases where the auto
+              suggestions miss the right voter (e.g. nickname, typo,
+              EPIC lookup). Calls the same admin voter search endpoint. */}
+          <div className="border-t pt-3 space-y-2">
+            <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+              {lang === "ta" ? "வாக்காளரை கைமுறையாக தேடு" : "Find voter manually"}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); runSearch(); } }}
+                placeholder={lang === "ta" ? "பெயர் அல்லது EPIC எண்…" : "Name or EPIC number…"}
+                data-testid="voter-search-input"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={runSearch}
+                disabled={searching || searchQuery.trim().length < 2}
+                data-testid="voter-search-btn"
+              >
+                {searching ? <Loader2 className="w-4 h-4" /> : <Search className="w-4 h-4" />}
+              </Button>
+            </div>
+            {searchResults && searchResults.length === 0 && (
+              <div className="text-xs text-muted-foreground italic">
+                {lang === "ta" ? "முடிவுகள் இல்லை." : "No matches."}
+              </div>
+            )}
+            {searchResults && searchResults.length > 0 && (
+              <div className="space-y-1.5">
+                {searchResults.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-start justify-between gap-2 rounded border p-2 text-sm"
+                    data-testid={`voter-search-result-${s.id}`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium truncate">{s.fullName}</div>
+                      <div className="text-xs text-muted-foreground font-mono">{s.epicNumber}</div>
+                      {s.boothNo && (
+                        <div className="text-[10px] text-muted-foreground">
+                          {lang === "ta" ? "வா.சா." : "Booth"} {s.boothNo}
+                          {s.boothName ? ` · ${s.boothName}` : ""}
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      disabled={busyId === s.id}
+                      onClick={() => linkVoter(s.id)}
+                      data-testid={`link-search-${s.id}`}
+                    >
+                      {busyId === s.id
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : (lang === "ta" ? "இணை" : "Link")}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
       {error && <div className="text-xs text-destructive">{error}</div>}

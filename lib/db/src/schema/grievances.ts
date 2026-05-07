@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { votersTable } from "./voters";
 
 export const GRIEVANCE_CATEGORIES = [
   "Roads",
@@ -67,7 +68,7 @@ export const grievancesTable = pgTable("grievances", {
   // grievance was filed anonymously or no match was found yet.
   // ON DELETE SET NULL: removing a voter row should not delete the
   // grievance — we keep the complaint and just clear the link.
-  voterId: integer("voter_id"),
+  voterId: integer("voter_id").references(() => votersTable.id, { onDelete: "set null" }),
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

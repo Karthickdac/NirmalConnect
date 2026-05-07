@@ -85,6 +85,19 @@ function AdminInner({ lang = "ta" }: AdminProps) {
   const [active, setActive] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Deep-link support: other admin pages (e.g. VotersAdmin grievance
+  // click-through) can navigate here by setting `window.location.hash`
+  // to a tab id like `#grievances`. Read on mount and on hashchange.
+  useEffect(() => {
+    function syncFromHash() {
+      const m = window.location.hash.match(/^#([\w-]+)/);
+      if (m) setActive(m[1]);
+    }
+    syncFromHash();
+    window.addEventListener("hashchange", syncFromHash);
+    return () => window.removeEventListener("hashchange", syncFromHash);
+  }, []);
+
   useEffect(() => { if (!isAuthenticated()) setLocation("/login"); }, []);
   useEffect(() => { if (error) { removeToken(); setLocation("/login"); } }, [error]);
 

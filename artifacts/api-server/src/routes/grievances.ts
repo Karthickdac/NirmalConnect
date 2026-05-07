@@ -459,8 +459,15 @@ router.get("/grievances/:id", requireStaff, async (req: AuthRequest, res) => {
       }
     }
 
+    // Out-of-scope viewers must not see *any* identifier of the linked
+    // voter — not even the bare voterId — so officers cannot enumerate
+    // voters outside their assigned booths via the grievance detail.
+    const baseSerialized = serializeGrievance(grievance);
+    const safeSerialized = grievance.voterId != null && voter == null
+      ? { ...baseSerialized, voterId: null }
+      : baseSerialized;
     res.json({
-      ...serializeGrievance(grievance),
+      ...safeSerialized,
       voter,
       remarks: remarks.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
       statusLog: statusLog.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() })),
@@ -699,7 +706,7 @@ router.get("/admin/grievances/:id/voter-suggestions", requireStaff, async (req: 
     const items = (rows.rows ?? rows as unknown as Array<Record<string, unknown>>).map((r) => {
       const nameSim = Number(r.nameSim ?? 0);
       const wardBoost = Number(r.wardBoost ?? 0);
-      const confidence = Math.min(1, Math.round((nameSim + wardBoost) * 100) / 100);
+      const similarity = Math.min(1, Math.round((nameSim + wardBoost) * 100) / 100);
       return {
         id: Number(r.id),
         epicNumber: r.epicNumber as string,
@@ -714,7 +721,8 @@ router.get("/admin/grievances/:id/voter-suggestions", requireStaff, async (req: 
         boothName: (r.boothName as string | null) ?? null,
         wardId: r.wardId == null ? null : Number(r.wardId),
         wardName: (r.wardName as string | null) ?? null,
-        confidence,
+        similarity,
+        sameWard: wardBoost > 0,
       };
     });
 
