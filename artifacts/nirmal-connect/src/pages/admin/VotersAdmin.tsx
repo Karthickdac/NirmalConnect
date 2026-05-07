@@ -970,6 +970,20 @@ function ExportBar({
     format: "csv" | "xlsx"; rowCount: number; threshold: number;
   }>(null);
   const [password, setPassword] = useState("");
+  // Default: only the columns visible in the table on screen. Toggle
+  // ON to include the extra back-end fields (address, household,
+  // relation type) — keeps the export honest to "matches on-screen".
+  const [allFields, setAllFields] = useState(false);
+
+  // Mirrors VotersAdmin's table columns.
+  const VISIBLE_COLS = [
+    "fullName", "fullNameTa", "epicNumber", "age", "gender",
+    "relationName", "boothNo", "boothName", "partNumber", "serialInPart",
+  ];
+  const ALL_COLS = [
+    ...VISIBLE_COLS,
+    "id", "relationType", "houseNumber", "addressLine", "householdLabel",
+  ];
 
   function buildPayload(): Record<string, unknown> {
     const f: Record<string, unknown> = {};
@@ -995,7 +1009,12 @@ function ExportBar({
           "Content-Type": "application/json",
           ...(tok ? { Authorization: `Bearer ${tok}` } : {}),
         },
-        body: JSON.stringify({ format, filters: buildPayload(), ...(pw ? { password: pw } : {}) }),
+        body: JSON.stringify({
+          format,
+          filters: buildPayload(),
+          columns: allFields ? ALL_COLS : VISIBLE_COLS,
+          ...(pw ? { password: pw } : {}),
+        }),
       });
       if (r.status === 403) {
         const body = await r.json().catch(() => ({}));
@@ -1040,6 +1059,15 @@ function ExportBar({
       <span className="text-xs text-muted-foreground mr-1">
         Export current filter ({total.toLocaleString()} match{total === 1 ? "" : "es"}):
       </span>
+      <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={allFields}
+          onChange={(e) => setAllFields(e.target.checked)}
+          data-testid="checkbox-export-all-fields"
+        />
+        Include all fields (address, household, relation type)
+      </label>
       <Button
         size="sm" variant="outline" className="h-8 text-xs"
         disabled={running !== null || total === 0}

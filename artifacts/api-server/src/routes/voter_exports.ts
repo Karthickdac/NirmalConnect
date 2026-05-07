@@ -49,11 +49,25 @@ const filterSchema = z.object({
   tagIds: z.array(z.number().int().positive()).max(50).optional(),
 });
 
+// Allow-listed export columns. Anything not in this set is silently
+// dropped — clients cannot make the export include arbitrary fields.
+const ALL_COLUMN_KEYS = [
+  "id", "epicNumber", "fullName", "fullNameTa", "age", "gender",
+  "relationType", "relationName", "houseNumber", "addressLine",
+  "boothNo", "boothName", "partNumber", "serialInPart",
+  "householdLabel",
+] as const;
+
 const bodySchema = z.object({
   format: z.enum(["csv", "xlsx"]),
   password: z.string().min(1).max(200).optional(),
   threshold: z.number().int().min(1).max(EXPORT_PASSWORD_THRESHOLD).optional(),
   filters: filterSchema.default({}),
+  // Subset of columns the caller wants in the file (excluding the
+  // mandatory "Watermark" column which is always appended). Defaults
+  // to the columns visible in the on-screen Voters table — the export
+  // mirrors what staff actually see.
+  columns: z.array(z.enum(ALL_COLUMN_KEYS)).optional(),
 });
 
 type Filter = z.infer<typeof filterSchema>;
@@ -149,24 +163,33 @@ function csvCell(v: unknown): string {
   return s;
 }
 
-const COLUMNS = [
-  { key: "id",            header: "ID" },
-  { key: "epicNumber",    header: "EPIC" },
-  { key: "fullName",      header: "Name" },
-  { key: "fullNameTa",    header: "Name (TA)" },
-  { key: "age",           header: "Age" },
-  { key: "gender",        header: "Gender" },
-  { key: "relationType",  header: "Relation type" },
-  { key: "relationName",  header: "Relation name" },
-  { key: "houseNumber",   header: "House #" },
-  { key: "addressLine",   header: "Address" },
-  { key: "boothNo",       header: "Booth #" },
-  { key: "boothName",     header: "Booth name" },
-  { key: "partNumber",    header: "Part" },
-  { key: "serialInPart",  header: "Serial" },
-  { key: "householdLabel", header: "Household" },
-  { key: "watermark",     header: "Watermark" },
-] as const;
+const COLUMN_DEFS: Record<typeof ALL_COLUMN_KEYS[number], { header: string }> = {
+  id:             { header: "ID" },
+  epicNumber:     { header: "EPIC" },
+  fullName:       { header: "Name" },
+  fullNameTa:     { header: "Name (TA)" },
+  age:            { header: "Age" },
+  gender:         { header: "Gender" },
+  relationType:   { header: "Relation type" },
+  relationName:   { header: "Relation name" },
+  houseNumber:    { header: "House #" },
+  addressLine:    { header: "Address" },
+  boothNo:        { header: "Booth #" },
+  boothName:      { header: "Booth name" },
+  partNumber:     { header: "Part" },
+  serialInPart:   { header: "Serial" },
+  householdLabel: { header: "Household" },
+};
+
+// Default = exact column set rendered by VotersAdmin's table:
+// Name (incl. TA), EPIC, Age, Gender, Booth (no + name), Part / Serial.
+// Relation name is shown beneath the name in the UI so we include it
+// here too. Anything else (address, household, source) is opt-in via
+// the "include all fields" toggle in the UI.
+const DEFAULT_VISIBLE_COLUMNS: ReadonlyArray<typeof ALL_COLUMN_KEYS[number]> = [
+  "fullName", "fullNameTa", "epicNumber", "age", "gender",
+  "relationName", "boothNo", "boothName", "partNumber", "serialInPart",
+];
 
 router.post("/admin/voters/export", requireStaff, async (req: AuthRequest, res) => {
   if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -176,8 +199,20 @@ router.post("/admin/voters/export", requireStaff, async (req: AuthRequest, res) 
     res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     return;
   }
-  const { format, password, threshold, filters } = parsed.data;
+  const { format, password, threshold, filters, columns: requestedCols } = parsed.data;
   const effectiveThreshold = threshold ?? EXPORT_PASSWORD_THRESHOLD;
+
+  // Resolve column set: caller-supplied (subset of allow-list) or
+  // default = visible-on-screen columns. Watermark is always appended
+  // last so leaked sheets can be traced.
+  const selectedColKeys: ReadonlyArray<typeof ALL_COLUMN_KEYS[number]> =
+    requestedCols && requestedCols.length > 0
+      ? Array.from(new Set(requestedCols))
+      : DEFAULT_VISIBLE_COLUMNS;
+  const writeCols: Array<{ key: string; header: string }> = [
+    ...selectedColKeys.map((k) => ({ key: k, header: COLUMN_DEFS[k].header })),
+    { key: "watermark", header: "Watermark" },
+  ];
 
   // 1) Resolve scope + build where.
   const built = await buildExportWhere(req.user, filters);
@@ -260,6 +295,16 @@ router.post("/admin/voters/export", requireStaff, async (req: AuthRequest, res) 
     if (!res.writableEnded) aborted = true;
   });
 
+  // Mirror the search route's ordering so the export rows arrive in
+  // the same order staff see on-screen: EPIC short-circuit > trigram
+  // similarity for fuzzy text > id DESC fallback.
+  const usedEpicShortCircuit = !!(filters.q && EPIC_RE.test(filters.q));
+  const orderBy = usedEpicShortCircuit
+    ? [desc(votersTable.id)]
+    : (filters.q && filters.q.length >= 2
+        ? [desc(sql`similarity(lower(${votersTable.fullName}), ${filters.q.toLowerCase()})`), desc(votersTable.id)]
+        : [desc(votersTable.id)]);
+
   async function* batches() {
     if (!built) return;
     let offset = 0;
@@ -286,7 +331,7 @@ router.post("/admin/voters/export", requireStaff, async (req: AuthRequest, res) 
         .leftJoin(pollingStationsTable, eq(pollingStationsTable.id, votersTable.pollingStationId))
         .leftJoin(householdsTable, eq(householdsTable.id, votersTable.householdId))
         .where(where)
-        .orderBy(votersTable.id)
+        .orderBy(...orderBy)
         .limit(STREAM_BATCH_SIZE)
         .offset(offset);
       if (rows.length === 0) break;
@@ -307,12 +352,12 @@ router.post("/admin/voters/export", requireStaff, async (req: AuthRequest, res) 
     if (format === "csv") {
       // BOM so Excel auto-detects UTF-8 (Tamil names render correctly).
       hasher.write("\uFEFF");
-      hasher.write(COLUMNS.map((c) => csvCell(c.header)).join(",") + "\r\n");
+      hasher.write(writeCols.map((c) => csvCell(c.header)).join(",") + "\r\n");
       for await (const batch of batches()) {
         for (const row of batch) {
           const r = row as Record<string, unknown>;
           r.watermark = watermark;
-          const line = COLUMNS.map((c) => csvCell(r[c.key])).join(",") + "\r\n";
+          const line = writeCols.map((c) => csvCell(r[c.key])).join(",") + "\r\n";
           if (!hasher.write(line)) {
             await new Promise<void>((resolve) => hasher.once("drain", resolve));
           }
@@ -327,7 +372,7 @@ router.post("/admin/voters/export", requireStaff, async (req: AuthRequest, res) 
         useStyles: false,
       });
       const sheet = wb.addWorksheet("Voters");
-      sheet.columns = COLUMNS.map((c) => ({
+      sheet.columns = writeCols.map((c) => ({
         header: c.header, key: c.key, width: Math.min(40, Math.max(10, c.header.length + 4)),
       }));
       for await (const batch of batches()) {
