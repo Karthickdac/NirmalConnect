@@ -19,13 +19,17 @@ import type {
 import type {
   Activity,
   ActivityListResponse,
+  AdminDeleteWard200,
   AuthResponse,
+  BulkGrievanceAssignBody,
+  BulkUpdateResult,
   ConstituencyStats,
   ErrorResponse,
   Event,
   EventListResponse,
   Faq,
   GalleryListResponse,
+  GetAboutConfig200,
   GetFeaturedNewsParams,
   GetRecentActivitiesParams,
   GetUpcomingEventsParams,
@@ -54,6 +58,8 @@ import type {
   User,
   Volunteer,
   VolunteerRegistrationBody,
+  Ward,
+  WardBody,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -980,6 +986,82 @@ export function useListFaqs<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getListFaqsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns the parsed JSON value of the site_config "about" key, or null if no CMS content has been saved yet.
+ * @summary Get public About-the-leader CMS content
+ */
+export const getGetAboutConfigUrl = () => {
+  return `/api/about`;
+};
+
+export const getAboutConfig = async (
+  options?: RequestInit,
+): Promise<GetAboutConfig200> => {
+  return customFetch<GetAboutConfig200>(getGetAboutConfigUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAboutConfigQueryKey = () => {
+  return [`/api/about`] as const;
+};
+
+export const getGetAboutConfigQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAboutConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAboutConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAboutConfigQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAboutConfig>>> = ({
+    signal,
+  }) => getAboutConfig({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAboutConfig>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAboutConfigQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAboutConfig>>
+>;
+export type GetAboutConfigQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get public About-the-leader CMS content
+ */
+
+export function useGetAboutConfig<
+  TData = Awaited<ReturnType<typeof getAboutConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAboutConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAboutConfigQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -2282,4 +2364,423 @@ export const useAssignGrievance = <
   TContext
 > => {
   return useMutation(getAssignGrievanceMutationOptions(options));
+};
+
+/**
+ * @summary List all wards/areas
+ */
+export const getAdminListWardsUrl = () => {
+  return `/api/admin/wards`;
+};
+
+export const adminListWards = async (
+  options?: RequestInit,
+): Promise<Ward[]> => {
+  return customFetch<Ward[]>(getAdminListWardsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAdminListWardsQueryKey = () => {
+  return [`/api/admin/wards`] as const;
+};
+
+export const getAdminListWardsQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminListWards>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListWards>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAdminListWardsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListWards>>> = ({
+    signal,
+  }) => adminListWards({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminListWards>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminListWardsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminListWards>>
+>;
+export type AdminListWardsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List all wards/areas
+ */
+
+export function useAdminListWards<
+  TData = Awaited<ReturnType<typeof adminListWards>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListWards>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminListWardsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a ward/area
+ */
+export const getAdminCreateWardUrl = () => {
+  return `/api/admin/wards`;
+};
+
+export const adminCreateWard = async (
+  wardBody: WardBody,
+  options?: RequestInit,
+): Promise<Ward> => {
+  return customFetch<Ward>(getAdminCreateWardUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(wardBody),
+  });
+};
+
+export const getAdminCreateWardMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateWard>>,
+    TError,
+    { data: BodyType<WardBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminCreateWard>>,
+  TError,
+  { data: BodyType<WardBody> },
+  TContext
+> => {
+  const mutationKey = ["adminCreateWard"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminCreateWard>>,
+    { data: BodyType<WardBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminCreateWard(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminCreateWardMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminCreateWard>>
+>;
+export type AdminCreateWardMutationBody = BodyType<WardBody>;
+export type AdminCreateWardMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a ward/area
+ */
+export const useAdminCreateWard = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateWard>>,
+    TError,
+    { data: BodyType<WardBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminCreateWard>>,
+  TError,
+  { data: BodyType<WardBody> },
+  TContext
+> => {
+  return useMutation(getAdminCreateWardMutationOptions(options));
+};
+
+/**
+ * @summary Update a ward/area
+ */
+export const getAdminUpdateWardUrl = (id: number) => {
+  return `/api/admin/wards/${id}`;
+};
+
+export const adminUpdateWard = async (
+  id: number,
+  wardBody: WardBody,
+  options?: RequestInit,
+): Promise<Ward> => {
+  return customFetch<Ward>(getAdminUpdateWardUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(wardBody),
+  });
+};
+
+export const getAdminUpdateWardMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateWard>>,
+    TError,
+    { id: number; data: BodyType<WardBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminUpdateWard>>,
+  TError,
+  { id: number; data: BodyType<WardBody> },
+  TContext
+> => {
+  const mutationKey = ["adminUpdateWard"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminUpdateWard>>,
+    { id: number; data: BodyType<WardBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminUpdateWard(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminUpdateWardMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminUpdateWard>>
+>;
+export type AdminUpdateWardMutationBody = BodyType<WardBody>;
+export type AdminUpdateWardMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update a ward/area
+ */
+export const useAdminUpdateWard = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateWard>>,
+    TError,
+    { id: number; data: BodyType<WardBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminUpdateWard>>,
+  TError,
+  { id: number; data: BodyType<WardBody> },
+  TContext
+> => {
+  return useMutation(getAdminUpdateWardMutationOptions(options));
+};
+
+/**
+ * @summary Delete a ward/area
+ */
+export const getAdminDeleteWardUrl = (id: number) => {
+  return `/api/admin/wards/${id}`;
+};
+
+export const adminDeleteWard = async (
+  id: number,
+  options?: RequestInit,
+): Promise<AdminDeleteWard200> => {
+  return customFetch<AdminDeleteWard200>(getAdminDeleteWardUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getAdminDeleteWardMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteWard>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminDeleteWard>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["adminDeleteWard"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminDeleteWard>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return adminDeleteWard(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminDeleteWardMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminDeleteWard>>
+>;
+
+export type AdminDeleteWardMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete a ward/area
+ */
+export const useAdminDeleteWard = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteWard>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminDeleteWard>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAdminDeleteWardMutationOptions(options));
+};
+
+/**
+ * @summary Bulk-assign grievances to an officer
+ */
+export const getAdminBulkAssignGrievancesUrl = () => {
+  return `/api/admin/grievances/bulk-assign`;
+};
+
+export const adminBulkAssignGrievances = async (
+  bulkGrievanceAssignBody: BulkGrievanceAssignBody,
+  options?: RequestInit,
+): Promise<BulkUpdateResult> => {
+  return customFetch<BulkUpdateResult>(getAdminBulkAssignGrievancesUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(bulkGrievanceAssignBody),
+  });
+};
+
+export const getAdminBulkAssignGrievancesMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminBulkAssignGrievances>>,
+    TError,
+    { data: BodyType<BulkGrievanceAssignBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminBulkAssignGrievances>>,
+  TError,
+  { data: BodyType<BulkGrievanceAssignBody> },
+  TContext
+> => {
+  const mutationKey = ["adminBulkAssignGrievances"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminBulkAssignGrievances>>,
+    { data: BodyType<BulkGrievanceAssignBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminBulkAssignGrievances(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminBulkAssignGrievancesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminBulkAssignGrievances>>
+>;
+export type AdminBulkAssignGrievancesMutationBody =
+  BodyType<BulkGrievanceAssignBody>;
+export type AdminBulkAssignGrievancesMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Bulk-assign grievances to an officer
+ */
+export const useAdminBulkAssignGrievances = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminBulkAssignGrievances>>,
+    TError,
+    { data: BodyType<BulkGrievanceAssignBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminBulkAssignGrievances>>,
+  TError,
+  { data: BodyType<BulkGrievanceAssignBody> },
+  TContext
+> => {
+  return useMutation(getAdminBulkAssignGrievancesMutationOptions(options));
 };

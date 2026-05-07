@@ -341,6 +341,61 @@ export interface GrievanceOfficerList {
   officers: GrievanceOfficerItem[];
 }
 
+export interface Ward {
+  id: number;
+  name: string;
+  /** @nullable */
+  area?: string | null;
+  /** @nullable */
+  coordinatorName?: string | null;
+  /** @nullable */
+  coordinatorPhone?: string | null;
+  /** @nullable */
+  coordinatorEmail?: string | null;
+  /** @nullable */
+  population?: number | null;
+  /** @nullable */
+  households?: number | null;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WardBody {
+  /** @minLength 1 */
+  name: string;
+  /** @nullable */
+  area?: string | null;
+  /** @nullable */
+  coordinatorName?: string | null;
+  /** @nullable */
+  coordinatorPhone?: string | null;
+  /** @nullable */
+  coordinatorEmail?: string | null;
+  /** @nullable */
+  population?: number | null;
+  /** @nullable */
+  households?: number | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface BulkGrievanceAssignBody {
+  /**
+   * @minItems 1
+   * @maxItems 200
+   */
+  ids: number[];
+  officerId: number;
+  /** @minLength 1 */
+  officerName: string;
+}
+
+export interface BulkUpdateResult {
+  updated: number;
+}
+
 export interface GrievanceAttachmentItem {
   id: number;
   grievanceId: number;
@@ -412,6 +467,8 @@ export const ListGalleryType = {
   video: "video",
 } as const;
 
+export type GetAboutConfig200 = { [key: string]: unknown } | null;
+
 export type GetFeaturedNewsParams = {
   limit?: number;
 };
@@ -432,4 +489,8 @@ export type ListGrievancesParams = {
   priority?: string;
   ward?: string;
   constituency?: string;
+};
+
+export type AdminDeleteWard200 = {
+  success: boolean;
 };

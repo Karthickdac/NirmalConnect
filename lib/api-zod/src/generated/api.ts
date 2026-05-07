@@ -241,6 +241,14 @@ export const ListFaqsResponseItem = zod.object({
 export const ListFaqsResponse = zod.array(ListFaqsResponseItem);
 
 /**
+ * Returns the parsed JSON value of the site_config "about" key, or null if no CMS content has been saved yet.
+ * @summary Get public About-the-leader CMS content
+ */
+export const GetAboutConfigResponse = zod
+  .record(zod.string(), zod.unknown())
+  .nullable();
+
+/**
  * @summary Get constituency development statistics
  */
 export const GetConstituencyStatsResponse = zod.object({
@@ -610,4 +618,95 @@ export const AssignGrievanceResponse = zod.object({
   anonymous: zod.boolean(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary List all wards/areas
+ */
+export const AdminListWardsResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  area: zod.string().nullish(),
+  coordinatorName: zod.string().nullish(),
+  coordinatorPhone: zod.string().nullish(),
+  coordinatorEmail: zod.string().nullish(),
+  population: zod.number().nullish(),
+  households: zod.number().nullish(),
+  notes: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+export const AdminListWardsResponse = zod.array(AdminListWardsResponseItem);
+
+/**
+ * @summary Create a ward/area
+ */
+
+export const AdminCreateWardBody = zod.object({
+  name: zod.string().min(1),
+  area: zod.string().nullish(),
+  coordinatorName: zod.string().nullish(),
+  coordinatorPhone: zod.string().nullish(),
+  coordinatorEmail: zod.string().nullish(),
+  population: zod.number().nullish(),
+  households: zod.number().nullish(),
+  notes: zod.string().nullish(),
+});
+
+/**
+ * @summary Update a ward/area
+ */
+export const AdminUpdateWardParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminUpdateWardBody = zod.object({
+  name: zod.string().min(1),
+  area: zod.string().nullish(),
+  coordinatorName: zod.string().nullish(),
+  coordinatorPhone: zod.string().nullish(),
+  coordinatorEmail: zod.string().nullish(),
+  population: zod.number().nullish(),
+  households: zod.number().nullish(),
+  notes: zod.string().nullish(),
+});
+
+export const AdminUpdateWardResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  area: zod.string().nullish(),
+  coordinatorName: zod.string().nullish(),
+  coordinatorPhone: zod.string().nullish(),
+  coordinatorEmail: zod.string().nullish(),
+  population: zod.number().nullish(),
+  households: zod.number().nullish(),
+  notes: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Delete a ward/area
+ */
+export const AdminDeleteWardParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminDeleteWardResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Bulk-assign grievances to an officer
+ */
+export const adminBulkAssignGrievancesBodyIdsMax = 200;
+
+export const AdminBulkAssignGrievancesBody = zod.object({
+  ids: zod.array(zod.number()).min(1).max(adminBulkAssignGrievancesBodyIdsMax),
+  officerId: zod.number(),
+  officerName: zod.string().min(1),
+});
+
+export const AdminBulkAssignGrievancesResponse = zod.object({
+  updated: zod.number(),
 });

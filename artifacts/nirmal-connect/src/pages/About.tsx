@@ -72,11 +72,18 @@ interface AboutProps { lang: Language; }
 export default function About({ lang }: AboutProps) {
   const [config, setConfig] = useState<AboutConfig>(DEFAULT_CONFIG);
 
+  // Fetch live CMS content from the public endpoint (GET /api/about).
+  // The endpoint is unauthenticated and returns null when no CMS row
+  // is saved yet, in which case we fall back to DEFAULT_CONFIG.
   useEffect(() => {
     fetch(`${BASE}/about`)
       .then(r => r.ok ? r.json() : null)
-      .then((d: AboutConfig | null) => { if (d) setConfig(prev => ({ ...prev, ...d })); })
-      .catch(() => {/* use defaults */});
+      .then((d: Partial<AboutConfig> | null) => {
+        if (d && typeof d === "object") {
+          setConfig(prev => ({ ...prev, ...d }));
+        }
+      })
+      .catch(() => {/* network error → keep DEFAULT_CONFIG */});
   }, []);
 
   const t = (en: string, ta: string) => lang === "ta" ? ta : en;

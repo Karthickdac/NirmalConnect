@@ -294,6 +294,22 @@ paths:
                 items:
                   $ref: "#/components/schemas/Faq"
 
+  /about:
+    get:
+      operationId: getAboutConfig
+      tags: [stats]
+      summary: Get public About-the-leader CMS content
+      description: Returns the parsed JSON value of the site_config "about" key, or null if no CMS content has been saved yet.
+      responses:
+        "200":
+          description: About config (object) or null when not yet configured
+          content:
+            application/json:
+              schema:
+                nullable: true
+                type: object
+                additionalProperties: true
+
   /stats/constituency:
     get:
       operationId: getConstituencyStats
