@@ -1075,7 +1075,13 @@ export type AdminListRoutingLogParams = {
 };
 
 export type AdminGrievanceAnalyticsParams = {
+  /**
+   * ISO date (YYYY-MM-DD) or full date-time, inclusive lower bound
+   */
   from?: string;
+  /**
+   * ISO date (YYYY-MM-DD) or full date-time, inclusive upper bound (date-only is treated as end-of-day UTC)
+   */
   to?: string;
   category?: string;
   status?: string;

@@ -1428,8 +1428,8 @@ paths:
       summary: Aggregated grievance analytics + heatmap points (admin only)
       security: [{ bearerAuth: [] }]
       parameters:
-        - { name: from, in: query, schema: { type: string, format: date-time } }
-        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: from, in: query, description: "ISO date (YYYY-MM-DD) or full date-time, inclusive lower bound", schema: { type: string } }
+        - { name: to, in: query, description: "ISO date (YYYY-MM-DD) or full date-time, inclusive upper bound (date-only is treated as end-of-day UTC)", schema: { type: string } }
         - { name: category, in: query, schema: { type: string } }
         - { name: status, in: query, schema: { type: string } }
         - { name: officerIds, in: query, description: "Comma-separated officer user IDs", schema: { type: string } }

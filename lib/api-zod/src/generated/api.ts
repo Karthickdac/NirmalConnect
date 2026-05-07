@@ -1482,8 +1482,16 @@ export const AdminListRoutingLogResponse = zod.object({
  * @summary Aggregated grievance analytics + heatmap points (admin only)
  */
 export const AdminGrievanceAnalyticsQueryParams = zod.object({
-  from: zod.date().optional(),
-  to: zod.date().optional(),
+  from: zod.coerce
+    .string()
+    .optional()
+    .describe("ISO date (YYYY-MM-DD) or full date-time, inclusive lower bound"),
+  to: zod.coerce
+    .string()
+    .optional()
+    .describe(
+      "ISO date (YYYY-MM-DD) or full date-time, inclusive upper bound (date-only is treated as end-of-day UTC)",
+    ),
   category: zod.coerce.string().optional(),
   status: zod.coerce.string().optional(),
   officerIds: zod.coerce
