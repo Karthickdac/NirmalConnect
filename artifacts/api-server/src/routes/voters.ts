@@ -353,6 +353,27 @@ router.post(
       const insertedCount = values.length - existingSet.size;
       const updatedCount = existingSet.size;
 
+      // DPDP audit: write one audit row per EPIC touched. Batched in
+      // chunks so a 1000-voter commit produces 1000 entries without a
+      // round-trip per row. Failure here must not roll back the commit.
+      try {
+        const chunkSize = 500;
+        for (let off = 0; off < values.length; off += chunkSize) {
+          const slice = values.slice(off, off + chunkSize);
+          await db.insert(auditLogTable).values(
+            slice.map((v) => ({
+              actorId: req.user?.id ?? null,
+              actorName: req.user?.name ?? "Unknown",
+              action: existingSet.has(v.epicNumber) ? "VOTER_WRITE_UPDATE" : "VOTER_WRITE_INSERT",
+              target: `voter:${v.epicNumber}`,
+              detail: `import:${id} ${batch.filename}`,
+            })),
+          );
+        }
+      } catch (e) {
+        console.error("[voters] per-EPIC audit insert failed:", e);
+      }
+
       await db
         .update(voterImportsTable)
         .set({
@@ -399,10 +420,11 @@ router.delete("/admin/voters/imports/:id", ...requireVoterScope, async (req: Aut
 
 // ── GET /api/admin/voters/coverage — voter counts per polling station ──
 //
-// Used by HierarchyAdmin to show a "voters loaded: N" pill per booth.
-// requireStaff (not super_admin) is sufficient here — we only return
-// aggregate counts, no PII.
-router.get("/admin/voters/coverage", requireStaff, async (_req, res) => {
+// Aggregate-only (no PII), but still gated behind the same voter scope
+// as every other voter endpoint so we have a single source of truth
+// for "who can see anything about voters".
+router.get("/admin/voters/coverage", ...requireVoterScope, async (req: AuthRequest, res) => {
+  await logVoterAudit(req, "VOTER_COVERAGE_VIEW", "voters", null);
   try {
     const rows = await db
       .select({

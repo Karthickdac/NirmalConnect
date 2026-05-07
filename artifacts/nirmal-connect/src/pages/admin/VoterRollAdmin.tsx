@@ -82,8 +82,11 @@ export default function VoterRollAdmin() {
 
   const reload = () => {
     setLoading(true);
-    Promise.all([adminApi.getVoterStats(), adminApi.getVoterImports()])
-      .then(([s, i]: [typeof stats extends infer _ ? any : never, { items: VoterImportRow[] }]) => {
+    Promise.all([
+      adminApi.getVoterStats() as Promise<{ totalVoters: number; totalImports: number; committedImports: number }>,
+      adminApi.getVoterImports() as Promise<{ items: VoterImportRow[] }>,
+    ])
+      .then(([s, i]) => {
         setStats(s);
         setImports(i.items);
         setError(null);

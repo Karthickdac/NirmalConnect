@@ -1,6 +1,9 @@
 import {
   pgTable, text, serial, integer, timestamp, index, uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { pollingStationsTable } from "./hierarchy";
+import { usersTable } from "./users";
 
 // ── Voters (electoral roll) ──────────────────────────────
 //
@@ -33,7 +36,12 @@ export const votersTable = pgTable("voters", {
   addressLine: text("address_line"),
   // Booth membership — FK to polling_stations.id. Nullable so a row
   // can be retained even if the booth is later renumbered/removed.
-  pollingStationId: integer("polling_station_id"),
+  // ON DELETE SET NULL: if a booth is removed the voter row stays
+  // (we never lose elector data) but the link is cleared.
+  pollingStationId: integer("polling_station_id").references(
+    () => pollingStationsTable.id,
+    { onDelete: "set null" },
+  ),
   partNumber: text("part_number"),     // ECI "Part No." within the AC
   serialInPart: integer("serial_in_part"), // Sl. No. within that part
   // Provenance: which import batch loaded / last updated this row.
@@ -46,9 +54,13 @@ export const votersTable = pgTable("voters", {
   // EPIC must be globally unique — same elector cannot exist twice.
   epicUnique: uniqueIndex("voters_epic_unique").on(t.epicNumber),
   boothIdx: index("voters_booth_idx").on(t.pollingStationId),
-  // Plain btree on lowercased name; trigram index added separately
-  // via SQL since drizzle's index() builder lacks pg_trgm ops.
   nameIdx: index("voters_name_idx").on(t.fullName),
+  // Trigram index for fuzzy name search (used by voter-search task #43).
+  // Requires the pg_trgm extension; we ensure it in seed/migrations.
+  nameTrgmIdx: index("voters_name_trgm_idx").using(
+    "gin",
+    sql`lower(${t.fullName}) gin_trgm_ops`,
+  ),
   partIdx: index("voters_part_idx").on(t.partNumber, t.serialInPart),
 }));
 
@@ -89,7 +101,9 @@ export const voterImportsTable = pgTable("voter_imports", {
   // Optional booth hint — staff may pre-tag a batch with the booth
   // number expected in the file (cross-checked at commit time).
   expectedBoothNo: text("expected_booth_no"),
-  uploadedBy: integer("uploaded_by"),
+  // FK to users.id — set null on delete so the import history is
+  // preserved even if the staff account is removed later.
+  uploadedBy: integer("uploaded_by").references(() => usersTable.id, { onDelete: "set null" }),
   uploadedByName: text("uploaded_by_name"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

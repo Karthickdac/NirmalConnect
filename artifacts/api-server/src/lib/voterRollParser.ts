@@ -15,6 +15,7 @@
 // affected serials land in `skipped` so staff can re-upload with OCR.
 
 import { createRequire } from "node:module";
+import { ocrScannedPages } from "./voterOcr.js";
 
 const requireCjs = createRequire(import.meta.url);
 
@@ -205,19 +206,17 @@ export async function parseVoterRollPdf(buffer: Buffer): Promise<ParseResult> {
   const skipped: SkippedBlock[] = [];
   const seenEpics = new Set<string>();
   let ocrPagesCount = 0;
+  const scannedPages: number[] = [];
 
   pages.forEach((p, idx) => {
     const pageNo = idx + 1;
     const pageText = p.text ?? "";
     // Heuristic: a CEO roll page that's a scanned image yields almost
-    // no extractable text. Treat such pages as needing OCR.
+    // no extractable text. Queue it for OCR after we finish the
+    // text-layer pass.
     if (normalizeWhitespace(pageText).length < 80) {
       ocrPagesCount += 1;
-      skipped.push({
-        page: pageNo,
-        reason: "scanned-page-needs-ocr",
-        raw: pageText.slice(0, 120),
-      });
+      scannedPages.push(pageNo);
       return;
     }
     const blocks = splitVoterBlocks(pageText);
@@ -232,6 +231,36 @@ export async function parseVoterRollPdf(buffer: Buffer): Promise<ParseResult> {
       voters.push(result);
     }
   });
+
+  // OCR fallback (Tamil + English) for scanned pages. Best-effort: if
+  // the pipeline fails or returns nothing for a page, we keep the
+  // original "scanned-page-needs-ocr" skip marker so staff know.
+  if (scannedPages.length > 0) {
+    const ocrResults = await ocrScannedPages(buffer, scannedPages);
+    const ocredSet = new Set<number>();
+    for (const { page, text } of ocrResults) {
+      const blocks = splitVoterBlocks(text);
+      let pageContributed = 0;
+      for (const { serial, raw } of blocks) {
+        const result = parseVoterBlock(raw, serial, page, partNumber);
+        if ("skipped" in result) continue;
+        if (seenEpics.has(result.epicNumber)) continue;
+        seenEpics.add(result.epicNumber);
+        voters.push(result);
+        pageContributed += 1;
+      }
+      if (pageContributed > 0) ocredSet.add(page);
+    }
+    for (const page of scannedPages) {
+      if (!ocredSet.has(page)) {
+        skipped.push({
+          page,
+          reason: "scanned-page-ocr-empty",
+          raw: "(OCR returned no parseable voter records)",
+        });
+      }
+    }
+  }
 
   return {
     partNumber,

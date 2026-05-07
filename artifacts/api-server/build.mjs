@@ -31,6 +31,8 @@ async function buildAll() {
       "*.node",
       "sharp",
       "pdf-parse",
+      "pdf-to-img",
+      "tesseract.js",
       "better-sqlite3",
       "sqlite3",
       "canvas",
