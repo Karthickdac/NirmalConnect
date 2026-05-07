@@ -6,6 +6,7 @@ import {
   timestamp,
   boolean,
   doublePrecision,
+  index,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -62,10 +63,34 @@ export const grievancesTable = pgTable("grievances", {
   // analytics heatmap can plot reports outside any registered booth/ward.
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
+  // Optional link to a known voter (electoral roll). Null when the
+  // grievance was filed anonymously or no match was found yet.
+  // ON DELETE SET NULL: removing a voter row should not delete the
+  // grievance — we keep the complaint and just clear the link.
+  voterId: integer("voter_id"),
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => ({
+  voterIdx: index("grievances_voter_idx").on(t.voterId),
+}));
+
+// Audit trail for voter-link changes on grievances. Mirrors the pattern
+// used by grievance_status_log / grievance_routing_log so reviewers can
+// reconstruct who linked which voter to which grievance and when.
+export const grievanceVoterLinkLogTable = pgTable("grievance_voter_link_log", {
+  id: serial("id").primaryKey(),
+  grievanceId: integer("grievance_id").notNull(),
+  voterIdOld: integer("voter_id_old"),
+  voterIdNew: integer("voter_id_new"),
+  reason: text("reason").notNull().default("manual"), // manual | unlink
+  changedBy: integer("changed_by"),
+  changedByName: text("changed_by_name").notNull().default("System"),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  grievanceIdx: index("grievance_voter_link_log_grievance_idx").on(t.grievanceId),
+}));
 
 export const grievanceAttachmentsTable = pgTable("grievance_attachments", {
   id: serial("id").primaryKey(),

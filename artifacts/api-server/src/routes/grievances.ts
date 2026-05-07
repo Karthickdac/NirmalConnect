@@ -6,14 +6,20 @@ import {
   grievanceRemarksTable,
   grievanceStatusLogTable,
   grievanceRoutingLogTable,
+  grievanceVoterLinkLogTable,
+  votersTable,
+  pollingStationsTable,
+  wardsTable,
+  auditLogTable,
   usersTable,
 } from "@workspace/db/schema";
 import { requireStaff, type AuthRequest } from "../lib/auth.js";
-import { eq, desc, and, count, gte, lte, sql } from "drizzle-orm";
+import { eq, desc, and, count, gte, lte, sql, inArray } from "drizzle-orm";
 import {
   resolveOwnerForGrievance, logRouting, resolveWardId,
   validateAreaInWard, validateBoothInWard,
 } from "../lib/grievance-routing.js";
+import { getVoterScopeForUser, resolveScopeBoothIds } from "../lib/voterScope.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -418,8 +424,44 @@ router.get("/grievances/:id", requireStaff, async (req: AuthRequest, res) => {
         .orderBy(grievanceAttachmentsTable.createdAt),
     ]);
 
+    // If a voter is linked AND it's in scope for the caller, surface a
+    // small DTO so the UI can render the chip without a follow-up call.
+    // Out-of-scope viewers see `voterId` (so they know a link exists)
+    // but no PII.
+    let voter: {
+      id: number;
+      epicNumber: string;
+      fullName: string;
+      pollingStationId: number | null;
+      boothNo: string | null;
+      boothName: string | null;
+    } | null = null;
+    if (grievance.voterId != null && req.user) {
+      const scope = await getVoterScopeForUser(req.user);
+      const allowed = scope.unrestricted ? null : await resolveScopeBoothIds(scope);
+      const [v] = await db
+        .select({
+          id: votersTable.id,
+          epicNumber: votersTable.epicNumber,
+          fullName: votersTable.fullName,
+          pollingStationId: votersTable.pollingStationId,
+          boothNo: pollingStationsTable.boothNo,
+          boothName: pollingStationsTable.name,
+        })
+        .from(votersTable)
+        .leftJoin(pollingStationsTable, eq(pollingStationsTable.id, votersTable.pollingStationId))
+        .where(eq(votersTable.id, grievance.voterId))
+        .limit(1);
+      if (v) {
+        const inScope = scope.unrestricted ||
+          (v.pollingStationId != null && (allowed?.includes(v.pollingStationId) ?? false));
+        if (inScope) voter = v;
+      }
+    }
+
     res.json({
       ...serializeGrievance(grievance),
+      voter,
       remarks: remarks.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
       statusLog: statusLog.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() })),
       attachments: attachments.map((a) => ({ ...a, createdAt: a.createdAt.toISOString() })),
@@ -538,6 +580,282 @@ router.post("/grievances/:id/assign", requireStaff, async (req: AuthRequest, res
     res.json(serializeGrievance(updated));
   } catch (err) {
     console.error("[grievances] assign error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Voter-link audit helper ──────────────────────────────────────
+async function logGrievanceAudit(
+  req: AuthRequest,
+  action: string,
+  target: string,
+  detail?: string | null,
+) {
+  try {
+    await db.insert(auditLogTable).values({
+      actorId: req.user?.id ?? null,
+      actorName: req.user?.name ?? "Unknown",
+      action,
+      target,
+      detail: detail ?? null,
+    });
+  } catch {
+    /* non-critical */
+  }
+}
+
+// Loads a grievance by id and returns null if not found. (No scope
+// restriction — staff can view any grievance; voter-link operations
+// only require that the *voter* be in scope.)
+async function loadGrievance(id: number) {
+  const [g] = await db
+    .select()
+    .from(grievancesTable)
+    .where(eq(grievancesTable.id, id))
+    .limit(1);
+  return g ?? null;
+}
+
+// Grievance-scope check for voter-link operations. Mirrors the inbox
+// scoping in GET /api/grievances: a `grievance_officer` may only act
+// on grievances assigned to them; admins / coordinators / super_admin
+// are unrestricted. Returns true if the caller may act on this grievance.
+function userCanActOnGrievance(
+  user: NonNullable<AuthRequest["user"]>,
+  grievance: { assignedTo: number | null },
+): boolean {
+  if (user.role === "grievance_officer") {
+    return grievance.assignedTo === user.id;
+  }
+  return true;
+}
+
+// ── GET /api/admin/grievances/:id/voter-suggestions ───────────────
+// Returns top 3 voter candidates ranked by name + ward similarity,
+// scoped to the actor's voter scope. Used by the grievance detail
+// page to populate the "Match voter" panel.
+router.get("/admin/grievances/:id/voter-suggestions", requireStaff, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const id = parseInt(req.params.id as string, 10);
+    if (!Number.isFinite(id) || id <= 0) { res.status(400).json({ error: "Invalid id" }); return; }
+    const grievance = await loadGrievance(id);
+    if (!grievance) { res.status(404).json({ error: "Not found" }); return; }
+    if (!userCanActOnGrievance(req.user, grievance)) {
+      await logGrievanceAudit(req, "GRIEVANCE_VOTER_SUGGEST_DENIED",
+        `grievance:${grievance.ticketNo}`, "grievance_out_of_scope");
+      res.status(403).json({ error: "You cannot access this grievance" });
+      return;
+    }
+
+    const scope = await getVoterScopeForUser(req.user);
+    const allowed = scope.unrestricted ? null : await resolveScopeBoothIds(scope);
+    // Empty scope → no candidates can possibly match.
+    if (allowed != null && allowed.length === 0) {
+      res.json({ items: [] });
+      return;
+    }
+
+    const name = (grievance.name || "").trim();
+    if (name.length < 2) { res.json({ items: [] }); return; }
+
+    // pg_trgm similarity on lower(full_name) vs the grievance name,
+    // plus a +0.15 ward-match boost. Threshold 0.18 keeps obvious
+    // mismatches out while still surfacing reasonable typos.
+    const wardName = (grievance.ward || "").trim();
+    const scopeFilter = allowed != null
+      ? sql`AND v.polling_station_id = ANY(${sql.raw(`ARRAY[${allowed.join(",") || "NULL"}]::int[]`)})`
+      : sql``;
+    const rows = await db.execute(sql`
+      SELECT
+        v.id,
+        v.epic_number       AS "epicNumber",
+        v.full_name         AS "fullName",
+        v.full_name_ta      AS "fullNameTa",
+        v.age,
+        v.gender,
+        v.house_number      AS "houseNumber",
+        v.address_line      AS "addressLine",
+        v.polling_station_id AS "pollingStationId",
+        ps.booth_no         AS "boothNo",
+        ps.name             AS "boothName",
+        w.id                AS "wardId",
+        w.name              AS "wardName",
+        similarity(lower(v.full_name), lower(${name})) AS "nameSim",
+        CASE
+          WHEN ${wardName === "" ? sql`FALSE` : sql`w.name = ${wardName}`} THEN 0.15
+          ELSE 0
+        END AS "wardBoost"
+      FROM voters v
+      LEFT JOIN polling_stations ps ON ps.id = v.polling_station_id
+      LEFT JOIN wards w ON w.id = ps.ward_id
+      WHERE similarity(lower(v.full_name), lower(${name})) > 0.18
+        ${scopeFilter}
+      ORDER BY (similarity(lower(v.full_name), lower(${name}))
+                + CASE WHEN ${wardName === "" ? sql`FALSE` : sql`w.name = ${wardName}`} THEN 0.15 ELSE 0 END) DESC
+      LIMIT 3
+    `);
+
+    const items = (rows.rows ?? rows as unknown as Array<Record<string, unknown>>).map((r) => {
+      const nameSim = Number(r.nameSim ?? 0);
+      const wardBoost = Number(r.wardBoost ?? 0);
+      const confidence = Math.min(1, Math.round((nameSim + wardBoost) * 100) / 100);
+      return {
+        id: Number(r.id),
+        epicNumber: r.epicNumber as string,
+        fullName: r.fullName as string,
+        fullNameTa: (r.fullNameTa as string | null) ?? null,
+        age: r.age == null ? null : Number(r.age),
+        gender: (r.gender as string | null) ?? null,
+        houseNumber: (r.houseNumber as string | null) ?? null,
+        addressLine: (r.addressLine as string | null) ?? null,
+        pollingStationId: r.pollingStationId == null ? null : Number(r.pollingStationId),
+        boothNo: (r.boothNo as string | null) ?? null,
+        boothName: (r.boothName as string | null) ?? null,
+        wardId: r.wardId == null ? null : Number(r.wardId),
+        wardName: (r.wardName as string | null) ?? null,
+        confidence,
+      };
+    });
+
+    await logGrievanceAudit(
+      req, "GRIEVANCE_VOTER_SUGGEST",
+      `grievance:${grievance.ticketNo}`,
+      `count=${items.length}`,
+    );
+    res.json({ items });
+  } catch (err) {
+    console.error("[grievances] voter suggestions error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const LinkVoterBody = z.object({
+  voterId: z.number().int().positive(),
+  note: z.string().max(500).optional().nullable(),
+});
+
+// ── PUT /api/admin/grievances/:id/voter ──────────────────────────
+// Link a grievance to a voter. The chosen voter must be in the
+// caller's voter scope. Idempotent (re-linking the same voter is a
+// no-op that still logs).
+router.put("/admin/grievances/:id/voter", requireStaff, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const id = parseInt(req.params.id as string, 10);
+    if (!Number.isFinite(id) || id <= 0) { res.status(400).json({ error: "Invalid id" }); return; }
+    const body = LinkVoterBody.safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+
+    const grievance = await loadGrievance(id);
+    if (!grievance) { res.status(404).json({ error: "Not found" }); return; }
+    if (!userCanActOnGrievance(req.user, grievance)) {
+      await logGrievanceAudit(req, "GRIEVANCE_VOTER_LINK_DENIED",
+        `grievance:${grievance.ticketNo}`,
+        `voter:${body.data.voterId} grievance_out_of_scope`);
+      res.status(403).json({ error: "You cannot modify this grievance" });
+      return;
+    }
+
+    const [voter] = await db
+      .select({ id: votersTable.id, epicNumber: votersTable.epicNumber, pollingStationId: votersTable.pollingStationId })
+      .from(votersTable)
+      .where(eq(votersTable.id, body.data.voterId))
+      .limit(1);
+    if (!voter) { res.status(404).json({ error: "Voter not found" }); return; }
+
+    // Voter scope check — refuse to link a voter the caller cannot see.
+    const scope = await getVoterScopeForUser(req.user);
+    if (!scope.unrestricted) {
+      const allowed = await resolveScopeBoothIds(scope);
+      const inScope = voter.pollingStationId != null && (allowed?.includes(voter.pollingStationId) ?? false);
+      if (!inScope) {
+        await logGrievanceAudit(req, "GRIEVANCE_VOTER_LINK_DENIED",
+          `grievance:${grievance.ticketNo}`, `voter:${voter.epicNumber} out_of_scope`);
+        res.status(403).json({ error: "Voter is not in your assigned scope" });
+        return;
+      }
+    }
+
+    const previous = grievance.voterId ?? null;
+    const [updated] = await db.update(grievancesTable)
+      .set({ voterId: voter.id })
+      .where(eq(grievancesTable.id, id))
+      .returning();
+
+    await db.insert(grievanceVoterLinkLogTable).values({
+      grievanceId: id,
+      voterIdOld: previous,
+      voterIdNew: voter.id,
+      reason: "manual",
+      changedBy: req.user.id,
+      changedByName: req.user.name,
+      note: body.data.note ?? null,
+    });
+    await logGrievanceAudit(req, "GRIEVANCE_VOTER_LINK",
+      `grievance:${grievance.ticketNo}`, `voter:${voter.epicNumber}`);
+
+    res.json(serializeGrievance(updated));
+  } catch (err) {
+    console.error("[grievances] voter link error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── DELETE /api/admin/grievances/:id/voter ───────────────────────
+// Clear the voter link. To unlink a voter the caller cannot see, the
+// caller must be unrestricted (super_admin / admin). Officers can
+// only unlink voters in their own scope — same rule as link.
+router.delete("/admin/grievances/:id/voter", requireStaff, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const id = parseInt(req.params.id as string, 10);
+    if (!Number.isFinite(id) || id <= 0) { res.status(400).json({ error: "Invalid id" }); return; }
+
+    const grievance = await loadGrievance(id);
+    if (!grievance) { res.status(404).json({ error: "Not found" }); return; }
+    if (!userCanActOnGrievance(req.user, grievance)) {
+      await logGrievanceAudit(req, "GRIEVANCE_VOTER_UNLINK_DENIED",
+        `grievance:${grievance.ticketNo}`, "grievance_out_of_scope");
+      res.status(403).json({ error: "You cannot modify this grievance" });
+      return;
+    }
+    if (grievance.voterId == null) { res.json(serializeGrievance(grievance)); return; }
+
+    const scope = await getVoterScopeForUser(req.user);
+    if (!scope.unrestricted) {
+      const [v] = await db.select({ pollingStationId: votersTable.pollingStationId, epicNumber: votersTable.epicNumber })
+        .from(votersTable).where(eq(votersTable.id, grievance.voterId)).limit(1);
+      const allowed = await resolveScopeBoothIds(scope);
+      const inScope = v?.pollingStationId != null && (allowed?.includes(v.pollingStationId) ?? false);
+      if (!inScope) {
+        await logGrievanceAudit(req, "GRIEVANCE_VOTER_UNLINK_DENIED",
+          `grievance:${grievance.ticketNo}`, `voter:${v?.epicNumber ?? grievance.voterId} out_of_scope`);
+        res.status(403).json({ error: "Linked voter is not in your assigned scope" });
+        return;
+      }
+    }
+
+    const previous = grievance.voterId;
+    const [updated] = await db.update(grievancesTable)
+      .set({ voterId: null })
+      .where(eq(grievancesTable.id, id))
+      .returning();
+
+    await db.insert(grievanceVoterLinkLogTable).values({
+      grievanceId: id,
+      voterIdOld: previous,
+      voterIdNew: null,
+      reason: "unlink",
+      changedBy: req.user.id,
+      changedByName: req.user.name,
+    });
+    await logGrievanceAudit(req, "GRIEVANCE_VOTER_UNLINK",
+      `grievance:${grievance.ticketNo}`, `voter_id_old=${previous}`);
+
+    res.json(serializeGrievance(updated));
+  } catch (err) {
+    console.error("[grievances] voter unlink error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

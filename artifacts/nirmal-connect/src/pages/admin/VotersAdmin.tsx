@@ -526,6 +526,7 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
               )}
               <TagsPanel voterId={detail.id} initialTags={detail.tags} allTags={allTags} displayLang={displayLang} />
               <NotesPanel voterId={detail.id} me={me} isAdminRole={isAdminRole} />
+              <GrievancesPanel voterId={detail.id} />
               <div className="text-xs text-muted-foreground border-t pt-3">
                 Last updated {new Date(detail.updatedAt).toLocaleString()}
               </div>
@@ -551,6 +552,67 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function capitalize(s: string): string {
   return s.length ? s[0].toUpperCase() + s.slice(1) : s;
+}
+
+interface VoterGrievanceItem {
+  id: number;
+  ticketNo: string;
+  category: string;
+  status: string;
+  priority: string;
+  ward: string | null;
+  assignedTo: number | null;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt: string | null;
+}
+
+function GrievancesPanel({ voterId }: { voterId: number }) {
+  const { data, isLoading, error } = useQuery<{ items: VoterGrievanceItem[] }>({
+    queryKey: ["voter-grievances", voterId],
+    queryFn: () => authJson<{ items: VoterGrievanceItem[] }>(`/admin/voters/${voterId}/grievances`),
+  });
+  const items = data?.items ?? [];
+  return (
+    <div className="border-t pt-3" data-testid="voter-grievances-panel">
+      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+        Grievances ({items.length})
+      </div>
+      {isLoading && <div className="text-xs text-muted-foreground">Loading…</div>}
+      {error && (
+        <div className="text-xs text-destructive">
+          {(error as Error).message}
+        </div>
+      )}
+      {!isLoading && !error && items.length === 0 && (
+        <div className="text-xs text-muted-foreground italic">
+          No grievances linked to this voter yet.
+        </div>
+      )}
+      <div className="space-y-2">
+        {items.map((g) => (
+          <div
+            key={g.id}
+            className="rounded border bg-muted/20 p-2 text-sm"
+            data-testid={`voter-grievance-${g.id}`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-mono text-xs">{g.ticketNo}</span>
+              <span className="text-[10px] text-muted-foreground">
+                {new Date(g.createdAt).toLocaleDateString()}
+              </span>
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              <Badge variant="secondary" className="text-[10px]">{g.category}</Badge>
+              <Badge variant="outline" className="text-[10px]">{g.status}</Badge>
+              <Badge variant="outline" className="text-[10px]">{g.priority}</Badge>
+              {g.ward && <span className="text-[10px] text-muted-foreground">· {g.ward}</span>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function TagsPanel({

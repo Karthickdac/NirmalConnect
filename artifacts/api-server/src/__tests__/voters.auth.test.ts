@@ -92,6 +92,38 @@ test("voter scope helper is wired into search & detail routes (source check)", a
   assert.match(src, /res\.status\(404\)\.json\(\{ error: "Not found" \}\)/);
 });
 
+test("voter→grievances and grievance→voter routes reject unauthenticated requests", async () => {
+  const cases: Array<["get" | "put" | "delete", string]> = [
+    ["get", "/api/admin/voters/1/grievances"],
+    ["get", "/api/admin/grievances/1/voter-suggestions"],
+    ["put", "/api/admin/grievances/1/voter"],
+    ["delete", "/api/admin/grievances/1/voter"],
+  ];
+  for (const [method, path] of cases) {
+    const res = await request(app)[method](path);
+    assert.equal(res.status, 401, `${method.toUpperCase()} ${path} expected 401 got ${res.status}`);
+    assert.ok(
+      !JSON.stringify(res.body).match(/epic|fullName/i),
+      `${path} response leaked voter fields: ${JSON.stringify(res.body)}`,
+    );
+  }
+});
+
+test("grievance→voter linking enforces voter scope (source check)", async () => {
+  // Reviewers rely on this regex to confirm scope filtering is applied
+  // before linking, and that out-of-scope link/unlink attempts log a
+  // GRIEVANCE_VOTER_LINK_DENIED audit row + return 403.
+  const fs = await import("node:fs/promises");
+  const src = await fs.readFile(new URL("../routes/grievances.ts", import.meta.url), "utf8");
+  assert.match(src, /getVoterScopeForUser\(req\.user\)/);
+  assert.match(src, /resolveScopeBoothIds/);
+  assert.match(src, /GRIEVANCE_VOTER_LINK_DENIED/);
+  assert.match(src, /GRIEVANCE_VOTER_UNLINK_DENIED/);
+  assert.match(src, /GRIEVANCE_VOTER_SUGGEST_DENIED/);
+  assert.match(src, /userCanActOnGrievance/);
+  assert.match(src, /grievanceVoterLinkLogTable/);
+});
+
 test("non-staff session cookie is also rejected (no role bypass)", async () => {
   // Forge a junk cookie — should still 401, not 403, because our
   // requireStaff middleware verifies the JWT signature first.

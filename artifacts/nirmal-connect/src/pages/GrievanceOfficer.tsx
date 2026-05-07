@@ -13,7 +13,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import {
   ChevronLeft, ChevronRight, RefreshCw, Loader2, CheckCircle,
   Clock, AlertTriangle, MessageSquare, Filter, X, Paperclip, Users,
-  ListChecks, CalendarRange, FileDown, FileText, Inbox,
+  ListChecks, CalendarRange, FileDown, FileText, Inbox, UserCheck, UserX,
 } from "lucide-react";
 import type { Language } from "@/lib/i18n";
 import {
@@ -45,6 +45,15 @@ interface StaffGrievanceDetail {
   status: string;
   anonymous: boolean;
   assignedTo: number | null;
+  voterId: number | null;
+  voter: {
+    id: number;
+    epicNumber: string;
+    fullName: string;
+    pollingStationId: number | null;
+    boothNo: string | null;
+    boothName: string | null;
+  } | null;
   resolvedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -699,6 +708,15 @@ export default function GrievanceOfficer({ lang, token, userRole = "" }: Grievan
                 </div>
               )}
 
+              {/* Match Voter */}
+              <VoterMatchPanel
+                grievanceId={detail.id}
+                token={token}
+                voter={detail.voter}
+                lang={lang}
+                onChanged={() => refreshDetail(detail.id)}
+              />
+
               {/* Update Status */}
               <div className="border rounded-lg p-4 space-y-3">
                 <h4 className="font-semibold text-sm flex items-center gap-2">
@@ -877,6 +895,195 @@ export default function GrievanceOfficer({ lang, token, userRole = "" }: Grievan
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+interface VoterSuggestion {
+  id: number;
+  epicNumber: string;
+  fullName: string;
+  boothNo: string | null;
+  boothName: string | null;
+  similarity: number;
+  sameWard: boolean;
+}
+
+function VoterMatchPanel({
+  grievanceId, token, voter, lang, onChanged,
+}: {
+  grievanceId: number;
+  token: string;
+  voter: StaffGrievanceDetail["voter"];
+  lang: Language;
+  onChanged: () => void;
+}) {
+  const [suggestions, setSuggestions] = useState<VoterSuggestion[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
+
+  async function loadSuggestions() {
+    setLoading(true); setError(null);
+    try {
+      const r = await fetch(`/api/admin/grievances/${grievanceId}/voter-suggestions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json() as { items: VoterSuggestion[] };
+      setSuggestions(data.items ?? []);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function linkVoter(voterId: number) {
+    setBusyId(voterId); setError(null);
+    try {
+      const r = await fetch(`/api/admin/grievances/${grievanceId}/voter`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ voterId }),
+      });
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        throw new Error(body.error ?? `HTTP ${r.status}`);
+      }
+      setSuggestions(null);
+      onChanged();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function unlinkVoter() {
+    setBusyId(-1); setError(null);
+    try {
+      const r = await fetch(`/api/admin/grievances/${grievanceId}/voter`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        throw new Error(body.error ?? `HTTP ${r.status}`);
+      }
+      setSuggestions(null);
+      onChanged();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <div className="border rounded-lg p-4 space-y-3" data-testid="voter-match-panel">
+      <h4 className="font-semibold text-sm flex items-center gap-2">
+        <UserCheck className="w-4 h-4 text-primary" />
+        {lang === "ta" ? "வாக்காளரை இணை" : "Match Voter"}
+      </h4>
+      {voter ? (
+        <div className="flex items-start justify-between gap-2 rounded border bg-muted/30 p-3">
+          <div className="text-sm">
+            <div className="font-medium">{voter.fullName}</div>
+            <div className="text-xs text-muted-foreground font-mono">{voter.epicNumber}</div>
+            {voter.boothNo && (
+              <div className="text-xs text-muted-foreground">
+                {lang === "ta" ? "வாக்குச்சாவடி" : "Booth"} {voter.boothNo}
+                {voter.boothName ? ` · ${voter.boothName}` : ""}
+              </div>
+            )}
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={busyId === -1}
+            onClick={unlinkVoter}
+            data-testid="unlink-voter-btn"
+          >
+            {busyId === -1 ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
+            <span className="ml-1">{lang === "ta" ? "இணைப்பை நீக்கு" : "Unlink"}</span>
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {!suggestions && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={loadSuggestions}
+              disabled={loading}
+              data-testid="suggest-voters-btn"
+            >
+              {loading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Users className="w-4 h-4 mr-1" />}
+              {lang === "ta" ? "வாக்காளர்களைப் பரிந்துரை" : "Suggest matches"}
+            </Button>
+          )}
+          {suggestions && suggestions.length === 0 && (
+            <div className="text-xs text-muted-foreground italic">
+              {lang === "ta"
+                ? "பொருந்தக்கூடிய வாக்காளர் எதுவும் கிடைக்கவில்லை."
+                : "No matching voters found."}
+            </div>
+          )}
+          {suggestions && suggestions.length > 0 && (
+            <div className="space-y-2">
+              {suggestions.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-start justify-between gap-2 rounded border p-2"
+                  data-testid={`voter-suggestion-${s.id}`}
+                >
+                  <div className="text-sm min-w-0 flex-1">
+                    <div className="font-medium truncate">{s.fullName}</div>
+                    <div className="text-xs text-muted-foreground font-mono">{s.epicNumber}</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                      <Badge variant="secondary" className="text-[10px]">
+                        {Math.round(s.similarity * 100)}% match
+                      </Badge>
+                      {s.sameWard && (
+                        <Badge variant="outline" className="text-[10px]">
+                          {lang === "ta" ? "அதே வார்டு" : "Same ward"}
+                        </Badge>
+                      )}
+                      {s.boothNo && (
+                        <span className="text-[10px] text-muted-foreground">
+                          · {lang === "ta" ? "வா.சா." : "Booth"} {s.boothNo}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    disabled={busyId === s.id}
+                    onClick={() => linkVoter(s.id)}
+                    data-testid={`link-voter-${s.id}`}
+                  >
+                    {busyId === s.id
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : (lang === "ta" ? "இணை" : "Link")}
+                  </Button>
+                </div>
+              ))}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={loadSuggestions}
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
+                {lang === "ta" ? "மீண்டும் பரிந்துரை" : "Refresh suggestions"}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+      {error && <div className="text-xs text-destructive">{error}</div>}
     </div>
   );
 }

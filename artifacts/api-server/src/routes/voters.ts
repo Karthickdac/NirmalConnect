@@ -8,6 +8,7 @@ import { db } from "@workspace/db";
 import {
   votersTable, voterImportsTable, pollingStationsTable, auditLogTable,
   voterTagsTable, voterTagAssignmentsTable, voterNotesTable,
+  grievancesTable,
 } from "@workspace/db/schema";
 import { eq, desc, asc, sql, and, inArray, or, gte, lte } from "drizzle-orm";
 import { z } from "zod";
@@ -1291,6 +1292,51 @@ router.delete("/admin/voters/:id/notes/:noteId", requireStaff, async (req: AuthR
     res.json({ success: true });
   } catch (err) {
     console.error("[voters] delete note:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /api/admin/voters/:id/grievances ─────────────────────────
+// Lists every grievance linked to a given voter. Used by the voter
+// detail "Grievances" tab. Scope-checked via loadVoterForUser so an
+// officer can't enumerate grievances for voters they cannot see.
+router.get("/admin/voters/:id/grievances", requireStaff, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const id = Number.parseInt(String(req.params.id), 10);
+    if (!Number.isFinite(id) || id <= 0) { res.status(400).json({ error: "Invalid id" }); return; }
+    const voter = await loadVoterForUser(req.user, id);
+    if (!voter) { res.status(404).json({ error: "Not found" }); return; }
+    const rows = await db
+      .select({
+        id: grievancesTable.id,
+        ticketNo: grievancesTable.ticketNo,
+        category: grievancesTable.category,
+        status: grievancesTable.status,
+        priority: grievancesTable.priority,
+        ward: grievancesTable.ward,
+        assignedTo: grievancesTable.assignedTo,
+        createdAt: grievancesTable.createdAt,
+        updatedAt: grievancesTable.updatedAt,
+        resolvedAt: grievancesTable.resolvedAt,
+      })
+      .from(grievancesTable)
+      .where(eq(grievancesTable.voterId, id))
+      .orderBy(desc(grievancesTable.createdAt));
+    await logVoterAudit(
+      req, "VOTER_GRIEVANCES_READ",
+      `voter:${voter.epicNumber}`, `count=${rows.length}`,
+    );
+    res.json({
+      items: rows.map((r) => ({
+        ...r,
+        createdAt: r.createdAt.toISOString(),
+        updatedAt: r.updatedAt.toISOString(),
+        resolvedAt: r.resolvedAt?.toISOString() ?? null,
+      })),
+    });
+  } catch (err) {
+    console.error("[voters] list voter grievances:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
