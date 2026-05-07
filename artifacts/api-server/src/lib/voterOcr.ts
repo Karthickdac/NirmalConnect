@@ -109,7 +109,14 @@ export async function ocrScannedPages(
     const out: OcrPageText[] = [];
     let pageNo = 0;
     const worker = await getWorker();
-    const doc = await mod.pdf(pdfBuffer, { scale: 2 });
+    // scale=3 ≈ 216 DPI from the underlying 72 DPI PDF, putting the
+    // EPIC font (the smallest text on a CEO voter-roll page) above
+    // tesseract's reliable recognition floor of ~12-15px x-height.
+    // At scale=2 (~144 DPI) only ~7% of EPICs were readable; bumping
+    // to 3 substantially increases that hit rate at the cost of
+    // ~2.25× per-page CPU. scale=4 would be even better but pushes a
+    // 36-page upload past the 5-minute mark, which hurts UX.
+    const doc = await mod.pdf(pdfBuffer, { scale: 3 });
     for await (const png of doc) {
       pageNo += 1;
       if (!targetSet.has(pageNo)) continue;
