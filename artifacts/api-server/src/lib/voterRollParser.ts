@@ -112,6 +112,7 @@ function splitVoterBlocks(pageText: string): { serial: number | null; raw: strin
     "‹EPIC›",
   );
 
+  // ── Strict path (text-layer PDFs) ──────────────────────────────
   // A new voter cell opens with: <serial number on its own>\n? Name:
   // We find every such boundary, then slice the page accordingly so
   // each block runs from one Name: header up to (but not including)
@@ -120,7 +121,6 @@ function splitVoterBlocks(pageText: string): { serial: number | null; raw: strin
   const offsets: { idx: number; serial: number; nameStart: number }[] = [];
   let m: RegExpExecArray | null;
   while ((m = headerRe.exec(normalized)) !== null) {
-    // nameStart points to the "Name:" token so the slice keeps it.
     const nameStart = normalized.indexOf("Name", m.index);
     if (nameStart < 0) continue;
     offsets.push({ idx: m.index, serial: parseInt(m[1], 10), nameStart });
@@ -134,7 +134,36 @@ function splitVoterBlocks(pageText: string): { serial: number | null; raw: strin
     if (!/‹EPIC›/.test(raw)) continue;
     blocks.push({ serial: offsets[i]!.serial, raw });
   }
-  return blocks;
+  if (blocks.length > 0) return blocks;
+
+  // ── Lenient fallback (OCR output) ──────────────────────────────
+  // OCR'd 3-column grids rarely produce a clean "<serial>\nName:"
+  // boundary — column reading order, line-wrap noise, and dropped
+  // newlines all break the strict regex. As a fallback, anchor on
+  // the EPIC sentinel (which IS reliably recognised by tesseract
+  // because the IDs are uppercase ASCII), then walk backwards to
+  // grab the surrounding ~600 chars as the cell body. We accept any
+  // serial we can find inside that window; otherwise the row will
+  // still get an EPIC + name and the import job assigns serial=null.
+  const epicSentinelRe = /‹EPIC›\s*([A-Z0-9]{7,12})/g;
+  const epicMatches: { idx: number; epicEnd: number }[] = [];
+  while ((m = epicSentinelRe.exec(normalized)) !== null) {
+    epicMatches.push({ idx: m.index, epicEnd: m.index + m[0].length });
+  }
+  const out: { serial: number | null; raw: string }[] = [];
+  for (let i = 0; i < epicMatches.length; i += 1) {
+    const epicIdx = epicMatches[i]!.idx;
+    const prevEnd = i > 0 ? epicMatches[i - 1]!.epicEnd : 0;
+    // Window from the previous EPIC end to a little past this EPIC.
+    const winStart = Math.max(prevEnd, epicIdx - 600);
+    const winEnd = Math.min(normalized.length, epicMatches[i]!.epicEnd + 40);
+    const raw = normalized.slice(winStart, winEnd).trim();
+    if (!/Name|பெயர்/i.test(raw)) continue;
+    const serialMatch = raw.match(/(?:^|\n)\s*(\d{1,4})\s*(?:\n|Name|பெயர்)/i);
+    const serial = serialMatch ? parseInt(serialMatch[1]!, 10) : null;
+    out.push({ serial, raw });
+  }
+  return out;
 }
 
 function parseVoterBlock(
