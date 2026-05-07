@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, RefreshCw, Eye, EyeOff } from "lucide-react";
+import { Save, RefreshCw, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { adminApi } from "./api";
 import {
   HomeView,
@@ -141,8 +141,17 @@ export default function HomeAdmin() {
         </div>
       </div>
 
+      {isDirty && (
+        <p
+          data-testid="home-unsaved-banner"
+          className="text-amber-700 text-sm bg-amber-50 border border-amber-200 rounded-md px-3 py-2 flex items-center gap-2"
+        >
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>You have unsaved changes. Don't forget to click <strong>Save Changes</strong> before leaving this page.</span>
+        </p>
+      )}
       {error && <p className="text-red-500 text-sm bg-red-50 border border-red-200 rounded-md px-3 py-2">{error}</p>}
-      {saved && <p className="text-green-600 text-sm bg-green-50 border border-green-200 rounded-md px-3 py-2">Changes saved successfully.</p>}
+      {saved && !isDirty && <p className="text-green-600 text-sm bg-green-50 border border-green-200 rounded-md px-3 py-2">Changes saved successfully.</p>}
 
       <div className={showPreview ? "grid grid-cols-1 xl:grid-cols-2 gap-6 items-start" : ""}>
         <div className={`space-y-6 ${showPreview ? "" : "max-w-3xl"}`}>
