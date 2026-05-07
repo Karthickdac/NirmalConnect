@@ -10,6 +10,7 @@ import {
 } from "@workspace/db/schema";
 
 import { requireStaff, requireRole, type AuthRequest } from "../lib/auth.js";
+import { logRouting } from "../lib/grievance-routing.js";
 import { eq, desc, asc, sql, gte, lte, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import multer from "multer";
@@ -901,10 +902,34 @@ router.post("/admin/grievances/bulk-assign", requireRole("super_admin", "admin",
     }).safeParse(req.body);
     if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
     const { ids, officerId, officerName } = body.data;
+
+    // Snapshot previous assignees so each routing-log row can record
+    // the accurate from→to transition (manual reassignment audit trail).
+    const before = await db.select({ id: grievancesTable.id, assignedTo: grievancesTable.assignedTo })
+      .from(grievancesTable).where(inArray(grievancesTable.id, ids));
+    const prevById = new Map(before.map(r => [r.id, r.assignedTo]));
+
     const updated = await db.update(grievancesTable)
       .set({ assignedTo: officerId, status: "Assigned" })
       .where(inArray(grievancesTable.id, ids))
       .returning({ id: grievancesTable.id });
+
+    // One routing-log row per grievance, marking reason=reassign when
+    // there was a previous owner, otherwise reason=manual (first assign).
+    const actorName = req.user?.name ?? req.user?.email ?? "system";
+    const actorId = req.user?.id ?? null;
+    await Promise.all(updated.map(g => logRouting({
+      grievanceId: g.id,
+      fromOfficerId: prevById.get(g.id) ?? null,
+      toOfficerId: officerId,
+      reason: prevById.get(g.id) ? "reassign" : "manual",
+      matchedScope: "none",
+      matchedScopeId: null,
+      changedBy: actorId,
+      changedByName: actorName,
+      note: `Bulk assign → ${officerName}`,
+    })));
+
     await logAudit(req, "BULK_ASSIGN", `grievances:${ids.join(",")}`, `→ ${officerName}`);
     res.json({ updated: updated.length });
   } catch (err) {
