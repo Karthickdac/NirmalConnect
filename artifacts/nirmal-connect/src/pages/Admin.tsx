@@ -203,7 +203,7 @@ export default function Admin({ lang = "ta" }: AdminProps) {
         {/* Page content */}
         <main className="flex-1 p-4 sm:p-6 overflow-auto">
           {active === "dashboard"    && <Dashboard />}
-          {active === "grievances"   && <GrievanceOfficer lang={lang} token={token} />}
+          {active === "grievances"   && <GrievanceOfficer lang={lang} token={token} userRole={role} />}
           {active === "assignments"  && <AssignmentsAdmin token={token} />}
           {active === "news"         && <NewsAdmin />}
           {active === "press"        && <PressReleasesAdmin />}

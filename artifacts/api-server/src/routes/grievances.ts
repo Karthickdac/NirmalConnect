@@ -268,8 +268,17 @@ router.get("/grievances", requireStaff, async (req: AuthRequest, res) => {
     if (req.query.priority) conditions.push(eq(grievancesTable.priority, String(req.query.priority)));
     if (req.query.ward) conditions.push(eq(grievancesTable.ward, String(req.query.ward)));
     if (req.query.constituency) conditions.push(eq(grievancesTable.constituency, String(req.query.constituency)));
-    // "mine=1" filter: officer's personal inbox view (defaults on for non-admin officers)
-    if (String(req.query.mine ?? "") === "1" && req.user?.id) {
+    // Inbox scoping rules:
+    //   * `mine=1`            → always restrict to caller's own assignments
+    //   * caller is grievance_officer (no broader admin role) and neither
+    //     `mine` nor `all=1` was passed → default to caller's own inbox
+    //   * `all=1`             → explicit override, return everyone's
+    //   * any other staff role and no flag → return everyone's (admin default)
+    const mineFlag = String(req.query.mine ?? "") === "1";
+    const allFlag = String(req.query.all ?? "") === "1";
+    const callerRole = req.user?.role ?? "";
+    const officerDefault = callerRole === "grievance_officer" && !mineFlag && !allFlag;
+    if ((mineFlag || officerDefault) && req.user?.id) {
       conditions.push(eq(grievancesTable.assignedTo, req.user.id));
     }
     if (req.query.assignedTo) {

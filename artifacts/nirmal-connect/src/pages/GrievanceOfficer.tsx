@@ -27,7 +27,7 @@ import {
 import type { GrievanceListItem } from "@workspace/api-client-react";
 import { useWards } from "@/lib/useWards";
 
-interface GrievanceOfficerProps { lang: Language; token: string }
+interface GrievanceOfficerProps { lang: Language; token: string; userRole?: string }
 
 // Full staff-view detail type — includes internal remarks and attachments
 interface StaffGrievanceDetail {
@@ -112,7 +112,9 @@ async function fetchStaffDetail(id: number, token: string): Promise<StaffGrievan
   return res.json() as Promise<StaffGrievanceDetail>;
 }
 
-export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps) {
+export default function GrievanceOfficer({ lang, token, userRole = "" }: GrievanceOfficerProps) {
+  // Officers default to their own inbox; admins/coordinators default to all.
+  const isOfficer = userRole === "grievance_officer";
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState("");
@@ -123,7 +125,8 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
   // "Mine" toggle: when on, list is restricted to grievances assigned to the current officer.
-  const [mineOnly, setMineOnly] = useState(false);
+  // Default ON for grievance_officer role, OFF for broader admin roles.
+  const [mineOnly, setMineOnly] = useState(isOfficer);
   const { data: wardList = [] } = useWards();
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkStatus, setBulkStatus] = useState("");
@@ -156,7 +159,7 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
     ...(filterConstituency && { constituency: filterConstituency }),
     ...(filterDateFrom && { dateFrom: filterDateFrom }),
     ...(filterDateTo && { dateTo: filterDateTo }),
-    ...(mineOnly && { mine: "1" }),
+    ...(mineOnly ? { mine: "1" } : (isOfficer ? { all: "1" } : {})),
   };
 
   const { data, isFetching, refetch } = useQuery({

@@ -1323,6 +1323,9 @@ export const AdminUpdateAssignmentParams = zod.object({
 export const AdminUpdateAssignmentBody = zod.object({
   isActive: zod.boolean().optional(),
   roleLabel: zod.string().nullish(),
+  wardId: zod.number().nullish(),
+  areaId: zod.number().nullish(),
+  pollingStationId: zod.number().nullish(),
 });
 
 export const AdminUpdateAssignmentResponse = zod.object({

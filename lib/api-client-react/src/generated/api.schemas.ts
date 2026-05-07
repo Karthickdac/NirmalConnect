@@ -724,6 +724,12 @@ export interface OfficerAssignmentPatchBody {
   isActive?: boolean;
   /** @nullable */
   roleLabel?: string | null;
+  /** @nullable */
+  wardId?: number | null;
+  /** @nullable */
+  areaId?: number | null;
+  /** @nullable */
+  pollingStationId?: number | null;
 }
 
 export interface OfficerAssignment {

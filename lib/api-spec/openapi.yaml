@@ -2487,6 +2487,9 @@ components:
       properties:
         isActive: { type: boolean }
         roleLabel: { type: ["string", "null"] }
+        wardId: { type: ["integer", "null"] }
+        areaId: { type: ["integer", "null"] }
+        pollingStationId: { type: ["integer", "null"] }
 
     OfficerAssignment:
       type: object
