@@ -205,6 +205,7 @@ export default function GalleryAdmin() {
               label="Media URL *"
               value={form.mediaUrl}
               onChange={(url) => setForm(f => ({ ...f, mediaUrl: url }))}
+              onThumbnailChange={(url) => setForm(f => ({ ...f, thumbnailUrl: url }))}
               placeholder="https://… or upload below"
             />
             <ImageUploader
