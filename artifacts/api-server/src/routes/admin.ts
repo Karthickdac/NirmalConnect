@@ -2085,8 +2085,10 @@ router.get(
       // Resolve effective ward via polling_station -> area fallback,
       // and grab GPS coords from polling_station with ward centroid fallback.
       const effectiveWardId = sql<number | null>`coalesce(${pollingStationsTable.wardId}, ${areasTable.wardId})`;
-      const lat = sql<number | null>`coalesce(${pollingStationsTable.latitude}, ${wardsTable.latitude})`;
-      const lng = sql<number | null>`coalesce(${pollingStationsTable.longitude}, ${wardsTable.longitude})`;
+      // Prefer the citizen's own GPS pin, then fall back to the booth's coords,
+      // then the ward centroid — so heatmap covers reports outside any booth.
+      const lat = sql<number | null>`coalesce(${grievancesTable.latitude}, ${pollingStationsTable.latitude}, ${wardsTable.latitude})`;
+      const lng = sql<number | null>`coalesce(${grievancesTable.longitude}, ${pollingStationsTable.longitude}, ${wardsTable.longitude})`;
 
       const rows = await db
         .select({

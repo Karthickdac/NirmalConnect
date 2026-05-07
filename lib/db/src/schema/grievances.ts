@@ -5,6 +5,7 @@ import {
   integer,
   timestamp,
   boolean,
+  doublePrecision,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -57,6 +58,10 @@ export const grievancesTable = pgTable("grievances", {
   // Used by the auto-router and admin matrix.
   areaId: integer("area_id"),
   pollingStationId: integer("polling_station_id"),
+  // Optional citizen-supplied GPS pin (drop-pin or "use my location") so the
+  // analytics heatmap can plot reports outside any registered booth/ward.
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

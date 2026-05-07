@@ -1924,6 +1924,16 @@ components:
         pollingStationId:
           type: ["integer", "null"]
           description: Optional polling-station (booth) id
+        latitude:
+          type: ["number", "null"]
+          minimum: -90
+          maximum: 90
+          description: Optional citizen-supplied GPS latitude (pin-drop or "use my location")
+        longitude:
+          type: ["number", "null"]
+          minimum: -180
+          maximum: 180
+          description: Optional citizen-supplied GPS longitude
       required:
         - name
         - phone

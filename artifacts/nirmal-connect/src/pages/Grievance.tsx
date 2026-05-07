@@ -23,12 +23,13 @@ import type { Language } from "@/lib/i18n";
 import { submitGrievance, trackGrievance, getGrievanceHeatmap } from "@workspace/api-client-react";
 import type { GrievanceTrackResponse } from "@workspace/api-client-react";
 import { useWards } from "@/lib/useWards";
+import GpsPicker, { type GpsValue } from "@/components/GpsPicker";
 
 interface GrievanceProps { lang: Language; }
 
 /** Submit grievance as multipart/form-data when files are attached. */
 async function submitGrievanceWithFiles(
-  data: { name: string; phone: string; category: string; description: string; address?: string | null; ward?: string | null; anonymous?: boolean; areaId?: number | null; pollingStationId?: number | null },
+  data: { name: string; phone: string; category: string; description: string; address?: string | null; ward?: string | null; anonymous?: boolean; areaId?: number | null; pollingStationId?: number | null; latitude?: number | null; longitude?: number | null },
   files: File[]
 ): Promise<{ ticketNo: string }> {
   const fd = new globalThis.FormData();
@@ -40,6 +41,10 @@ async function submitGrievanceWithFiles(
   if (data.ward) fd.append("ward", data.ward);
   if (data.areaId) fd.append("areaId", String(data.areaId));
   if (data.pollingStationId) fd.append("pollingStationId", String(data.pollingStationId));
+  if (data.latitude != null && data.longitude != null) {
+    fd.append("latitude", String(data.latitude));
+    fd.append("longitude", String(data.longitude));
+  }
   fd.append("anonymous", String(data.anonymous ?? false));
   files.forEach((f) => fd.append("attachments", f));
   const res = await fetch("/api/grievances/submit", { method: "POST", body: fd });
@@ -199,6 +204,7 @@ export default function Grievance({ lang }: GrievanceProps) {
   const [copied, setCopied] = useState(false);
   const [isTracking, setIsTracking] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [gps, setGps] = useState<GpsValue | null>(null);
   const { data: wardList = [] } = useWards();
 
   const form = useForm<FormData>({
@@ -235,6 +241,8 @@ export default function Grievance({ lang }: GrievanceProps) {
         ward: data.ward || null,
         areaId: data.areaId ?? null,
         pollingStationId: data.pollingStationId ?? null,
+        latitude: gps?.lat ?? null,
+        longitude: gps?.lng ?? null,
         anonymous: data.anonymous ?? false,
       };
       if (attachedFiles.length > 0) {
@@ -246,6 +254,7 @@ export default function Grievance({ lang }: GrievanceProps) {
       setTicketNo(result.ticketNo);
       setSubmitted(true);
       setAttachedFiles([]);
+      setGps(null);
     },
     onError: () => {
       form.setError("root", { message: lang === "ta" ? "சேவை தடைபட்டது. மீண்டும் முயற்சிக்கவும்." : "Service error. Please try again." });
@@ -567,6 +576,8 @@ export default function Grievance({ lang }: GrievanceProps) {
                         </div>
                       )}
                     </div>
+
+                    <GpsPicker value={gps} onChange={setGps} lang={lang} />
 
                     {form.formState.errors.root && (
                       <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 rounded-lg p-3">

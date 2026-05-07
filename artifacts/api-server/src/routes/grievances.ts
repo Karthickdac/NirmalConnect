@@ -68,7 +68,13 @@ const SubmitBody = z.object({
   // optional sub-ward routing scope (cascading dropdowns)
   areaId: z.coerce.number().int().positive().optional().nullable(),
   pollingStationId: z.coerce.number().int().positive().optional().nullable(),
-});
+  // Optional citizen-supplied GPS coords (pin-drop or "use my location").
+  latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
+  longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
+}).refine(
+  (d) => (d.latitude == null) === (d.longitude == null),
+  { message: "latitude and longitude must be supplied together", path: ["longitude"] },
+);
 
 const StatusUpdateBody = z.object({
   status: z.enum(["Submitted", "Under Review", "Assigned", "In Progress", "Resolved", "Closed"]),
@@ -143,6 +149,8 @@ router.post("/grievances/submit", upload.array("attachments", 3), async (req, re
       ward: body.data.ward ?? null,
       areaId: body.data.areaId ?? null,
       pollingStationId: body.data.pollingStationId ?? null,
+      latitude: body.data.latitude ?? null,
+      longitude: body.data.longitude ?? null,
       constituency: body.data.constituency ?? "Tirupparankundram",
       anonymous: body.data.anonymous ?? false,
       priority: "Medium",

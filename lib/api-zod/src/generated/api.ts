@@ -360,6 +360,12 @@ export const GetRecentActivitiesResponse = zod.array(
 /**
  * @summary Submit a public grievance
  */
+export const submitGrievanceBodyLatitudeMin = -90;
+export const submitGrievanceBodyLatitudeMax = 90;
+
+export const submitGrievanceBodyLongitudeMin = -180;
+export const submitGrievanceBodyLongitudeMax = 180;
+
 export const SubmitGrievanceBody = zod.object({
   name: zod.string(),
   phone: zod.string(),
@@ -378,6 +384,20 @@ export const SubmitGrievanceBody = zod.object({
     .number()
     .nullish()
     .describe("Optional polling-station (booth) id"),
+  latitude: zod
+    .number()
+    .min(submitGrievanceBodyLatitudeMin)
+    .max(submitGrievanceBodyLatitudeMax)
+    .nullish()
+    .describe(
+      'Optional citizen-supplied GPS latitude (pin-drop or \"use my location\")',
+    ),
+  longitude: zod
+    .number()
+    .min(submitGrievanceBodyLongitudeMin)
+    .max(submitGrievanceBodyLongitudeMax)
+    .nullish()
+    .describe("Optional citizen-supplied GPS longitude"),
 });
 
 /**
@@ -1570,6 +1590,16 @@ export const AdminGrievanceAnalyticsResponse = zod.object({
       open: zod.number(),
     }),
   ),
+  trend: zod.array(
+    zod.object({
+      bucket: zod
+        .string()
+        .describe("ISO date (YYYY-MM-DD) anchoring the bucket start"),
+      submitted: zod.number(),
+      resolved: zod.number(),
+    }),
+  ),
+  trendGranularity: zod.enum(["day", "week", "month"]),
   cachedAt: zod.coerce.date().optional(),
   cacheTtlSeconds: zod.number().optional(),
 });

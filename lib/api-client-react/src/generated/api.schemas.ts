@@ -223,6 +223,20 @@ export interface GrievanceSubmitBody {
    * @nullable
    */
   pollingStationId?: number | null;
+  /**
+   * Optional citizen-supplied GPS latitude (pin-drop or "use my location")
+   * @minimum -90
+   * @maximum 90
+   * @nullable
+   */
+  latitude?: number | null;
+  /**
+   * Optional citizen-supplied GPS longitude
+   * @minimum -180
+   * @maximum 180
+   * @nullable
+   */
+  longitude?: number | null;
 }
 
 export interface GrievancePublic {
@@ -968,6 +982,22 @@ export type GrievanceAnalyticsByOfficerItem = {
   open: number;
 };
 
+export type GrievanceAnalyticsTrendItem = {
+  /** ISO date (YYYY-MM-DD) anchoring the bucket start */
+  bucket: string;
+  submitted: number;
+  resolved: number;
+};
+
+export type GrievanceAnalyticsTrendGranularity =
+  (typeof GrievanceAnalyticsTrendGranularity)[keyof typeof GrievanceAnalyticsTrendGranularity];
+
+export const GrievanceAnalyticsTrendGranularity = {
+  day: "day",
+  week: "week",
+  month: "month",
+} as const;
+
 export interface GrievanceAnalytics {
   filters?: GrievanceAnalyticsFilters;
   totals: GrievanceAnalyticsTotals;
@@ -978,6 +1008,8 @@ export interface GrievanceAnalytics {
   byCategory: GrievanceAnalyticsByCategoryItem[];
   byStatus: GrievanceAnalyticsByStatusItem[];
   byOfficer: GrievanceAnalyticsByOfficerItem[];
+  trend: GrievanceAnalyticsTrendItem[];
+  trendGranularity: GrievanceAnalyticsTrendGranularity;
   cachedAt?: string;
   cacheTtlSeconds?: number;
 }
