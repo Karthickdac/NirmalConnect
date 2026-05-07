@@ -14,10 +14,8 @@
 // text layer only; image-only PDFs report `ocrPagesCount` and the
 // affected serials land in `skipped` so staff can re-upload with OCR.
 
-import { createRequire } from "node:module";
 import { ocrScannedPages } from "./voterOcr.js";
 
-const requireCjs = createRequire(import.meta.url);
 
 export interface ParsedVoter {
   epicNumber: string;
@@ -217,9 +215,21 @@ function parseVoterBlock(
 }
 
 export async function parseVoterRollPdf(buffer: Buffer): Promise<ParseResult> {
-  // Lazy CJS require — pdf-parse ships ESM/CJS hybrid that mis-resolves
-  // when pulled in through esbuild's static analyzer.
-  const { PDFParse } = requireCjs("pdf-parse") as {
+  // IMPORTANT: must be a dynamic ESM import, not requireCjs.
+  // pdf-parse@2.4.5's CJS bundle (`dist/pdf-parse/cjs/index.cjs`) is
+  // a single-line bundle that inlines its OWN copy of pdfjs-dist
+  // 5.4.296 — it ignores whatever pdfjs-dist version is in node_modules.
+  // pdf-to-img@6 loads pdfjs-dist 5.6.205 from node_modules, and pdfjs
+  // strictly requires its API and Worker bundles to be the same
+  // version. Mixing the two paths (CJS pdf-parse + ESM pdf-to-img)
+  // crashed the OCR pipeline with
+  //   "API version 5.6.205 does not match Worker version 5.4.296".
+  // The ESM build of pdf-parse imports
+  //   pdfjs-dist/legacy/build/pdf.mjs
+  // which respects the workspace pnpm `pdfjs-dist` override and
+  // resolves to the same 5.6.205 that pdf-to-img sees. Keep both libs
+  // on the ESM path so they share one pdfjs version.
+  const { PDFParse } = (await import("pdf-parse")) as unknown as {
     PDFParse: new (opts: { data: Buffer }) => {
       getText(): Promise<{ text: string; pages: { text: string }[] }>;
     };
