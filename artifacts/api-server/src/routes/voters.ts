@@ -8,7 +8,7 @@ import { db } from "@workspace/db";
 import {
   votersTable, voterImportsTable, pollingStationsTable, auditLogTable,
 } from "@workspace/db/schema";
-import { eq, desc, sql, and, inArray } from "drizzle-orm";
+import { eq, desc, sql, and, inArray, or, gte, lte } from "drizzle-orm";
 import { z } from "zod";
 import multer from "multer";
 import { createHash } from "node:crypto";
@@ -16,6 +16,7 @@ import { requireStaff, requireRole, type AuthRequest } from "../lib/auth.js";
 import {
   parseVoterRollPdf, type ParsedVoter, type ParseResult,
 } from "../lib/voterRollParser.js";
+import { getVoterScopeForUser, resolveScopeBoothIds } from "../lib/voterScope.js";
 
 const router = Router();
 
@@ -573,6 +574,246 @@ router.get("/admin/voters/stats", ...requireVoterScope, async (req: AuthRequest,
     res.json({ totalVoters, totalImports, committedImports });
   } catch (err) {
     console.error("[voters] stats:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Voter search & detail (task #43) ─────────────────────────────
+//
+// These two endpoints are gated by `requireStaff`, NOT requireVoterScope,
+// because we want grievance officers / coordinators to see voters within
+// their assigned wards / areas / booths. Admins (super_admin / admin /
+// minister) see everything; everyone else is filtered through
+// `getVoterScopeForUser`. Out-of-scope detail look-ups return 404 (not
+// 403) so they don't leak existence of voters outside an officer's area.
+
+// Per-user in-memory token bucket: 60 requests / 60s window per userId.
+// Naive but sufficient for a single-process deployment; switch to Redis
+// when we scale horizontally.
+const VOTER_SEARCH_RATE_LIMIT = 60;
+const VOTER_SEARCH_WINDOW_MS = 60_000;
+const voterSearchHits = new Map<number, number[]>();
+
+function checkVoterRateLimit(userId: number): boolean {
+  const now = Date.now();
+  const cutoff = now - VOTER_SEARCH_WINDOW_MS;
+  const arr = (voterSearchHits.get(userId) ?? []).filter((t) => t > cutoff);
+  if (arr.length >= VOTER_SEARCH_RATE_LIMIT) {
+    voterSearchHits.set(userId, arr);
+    return false;
+  }
+  arr.push(now);
+  voterSearchHits.set(userId, arr);
+  return true;
+}
+
+const EPIC_RE = /^[A-Z]{3}\d{7}$/i;
+
+const searchQuerySchema = z.object({
+  q: z.string().trim().max(120).optional(),
+  boothId: z.coerce.number().int().positive().optional(),
+  wardId: z.coerce.number().int().positive().optional(),
+  gender: z.enum(["M", "F", "O"]).optional(),
+  minAge: z.coerce.number().int().min(0).max(150).optional(),
+  maxAge: z.coerce.number().int().min(0).max(150).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+router.get("/admin/voters", requireStaff, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
+    if (!checkVoterRateLimit(req.user.id)) {
+      res.status(429).json({ error: "Too many requests, slow down." });
+      return;
+    }
+
+    const parsed = searchQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid query", details: parsed.error.flatten() });
+      return;
+    }
+    const { q, boothId, wardId, gender, minAge, maxAge, page, limit } = parsed.data;
+
+    const scope = await getVoterScopeForUser(req.user);
+    const scopedBoothIds = await resolveScopeBoothIds(scope);
+
+    // Out-of-scope short-circuit: officer with no assignments → empty.
+    if (scopedBoothIds && scopedBoothIds.length === 0) {
+      await logVoterAudit(
+        req, "VOTER_SEARCH",
+        "voters",
+        `q=${q ?? ""};empty_scope;total=0`,
+      );
+      res.json({ items: [], total: 0, page, limit, hasMore: false });
+      return;
+    }
+
+    const conds = [] as ReturnType<typeof eq>[];
+    if (scopedBoothIds) conds.push(inArray(votersTable.pollingStationId, scopedBoothIds));
+    if (boothId) {
+      // Ensure booth filter doesn't escape scope.
+      if (scopedBoothIds && !scopedBoothIds.includes(boothId)) {
+        await logVoterAudit(req, "VOTER_SEARCH", "voters", `boothId=${boothId};out_of_scope`);
+        res.json({ items: [], total: 0, page, limit, hasMore: false });
+        return;
+      }
+      conds.push(eq(votersTable.pollingStationId, boothId));
+    }
+    if (wardId) {
+      // Resolve ward → booths once and intersect.
+      const wardBooths = await db
+        .select({ id: pollingStationsTable.id })
+        .from(pollingStationsTable)
+        .where(eq(pollingStationsTable.wardId, wardId));
+      const wardBoothIds = wardBooths.map((b) => b.id);
+      if (wardBoothIds.length === 0) {
+        res.json({ items: [], total: 0, page, limit, hasMore: false });
+        return;
+      }
+      conds.push(inArray(votersTable.pollingStationId, wardBoothIds));
+    }
+    if (gender) conds.push(eq(votersTable.gender, gender));
+    if (minAge != null) conds.push(gte(votersTable.age, minAge));
+    if (maxAge != null) conds.push(lte(votersTable.age, maxAge));
+
+    // EPIC short-circuit: exact match overrides fuzzy name search.
+    let usedEpicShortCircuit = false;
+    if (q && EPIC_RE.test(q)) {
+      conds.push(eq(votersTable.epicNumber, q.toUpperCase()));
+      usedEpicShortCircuit = true;
+    } else if (q && q.length >= 2) {
+      const like = `%${q.toLowerCase()}%`;
+      // Trigram similarity on lower(full_name); ILIKE fallback covers Tamil
+      // (no trigram index there, but column is small enough).
+      conds.push(
+        or(
+          sql`lower(${votersTable.fullName}) % ${q.toLowerCase()}`,
+          sql`lower(${votersTable.fullName}) ILIKE ${like}`,
+          sql`${votersTable.fullNameTa} ILIKE ${like}`,
+        )!,
+      );
+    }
+
+    const whereClause = conds.length > 0 ? and(...conds) : undefined;
+    const offset = (page - 1) * limit;
+
+    const orderBy = usedEpicShortCircuit
+      ? [desc(votersTable.id)]
+      : (q && q.length >= 2
+          ? [desc(sql`similarity(lower(${votersTable.fullName}), ${q.toLowerCase()})`)]
+          : [desc(votersTable.id)]);
+
+    const [rows, totalRow] = await Promise.all([
+      db
+        .select({
+          id: votersTable.id,
+          epicNumber: votersTable.epicNumber,
+          fullName: votersTable.fullName,
+          fullNameTa: votersTable.fullNameTa,
+          age: votersTable.age,
+          gender: votersTable.gender,
+          relationName: votersTable.relationName,
+          partNumber: votersTable.partNumber,
+          serialInPart: votersTable.serialInPart,
+          pollingStationId: votersTable.pollingStationId,
+          boothName: pollingStationsTable.name,
+          boothNo: pollingStationsTable.boothNo,
+        })
+        .from(votersTable)
+        .leftJoin(pollingStationsTable, eq(pollingStationsTable.id, votersTable.pollingStationId))
+        .where(whereClause)
+        .orderBy(...orderBy)
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(votersTable)
+        .where(whereClause),
+    ]);
+
+    const total = totalRow[0]?.n ?? 0;
+    await logVoterAudit(
+      req, "VOTER_SEARCH", "voters",
+      `q=${q ?? ""};epic=${usedEpicShortCircuit};total=${total};page=${page}`,
+    );
+
+    res.json({ items: rows, total, page, limit, hasMore: offset + rows.length < total });
+  } catch (err) {
+    console.error("[voters] search:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/admin/voters/:id", requireStaff, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
+    // Apply the same per-user rate limit to the detail endpoint so a staff
+    // account can't scrape PII by hammering sequential ids past the search
+    // throttle. Shared bucket: detail counts toward the same 60/min budget.
+    if (!checkVoterRateLimit(req.user.id)) {
+      res.status(429).json({ error: "Too many requests, slow down." });
+      return;
+    }
+    const id = Number.parseInt(String(req.params.id), 10);
+    if (!Number.isFinite(id) || id <= 0) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+
+    const [row] = await db
+      .select({
+        id: votersTable.id,
+        epicNumber: votersTable.epicNumber,
+        fullName: votersTable.fullName,
+        fullNameTa: votersTable.fullNameTa,
+        age: votersTable.age,
+        gender: votersTable.gender,
+        relationType: votersTable.relationType,
+        relationName: votersTable.relationName,
+        relationNameTa: votersTable.relationNameTa,
+        houseNumber: votersTable.houseNumber,
+        addressLine: votersTable.addressLine,
+        partNumber: votersTable.partNumber,
+        serialInPart: votersTable.serialInPart,
+        pollingStationId: votersTable.pollingStationId,
+        boothName: pollingStationsTable.name,
+        boothNo: pollingStationsTable.boothNo,
+        sourcePdf: votersTable.sourcePdf,
+        sourcePage: votersTable.sourcePage,
+        createdAt: votersTable.createdAt,
+        updatedAt: votersTable.updatedAt,
+      })
+      .from(votersTable)
+      .leftJoin(pollingStationsTable, eq(pollingStationsTable.id, votersTable.pollingStationId))
+      .where(eq(votersTable.id, id))
+      .limit(1);
+
+    if (!row) { res.status(404).json({ error: "Not found" }); return; }
+
+    // Scope check: out-of-scope is reported as 404 (not 403) to avoid
+    // leaking the existence of voters in other officers' wards.
+    const scope = await getVoterScopeForUser(req.user);
+    if (!scope.unrestricted) {
+      const allowedBooths = await resolveScopeBoothIds(scope);
+      const inScope =
+        row.pollingStationId != null &&
+        (allowedBooths?.includes(row.pollingStationId) ?? false);
+      if (!inScope) {
+        await logVoterAudit(req, "VOTER_DETAIL_DENIED", `voter:${row.epicNumber}`, "out_of_scope");
+        res.status(404).json({ error: "Not found" });
+        return;
+      }
+    }
+
+    await logVoterAudit(req, "VOTER_READ", `voter:${row.epicNumber}`, `voter_id=${row.id}`);
+    res.json({
+      ...row,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    });
+  } catch (err) {
+    console.error("[voters] detail:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

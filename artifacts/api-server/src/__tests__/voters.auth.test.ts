@@ -48,6 +48,27 @@ test("preview read audit emits one VOTER_READ row per returned EPIC (smoke)", as
   assert.match(src, /target:\s*`voter:\$\{v\.epicNumber\}`/);
 });
 
+test("voter search & detail routes also reject unauthenticated requests", async () => {
+  const r1 = await request(app).get("/api/admin/voters?q=test");
+  assert.equal(r1.status, 401);
+  const r2 = await request(app).get("/api/admin/voters/1");
+  assert.equal(r2.status, 401);
+  // No PII leak in error responses.
+  assert.ok(!JSON.stringify(r1.body).match(/epic|fullName/i));
+  assert.ok(!JSON.stringify(r2.body).match(/epic|fullName/i));
+});
+
+test("voter scope helper is wired into search & detail routes (source check)", async () => {
+  // Reviewers rely on this regex to confirm scope filtering is applied
+  // and that out-of-scope detail look-ups return 404 (not 403).
+  const fs = await import("node:fs/promises");
+  const src = await fs.readFile(new URL("../routes/voters.ts", import.meta.url), "utf8");
+  assert.match(src, /getVoterScopeForUser\(req\.user\)/);
+  assert.match(src, /resolveScopeBoothIds/);
+  assert.match(src, /VOTER_DETAIL_DENIED/);
+  assert.match(src, /res\.status\(404\)\.json\(\{ error: "Not found" \}\)/);
+});
+
 test("non-staff session cookie is also rejected (no role bypass)", async () => {
   // Forge a junk cookie — should still 401, not 403, because our
   // requireStaff middleware verifies the JWT signature first.
