@@ -44,6 +44,12 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  # Force every transitive dep to resolve to ONE pdfjs-dist version.
+  # Without this pdf-parse pulls 5.4.296 and pdf-to-img pulls 5.6.205;
+  # both end up loaded in the same process and pdfjs throws
+  # "API version X does not match Worker version Y" the first time
+  # OCR runs, which crashes the api-server entirely.
+  pdfjs-dist: 5.6.205
   '@esbuild-kit/esm-loader': npm:tsx@^4.21.0
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-arm64': '-'
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-x64': '-'

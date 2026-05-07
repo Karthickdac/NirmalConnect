@@ -96,14 +96,21 @@ export async function ocrScannedPages(
 ): Promise<OcrPageText[]> {
   if (targetPages.length === 0) return [];
   try {
+    // pdf-to-img v6: `pdf()` returns a Promise<{ length, getPage,
+    // [Symbol.asyncIterator] }>, not an AsyncIterable directly. Must
+    // await first, then iterate.
     const mod = (await import("pdf-to-img")) as unknown as {
-      pdf: (input: Buffer | Uint8Array, opts?: { scale?: number }) => AsyncIterable<Buffer>;
+      pdf: (
+        input: Buffer | Uint8Array,
+        opts?: { scale?: number },
+      ) => Promise<AsyncIterable<Buffer> & { length: number }>;
     };
     const targetSet = new Set(targetPages);
     const out: OcrPageText[] = [];
     let pageNo = 0;
     const worker = await getWorker();
-    for await (const png of mod.pdf(pdfBuffer, { scale: 2 })) {
+    const doc = await mod.pdf(pdfBuffer, { scale: 2 });
+    for await (const png of doc) {
       pageNo += 1;
       if (!targetSet.has(pageNo)) continue;
       try {
