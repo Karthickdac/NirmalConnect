@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -127,6 +127,13 @@ export default function GrievanceOfficer({ lang, token, userRole = "" }: Grievan
   // "Mine" toggle: when on, list is restricted to grievances assigned to the current officer.
   // Default ON for grievance_officer role, OFF for broader admin roles.
   const [mineOnly, setMineOnly] = useState(isOfficer);
+  // userRole is loaded async from /me — when it arrives and the user is a
+  // grievance officer, snap the toggle ON so they default to "Mine" instead
+  // of falling through to the all=1 inbox.
+  const [userTouchedToggle, setUserTouchedToggle] = useState(false);
+  useEffect(() => {
+    if (!userTouchedToggle && isOfficer) setMineOnly(true);
+  }, [isOfficer, userTouchedToggle]);
   const { data: wardList = [] } = useWards();
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkStatus, setBulkStatus] = useState("");
@@ -377,7 +384,7 @@ export default function GrievanceOfficer({ lang, token, userRole = "" }: Grievan
             variant={mineOnly ? "default" : "outline"}
             size="sm"
             className={`gap-1.5 h-8 ${mineOnly ? "bg-primary text-white hover:bg-primary/90" : ""}`}
-            onClick={() => { setMineOnly(v => !v); setPage(1); }}
+            onClick={() => { setMineOnly(v => !v); setUserTouchedToggle(true); setPage(1); }}
             data-testid="mine-toggle"
           >
             <Inbox className="w-3.5 h-3.5" />
