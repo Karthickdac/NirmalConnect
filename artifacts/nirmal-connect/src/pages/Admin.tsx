@@ -7,7 +7,7 @@ import {
   ChevronRight, Settings, Megaphone, FileText, MapPin, ClipboardList, Network, Map as MapIcon,
 } from "lucide-react";
 import { isAuthenticated, removeToken, getToken } from "@/lib/auth";
-import { useGetMe, adminListAssignments } from "@workspace/api-client-react";
+import { useGetMe } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
 import { lazy, Suspense } from "react";
 const ConstituencyMap = lazy(() => import("@/components/maps/ConstituencyMap"));
@@ -77,9 +77,20 @@ export default function Admin({ lang = "ta" }: AdminProps) {
   // a "show only my ward" toggle. Skipped for super_admin/admin who already
   // see everything.
   const isOfficer = role === "grievance_officer" || role === "constituency_coordinator";
-  const { data: myAssignments } = useQuery({
-    queryKey: ["my-officer-assignments", me?.id],
-    queryFn: () => adminListAssignments({ userId: me!.id }),
+  // Read assignments via the dedicated /admin/my-assignments endpoint —
+  // /admin/assignments requires WARD_ROLES, which excludes grievance_officer,
+  // so officers must use this self-scoped route instead.
+  const { data: myAssignments } = useQuery<{ items: Array<{ wardId: number | null }> }>({
+    queryKey: ["map-my-assignments", me?.id],
+    queryFn: async () => {
+      const tok = getToken();
+      const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+      const r = await fetch(`${base}/api/admin/my-assignments`, {
+        headers: tok ? { Authorization: `Bearer ${tok}` } : undefined,
+      });
+      if (!r.ok) throw new Error("Failed to load assignments");
+      return r.json();
+    },
     enabled: Boolean(me?.id && isOfficer),
     staleTime: 60_000,
   });

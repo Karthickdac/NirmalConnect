@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import iconUrl from "leaflet/dist/images/marker-icon.png";
 import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
 import shadowUrl from "leaflet/dist/images/marker-shadow.png";
@@ -12,8 +14,11 @@ import {
   GeoJSON,
   CircleMarker,
   LayerGroup,
+  Tooltip,
   useMap,
 } from "react-leaflet";
+import MarkerClusterGroup from "react-leaflet-cluster";
+import type { Feature, Geometry } from "geojson";
 import type { Language } from "@/lib/i18n";
 import { mapTranslations, tMap } from "@/lib/mapI18n";
 
@@ -30,6 +35,9 @@ const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 // Thiruparankundram constituency centroid (approx, AC 195 Madurai).
 const DEFAULT_CENTER: [number, number] = [9.901, 78.078];
 const DEFAULT_ZOOM = 13;
+const CLUSTER_DISABLE_ZOOM = 16; // show individual markers when zoomed in
+
+type WardBoundaryFeature = Feature<Geometry, { wardId: number; name?: string }>;
 
 interface Zone {
   id: number;
@@ -45,7 +53,7 @@ interface Ward {
   wardType: string | null;
   latitude: number | null;
   longitude: number | null;
-  boundary: any | null;
+  boundary: WardBoundaryFeature | null;
   hasBoundary: boolean;
 }
 interface Booth {
@@ -89,7 +97,7 @@ function loadLayerPrefs(): Record<LayerKey, boolean> {
   try {
     const raw = localStorage.getItem(LAYER_STORAGE_KEY);
     if (!raw) return def;
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw) as Partial<Record<LayerKey, boolean>>;
     return { ...def, ...parsed };
   } catch {
     return def;
@@ -136,10 +144,12 @@ export default function ConstituencyMap({
     fetch(`${BASE}/api/map/data`)
       .then((r) => {
         if (!r.ok) throw new Error("Failed to load map data");
-        return r.json();
+        return r.json() as Promise<MapData>;
       })
-      .then((d: MapData) => { if (!cancelled) setData(d); })
-      .catch((e) => { if (!cancelled) setError(String(e?.message ?? e)); });
+      .then((d) => { if (!cancelled) setData(d); })
+      .catch((e: unknown) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+      });
     return () => { cancelled = true; };
   }, []);
 
@@ -148,8 +158,8 @@ export default function ConstituencyMap({
     if (!layers.grievances || pinsLoadedRef.current) return;
     pinsLoadedRef.current = true;
     fetch(`${BASE}/api/map/grievance-pins`)
-      .then((r) => (r.ok ? r.json() : []))
-      .then((rows: GrievancePin[]) => setPins(rows))
+      .then((r) => (r.ok ? (r.json() as Promise<GrievancePin[]>) : Promise.resolve([] as GrievancePin[])))
+      .then((rows) => setPins(rows))
       .catch(() => { pinsLoadedRef.current = false; });
   }, [layers.grievances]);
 
@@ -161,8 +171,33 @@ export default function ConstituencyMap({
     });
   }
 
-  const filteredWards = useMemo(() => {
+  // Compute zone centroids by averaging the GPS of wards inside each zone.
+  // We don't have native zone polygons, so the "zones" layer renders a
+  // labelled CircleMarker at each zone's centroid — the toggle is real.
+  const zoneCentroids = useMemo(() => {
     if (!data) return [];
+    const buckets = new Map<number, { sumLat: number; sumLng: number; n: number; zone: Zone }>();
+    for (const z of data.zones) buckets.set(z.id, { sumLat: 0, sumLng: 0, n: 0, zone: z });
+    for (const w of data.wards) {
+      if (w.zoneId == null || w.latitude == null || w.longitude == null) continue;
+      const b = buckets.get(w.zoneId);
+      if (!b) continue;
+      b.sumLat += w.latitude;
+      b.sumLng += w.longitude;
+      b.n += 1;
+    }
+    return Array.from(buckets.values())
+      .filter((b) => b.n > 0)
+      .map((b) => ({
+        zone: b.zone,
+        lat: b.sumLat / b.n,
+        lng: b.sumLng / b.n,
+        wardCount: b.n,
+      }));
+  }, [data]);
+
+  const filteredWards = useMemo(() => {
+    if (!data) return [] as Ward[];
     if (mineOnly && officerWardIds && officerWardIds.length > 0) {
       const set = new Set(officerWardIds);
       return data.wards.filter((w) => set.has(w.id));
@@ -171,7 +206,7 @@ export default function ConstituencyMap({
   }, [data, mineOnly, officerWardIds]);
 
   const filteredBooths = useMemo(() => {
-    if (!data) return [];
+    if (!data) return [] as Booth[];
     if (mineOnly && officerWardIds && officerWardIds.length > 0) {
       const set = new Set(officerWardIds);
       return data.pollingStations.filter((b) => b.wardId != null && set.has(b.wardId));
@@ -281,6 +316,33 @@ export default function ConstituencyMap({
             maxZoom={19}
           />
 
+          {data && layers.zones && (
+            <LayerGroup>
+              {zoneCentroids.map((z) => (
+                <CircleMarker
+                  key={`z-${z.zone.id}`}
+                  center={[z.lat, z.lng]}
+                  radius={14}
+                  pathOptions={{ color: "#7c3aed", fillColor: "#c4b5fd", fillOpacity: 0.45, weight: 2 }}
+                >
+                  <Tooltip permanent direction="top" offset={[0, -8]} className="zone-label">
+                    {lang === "ta" && z.zone.nameTa ? z.zone.nameTa : z.zone.name}
+                  </Tooltip>
+                  <Popup>
+                    <div className="text-sm">
+                      <div className="font-semibold">
+                        {lang === "ta" && z.zone.nameTa ? z.zone.nameTa : z.zone.name}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {z.wardCount} {tr.wards.toLowerCase()}
+                      </div>
+                    </div>
+                  </Popup>
+                </CircleMarker>
+              ))}
+            </LayerGroup>
+          )}
+
           {data && layers.wards && (
             <LayerGroup>
               {filteredWards.map((w) => {
@@ -288,7 +350,7 @@ export default function ConstituencyMap({
                   return (
                     <GeoJSON
                       key={`b-${w.id}`}
-                      data={w.boundary as any}
+                      data={w.boundary}
                       style={{ color: "#0ea5e9", weight: 2, fillOpacity: 0.12 }}
                     >
                       <Popup>
@@ -318,7 +380,11 @@ export default function ConstituencyMap({
           )}
 
           {data && layers.booths && (
-            <LayerGroup>
+            <MarkerClusterGroup
+              chunkedLoading
+              disableClusteringAtZoom={CLUSTER_DISABLE_ZOOM}
+              spiderfyOnMaxZoom={false}
+            >
               {filteredBooths.map((b) => (
                 <Marker key={b.id} position={[b.latitude!, b.longitude!]}>
                   <Popup>
@@ -341,7 +407,7 @@ export default function ConstituencyMap({
                   </Popup>
                 </Marker>
               ))}
-            </LayerGroup>
+            </MarkerClusterGroup>
           )}
 
           {layers.grievances && (

@@ -24,18 +24,28 @@ const BOUNDARIES_PATH = path.resolve(
   "../../../../lib/db/data/ward-boundaries.geojson",
 );
 
-type BoundaryEntry = { wardId: number; feature: unknown };
+interface GeoJsonFeature {
+  type: "Feature";
+  geometry: unknown;
+  properties: Record<string, unknown> | null;
+}
+interface GeoJsonFeatureCollection {
+  type: "FeatureCollection";
+  features: GeoJsonFeature[];
+}
+type BoundaryEntry = { wardId: number; feature: GeoJsonFeature };
+
 let cachedBoundaries: BoundaryEntry[] | null = null;
 function loadBoundaryFeatures(): BoundaryEntry[] {
   if (cachedBoundaries) return cachedBoundaries;
   let result: BoundaryEntry[] = [];
   try {
     const raw = fs.readFileSync(BOUNDARIES_PATH, "utf8");
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw) as GeoJsonFeatureCollection;
     const features = Array.isArray(parsed?.features) ? parsed.features : [];
     result = features
-      .filter((f: any) => f && f.geometry && Number.isInteger(f?.properties?.wardId))
-      .map((f: any) => ({ wardId: Number(f.properties.wardId), feature: f }));
+      .filter((f) => Boolean(f?.geometry) && typeof f?.properties?.wardId === "number")
+      .map((f) => ({ wardId: Number(f.properties!.wardId), feature: f }));
   } catch {
     result = [];
   }
@@ -84,19 +94,19 @@ router.get("/map/data", async (_req, res) => {
     // Merge file-based boundaries with any per-row boundary stored in
     // wards.boundary_geojson. Per-row data wins when both exist.
     const fileBoundaries = loadBoundaryFeatures();
-    const fileMap = new Map<number, unknown>();
+    const fileMap = new Map<number, GeoJsonFeature>();
     for (const b of fileBoundaries) fileMap.set(b.wardId, b.feature);
 
     const wardsOut = wards.map((w) => {
-      let boundary: unknown = null;
+      let boundary: GeoJsonFeature | null = null;
       if (w.boundaryGeojson) {
         try {
-          boundary = JSON.parse(w.boundaryGeojson);
+          boundary = JSON.parse(w.boundaryGeojson) as GeoJsonFeature;
         } catch {
           boundary = null;
         }
       }
-      if (!boundary && fileMap.has(w.id)) boundary = fileMap.get(w.id);
+      if (!boundary && fileMap.has(w.id)) boundary = fileMap.get(w.id) ?? null;
       return {
         id: w.id,
         name: w.name,

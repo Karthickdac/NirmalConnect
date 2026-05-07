@@ -1526,6 +1526,30 @@ const AssignmentBody = z.object({
   { message: "At least one of wardId, areaId, or pollingStationId is required" },
 );
 
+// GET /admin/my-assignments — any staff can read their own assignments.
+// Used by the embedded constituency map's "show only my ward" toggle so
+// grievance officers (who are not in WARD_ROLES) can still scope the map.
+router.get("/admin/my-assignments", requireStaff, async (req: AuthRequest, res) => {
+  try {
+    const uid = req.user?.id;
+    if (!uid) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const items = await db
+      .select({
+        id: officerAssignmentsTable.id,
+        userId: officerAssignmentsTable.userId,
+        wardId: officerAssignmentsTable.wardId,
+        areaId: officerAssignmentsTable.areaId,
+        pollingStationId: officerAssignmentsTable.pollingStationId,
+      })
+      .from(officerAssignmentsTable)
+      .where(eq(officerAssignmentsTable.userId, uid));
+    res.json({ items });
+  } catch (err) {
+    console.error("[admin] my-assignments error:", err);
+    res.status(500).json({ error: "Failed to load assignments" });
+  }
+});
+
 router.get("/admin/assignments", requireRole(...WARD_ROLES), async (req, res) => {
   try {
     const userIdParam = req.query.userId ? parseInt(String(req.query.userId), 10) : null;
