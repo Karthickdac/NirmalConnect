@@ -263,10 +263,6 @@ const splitBodySchema = z.object({
 router.post("/admin/households/:id/split", requireStaff, async (req: AuthRequest, res) => {
   try {
     if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
-    if (req.user.role !== "super_admin" && req.user.role !== "admin") {
-      res.status(403).json({ error: "Forbidden" });
-      return;
-    }
     const id = Number.parseInt(String(req.params.id), 10);
     if (!Number.isFinite(id) || id <= 0) { res.status(400).json({ error: "Invalid id" }); return; }
     const body = splitBodySchema.safeParse(req.body);
@@ -355,10 +351,6 @@ const mergeBodySchema = z.object({
 router.post("/admin/households/merge", requireStaff, async (req: AuthRequest, res) => {
   try {
     if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
-    if (req.user.role !== "super_admin" && req.user.role !== "admin") {
-      res.status(403).json({ error: "Forbidden" });
-      return;
-    }
     const body = mergeBodySchema.safeParse(req.body);
     if (!body.success) {
       res.status(400).json({ error: "Invalid", details: body.error.flatten() });
