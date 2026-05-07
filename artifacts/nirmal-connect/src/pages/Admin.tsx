@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Newspaper, Calendar, Activity, Image,
   Users, MessageSquare, HelpCircle, UserCircle, LogOut, Menu, X,
-  ChevronRight, Settings, Megaphone, FileText, MapPin, ClipboardList, Network, Map as MapIcon, BarChart3, Home as HomeIcon, ShieldAlert,
+  ChevronRight, ChevronDown, Settings, Megaphone, FileText, MapPin, ClipboardList, Network, Map as MapIcon, BarChart3, Home as HomeIcon, ShieldAlert,
 } from "lucide-react";
 import { isAuthenticated, removeToken, getToken } from "@/lib/auth";
 import { useGetMe } from "@workspace/api-client-react";
@@ -40,38 +40,103 @@ import { UnsavedChangesProvider, useConfirmDiscard } from "@/lib/unsavedChanges"
 
 interface AdminProps { lang?: Language }
 
+type NavGroupId =
+  | "overview"
+  | "grievances"
+  | "voters"
+  | "content"
+  | "organization"
+  | "site"
+  | "system";
+
 interface NavItem {
   id: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   roles?: string[];
+  group: NavGroupId;
 }
+
+interface NavGroup {
+  id: NavGroupId;
+  label: string;
+}
+
+// Ordered. Empty groups (after role filtering) are hidden automatically.
+const NAV_GROUPS: NavGroup[] = [
+  { id: "overview",     label: "Overview" },
+  { id: "grievances",   label: "Grievances" },
+  { id: "voters",       label: "Voters" },
+  { id: "content",      label: "Content" },
+  { id: "organization", label: "Organization" },
+  { id: "site",         label: "Site Management" },
+  { id: "system",       label: "System" },
+];
 
 // roles: undefined = all staff; listed = only those roles
 const NAV_ITEMS: NavItem[] = [
-  { id: "dashboard",    label: "Dashboard",         icon: LayoutDashboard },
-  { id: "grievances",   label: "Grievances",        icon: MessageSquare },
-  { id: "assignments",  label: "Officer Assignments", icon: Network,    roles: ["super_admin", "admin", "constituency_coordinator"] },
-  { id: "map",          label: "Constituency Map",   icon: MapIcon },
-  { id: "analytics",    label: "Analytics",          icon: BarChart3,   roles: ["super_admin", "admin", "constituency_coordinator"] },
-  { id: "news",         label: "News",               icon: Newspaper,    roles: ["super_admin", "admin", "pa_staff", "media_team"] },
-  { id: "press",        label: "Press Releases",    icon: FileText,     roles: ["super_admin", "admin", "pa_staff", "media_team"] },
-  { id: "events",       label: "Events",             icon: Calendar,     roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator", "media_team"] },
-  { id: "activities",   label: "Activities",         icon: Activity,     roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator", "media_team"] },
-  { id: "gallery",      label: "Gallery",            icon: Image,        roles: ["super_admin", "admin", "pa_staff", "media_team"] },
-  { id: "banners",      label: "Banners",            icon: Megaphone,    roles: ["super_admin", "admin", "pa_staff"] },
-  { id: "volunteers",   label: "Volunteers",         icon: Users,        roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator"] },
-  { id: "constituency", label: "Constituency & Wards", icon: MapPin,      roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator"] },
-  { id: "voters-search", label: "Voters",               icon: Users,        roles: ["super_admin", "admin", "constituency_coordinator", "grievance_officer", "pa_staff"] },
-  { id: "voters",       label: "Voter Roll",            icon: ShieldAlert, roles: ["super_admin"] },
-  { id: "voter-tags",   label: "Voter Tags",            icon: ShieldAlert, roles: ["super_admin"] },
-  { id: "voter-exports", label: "Voter Exports",        icon: Download,    roles: ["super_admin"] },
-  { id: "faqs",         label: "FAQs",               icon: HelpCircle,   roles: ["super_admin", "admin", "pa_staff"] },
-  { id: "home",         label: "Home CMS",           icon: HomeIcon,     roles: ["super_admin", "admin"] },
-  { id: "about",        label: "About CMS",          icon: UserCircle,   roles: ["super_admin", "admin"] },
-  { id: "settings",     label: "Site Settings",      icon: Settings,     roles: ["super_admin", "admin"] },
-  { id: "audit",        label: "Audit Log",          icon: ClipboardList, roles: ["super_admin", "admin"] },
+  // Overview
+  { id: "dashboard",    label: "Dashboard",            icon: LayoutDashboard, group: "overview" },
+  { id: "map",          label: "Constituency Map",     icon: MapIcon,         group: "overview" },
+  { id: "analytics",    label: "Analytics",            icon: BarChart3,       group: "overview", roles: ["super_admin", "admin", "constituency_coordinator"] },
+
+  // Grievances
+  { id: "grievances",   label: "Grievances",           icon: MessageSquare,   group: "grievances" },
+  { id: "assignments",  label: "Officer Assignments",  icon: Network,         group: "grievances", roles: ["super_admin", "admin", "constituency_coordinator"] },
+
+  // Voters
+  { id: "voters-search", label: "Voters",              icon: Users,           group: "voters", roles: ["super_admin", "admin", "constituency_coordinator", "grievance_officer", "pa_staff"] },
+  { id: "voters",        label: "Voter Roll",          icon: ShieldAlert,     group: "voters", roles: ["super_admin"] },
+  { id: "voter-tags",    label: "Voter Tags",          icon: ShieldAlert,     group: "voters", roles: ["super_admin"] },
+  { id: "voter-exports", label: "Voter Exports",       icon: Download,        group: "voters", roles: ["super_admin"] },
+
+  // Content
+  { id: "news",         label: "News",                 icon: Newspaper,       group: "content", roles: ["super_admin", "admin", "pa_staff", "media_team"] },
+  { id: "press",        label: "Press Releases",       icon: FileText,        group: "content", roles: ["super_admin", "admin", "pa_staff", "media_team"] },
+  { id: "events",       label: "Events",               icon: Calendar,        group: "content", roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator", "media_team"] },
+  { id: "activities",   label: "Activities",           icon: Activity,        group: "content", roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator", "media_team"] },
+  { id: "gallery",      label: "Gallery",              icon: Image,           group: "content", roles: ["super_admin", "admin", "pa_staff", "media_team"] },
+  { id: "banners",      label: "Banners",              icon: Megaphone,       group: "content", roles: ["super_admin", "admin", "pa_staff"] },
+
+  // Organization
+  { id: "volunteers",   label: "Volunteers",           icon: Users,           group: "organization", roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator"] },
+  { id: "constituency", label: "Constituency & Wards", icon: MapPin,          group: "organization", roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator"] },
+
+  // Site Management
+  { id: "home",         label: "Home CMS",             icon: HomeIcon,        group: "site", roles: ["super_admin", "admin"] },
+  { id: "about",        label: "About CMS",            icon: UserCircle,      group: "site", roles: ["super_admin", "admin"] },
+  { id: "faqs",         label: "FAQs",                 icon: HelpCircle,      group: "site", roles: ["super_admin", "admin", "pa_staff"] },
+  { id: "settings",     label: "Site Settings",        icon: Settings,        group: "site", roles: ["super_admin", "admin"] },
+
+  // System
+  { id: "audit",        label: "Audit Log",            icon: ClipboardList,   group: "system", roles: ["super_admin", "admin"] },
 ];
+
+// Persisted collapse state. Stored as a comma-separated list of
+// collapsed group ids so we can hand-edit / inspect easily and so an
+// older saved value never crashes parsing.
+const COLLAPSED_GROUPS_KEY = "nc.admin.sidebar.collapsedGroups";
+
+function loadCollapsedGroups(): Set<NavGroupId> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(COLLAPSED_GROUPS_KEY);
+    if (!raw) return new Set();
+    const ids = raw.split(",").map(s => s.trim()).filter(Boolean) as NavGroupId[];
+    return new Set(ids);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveCollapsedGroups(set: Set<NavGroupId>): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(COLLAPSED_GROUPS_KEY, [...set].join(","));
+  } catch {
+    /* ignore quota / privacy-mode failures */
+  }
+}
 
 export default function Admin({ lang = "ta" }: AdminProps) {
   return (
@@ -189,6 +254,30 @@ function AdminInner({ lang = "ta" }: AdminProps) {
     return item.roles.includes(role);
   });
 
+  // Group → visible items (preserves NAV_GROUPS order, drops empty groups)
+  const groupedNav = useMemo(() => {
+    return NAV_GROUPS
+      .map(g => ({ group: g, items: visibleNav.filter(it => it.group === g.id) }))
+      .filter(g => g.items.length > 0);
+  }, [visibleNav]);
+
+  // Collapsed-group state, persisted to localStorage. The group
+  // containing the active item is always rendered expanded regardless
+  // of the persisted value, so users never lose sight of where they
+  // are after a deep-link or page reload.
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<NavGroupId>>(() => loadCollapsedGroups());
+  useEffect(() => { saveCollapsedGroups(collapsedGroups); }, [collapsedGroups]);
+
+  function toggleGroup(id: NavGroupId): void {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  const activeGroupId = visibleNav.find(n => n.id === active)?.group;
+
   // Ensure active tab is accessible; reset to dashboard if not
   useEffect(() => {
     if (role && !visibleNav.find(n => n.id === active)) {
@@ -236,26 +325,55 @@ function AdminInner({ lang = "ta" }: AdminProps) {
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
-          {visibleNav.map((item) => {
-            const Icon = item.icon;
-            const isActive = active === item.id;
+        <nav className="flex-1 px-2 py-3 space-y-3 overflow-y-auto">
+          {groupedNav.map(({ group, items }) => {
+            const isActiveGroup = activeGroupId === group.id;
+            // Active group is always expanded so the user never loses
+            // their place after a refresh or hash deep-link.
+            const isCollapsed = !isActiveGroup && collapsedGroups.has(group.id);
             return (
-              <button
-                key={item.id}
-                onClick={() => navigate(item.id)}
-                data-testid={`admin-nav-${item.id}`}
-                className={`
-                  w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left
-                  ${isActive
-                    ? "bg-primary text-white shadow-sm"
-                    : "text-gray-400 hover:text-white hover:bg-white/10"}
-                `}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span className="truncate">{item.label}</span>
-                {isActive && <ChevronRight className="w-3.5 h-3.5 ml-auto shrink-0" />}
-              </button>
+              <div key={group.id}>
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.id)}
+                  data-testid={`admin-nav-group-${group.id}`}
+                  aria-expanded={!isCollapsed}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  {isCollapsed
+                    ? <ChevronRight className="w-3 h-3 shrink-0" />
+                    : <ChevronDown className="w-3 h-3 shrink-0" />}
+                  <span className="truncate">{group.label}</span>
+                  <span className="ml-auto text-gray-600 font-normal normal-case tracking-normal">
+                    {items.length}
+                  </span>
+                </button>
+                {!isCollapsed && (
+                  <div className="mt-1 space-y-0.5">
+                    {items.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = active === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => navigate(item.id)}
+                          data-testid={`admin-nav-${item.id}`}
+                          className={`
+                            w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left
+                            ${isActive
+                              ? "bg-primary text-white shadow-sm"
+                              : "text-gray-400 hover:text-white hover:bg-white/10"}
+                          `}
+                        >
+                          <Icon className="w-4 h-4 shrink-0" />
+                          <span className="truncate">{item.label}</span>
+                          {isActive && <ChevronRight className="w-3.5 h-3.5 ml-auto shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>
