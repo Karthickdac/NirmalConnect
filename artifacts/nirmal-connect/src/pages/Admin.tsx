@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Newspaper, Calendar, Activity, Image,
   Users, MessageSquare, HelpCircle, UserCircle, LogOut, Menu, X,
-  ChevronRight, Settings, Megaphone, FileText, MapPin, ClipboardList, Network, Map as MapIcon,
+  ChevronRight, Settings, Megaphone, FileText, MapPin, ClipboardList, Network, Map as MapIcon, BarChart3,
 } from "lucide-react";
 import { isAuthenticated, removeToken, getToken } from "@/lib/auth";
 import { useGetMe } from "@workspace/api-client-react";
@@ -13,6 +13,7 @@ import { lazy, Suspense } from "react";
 const ConstituencyMap = lazy(() => import("@/components/maps/ConstituencyMap"));
 import GrievanceOfficer from "./GrievanceOfficer";
 import Dashboard from "./admin/Dashboard";
+import Analytics from "./admin/Analytics";
 import NewsAdmin from "./admin/NewsAdmin";
 import EventsAdmin from "./admin/EventsAdmin";
 import ActivitiesAdmin from "./admin/ActivitiesAdmin";
@@ -45,6 +46,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "grievances",   label: "Grievances",        icon: MessageSquare },
   { id: "assignments",  label: "Officer Assignments", icon: Network,    roles: ["super_admin", "admin", "constituency_coordinator"] },
   { id: "map",          label: "Constituency Map",   icon: MapIcon },
+  { id: "analytics",    label: "Analytics",          icon: BarChart3,   roles: ["super_admin", "admin", "constituency_coordinator"] },
   { id: "news",         label: "News",               icon: Newspaper,    roles: ["super_admin", "admin", "pa_staff", "media_team"] },
   { id: "press",        label: "Press Releases",    icon: FileText,     roles: ["super_admin", "admin", "pa_staff", "media_team"] },
   { id: "events",       label: "Events",             icon: Calendar,     roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator", "media_team"] },
@@ -255,6 +257,14 @@ export default function Admin({ lang = "ta" }: AdminProps) {
                 height="calc(100vh - 130px)"
               />
             </Suspense>
+          )}
+          {active === "analytics"   && (
+            <Analytics
+              lang={lang}
+              officerWardIds={isOfficer ? officerWardIds : undefined}
+              officerAreaIds={isOfficer ? officerAreaIds : undefined}
+              officerPollingStationIds={isOfficer ? officerPollingStationIds : undefined}
+            />
           )}
           {active === "news"         && <NewsAdmin />}
           {active === "press"        && <PressReleasesAdmin />}

@@ -29,6 +29,7 @@ export const mapTranslations = {
     outline: "Constituency outline",
     constituencyOutline: "Madurai Municipal Corporation",
     osmAttribution: "Source: OpenStreetMap (ODbL-1.0).",
+    heatmap: "Grievance heatmap",
   },
   ta: {
     pageTitle: "தொகுதி வரைபடம்",
@@ -53,9 +54,70 @@ export const mapTranslations = {
     outline: "தொகுதி எல்லை",
     constituencyOutline: "மதுரை மாநகராட்சி",
     osmAttribution: "மூலம்: OpenStreetMap (ODbL-1.0).",
+    heatmap: "புகார் வெப்பப்படம்",
   },
 } as const;
 
 export function tMap(lang: Language, key: keyof typeof mapTranslations.en): string {
   return mapTranslations[lang][key] || mapTranslations.en[key];
+}
+
+
+export const analyticsTranslations = {
+  en: {
+    title: "Grievance Analytics",
+    subtitle: "Filter, compare, and visualise grievance load across the constituency.",
+    filters: "Filters",
+    from: "From",
+    to: "To",
+    category: "Category",
+    status: "Status",
+    officer: "Officer",
+    any: "Any",
+    clear: "Clear filters",
+    loading: "Loading analytics…",
+    cachedFor: "Cached for",
+    totalGrievances: "Total grievances (filtered)",
+    mapped: "Mapped to GPS",
+    unmapped: "Unmapped",
+    unmappedNote: "grievances have no GPS and are not shown on the heatmap.",
+    topWards: "Top 10 wards by grievance count",
+    byCategory: "By category",
+    avgResolution: "Avg resolution time per ward (hours)",
+    officerCaseload: "Officer caseload (top 10)",
+    open: "Open",
+    total: "Total",
+    heatmapTitle: "Grievance heatmap",
+    analytics: "Analytics",
+  },
+  ta: {
+    title: "புகார் பகுப்பாய்வு",
+    subtitle: "தொகுதி முழுவதும் புகார் சுமையை வடிகட்டி, ஒப்பிட்டு, காட்சிப்படுத்துங்கள்.",
+    filters: "வடிகட்டிகள்",
+    from: "தொடக்கம்",
+    to: "முடிவு",
+    category: "வகை",
+    status: "நிலை",
+    officer: "அதிகாரி",
+    any: "அனைத்தும்",
+    clear: "வடிகட்டிகளை அழி",
+    loading: "பகுப்பாய்வு ஏற்றப்படுகிறது…",
+    cachedFor: "சேமிக்கப்பட்டது",
+    totalGrievances: "மொத்தப் புகார்கள் (வடிகட்டப்பட்டது)",
+    mapped: "GPS இல் குறிக்கப்பட்டது",
+    unmapped: "GPS இல்லாதவை",
+    unmappedNote: "புகார்கள் GPS இல்லை, வெப்பப்படத்தில் காட்டப்படவில்லை.",
+    topWards: "மிகச் சிறந்த 10 வார்டுகள் (புகார் எண்ணிக்கை)",
+    byCategory: "வகை வாரியாக",
+    avgResolution: "சராசரி தீர்வு நேரம் (மணி, வார்டு வாரியாக)",
+    officerCaseload: "அதிகாரி பணி சுமை (முதல் 10)",
+    open: "திறந்தவை",
+    total: "மொத்தம்",
+    heatmapTitle: "புகார் வெப்பப்படம்",
+    analytics: "பகுப்பாய்வு",
+  },
+} as const;
+
+export function tAnalytics(lang: Language, key: keyof typeof analyticsTranslations.en): string {
+  return analyticsTranslations[lang][key] || analyticsTranslations.en[key];
 }

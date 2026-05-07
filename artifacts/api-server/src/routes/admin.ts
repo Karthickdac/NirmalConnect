@@ -1923,6 +1923,188 @@ router.delete("/admin/volunteer-assignments/:id", requireRole(...WARD_ROLES), as
   }
 });
 
+// ──────────────────────────────────────────────────────────
+// GET /admin/analytics/grievances — heatmap + analytics
+// ──────────────────────────────────────────────────────────
+const ANALYTICS_ROLES = ["super_admin", "admin", "constituency_coordinator"] as const;
+const ANALYTICS_TTL_MS = 60_000;
+const analyticsCache = new Map<string, { at: number; payload: unknown }>();
+
+router.get(
+  "/admin/analytics/grievances",
+  requireRole(...ANALYTICS_ROLES),
+  async (req, res) => {
+    try {
+      const q = z.object({
+        from: z.string().optional(),
+        to: z.string().optional(),
+        category: z.string().optional(),
+        status: z.string().optional(),
+        officerId: z.coerce.number().int().optional(),
+      }).safeParse(req.query);
+      if (!q.success) { res.status(400).json({ error: "Invalid filters" }); return; }
+      const f = q.data;
+      const cacheKey = JSON.stringify(f);
+      const hit = analyticsCache.get(cacheKey);
+      if (hit && Date.now() - hit.at < ANALYTICS_TTL_MS) {
+        res.json(hit.payload);
+        return;
+      }
+
+      const fromDate = f.from ? new Date(f.from) : null;
+      const toDate = f.to ? new Date(f.to) : null;
+      const conds = [] as ReturnType<typeof eq>[];
+      if (fromDate && !isNaN(fromDate.getTime())) conds.push(gte(grievancesTable.createdAt, fromDate));
+      if (toDate && !isNaN(toDate.getTime())) conds.push(lte(grievancesTable.createdAt, toDate));
+      if (f.category) conds.push(eq(grievancesTable.category, f.category));
+      if (f.status) conds.push(eq(grievancesTable.status, f.status));
+      if (f.officerId != null) conds.push(eq(grievancesTable.assignedTo, f.officerId));
+      const where = conds.length > 0 ? and(...conds) : undefined;
+
+      // Resolve effective ward via polling_station -> area fallback,
+      // and grab GPS coords from polling_station with ward centroid fallback.
+      const effectiveWardId = sql<number | null>`coalesce(${pollingStationsTable.wardId}, ${areasTable.wardId})`;
+      const lat = sql<number | null>`coalesce(${pollingStationsTable.latitude}, ${wardsTable.latitude})`;
+      const lng = sql<number | null>`coalesce(${pollingStationsTable.longitude}, ${wardsTable.longitude})`;
+
+      const rows = await db
+        .select({
+          id: grievancesTable.id,
+          status: grievancesTable.status,
+          category: grievancesTable.category,
+          assignedTo: grievancesTable.assignedTo,
+          createdAt: grievancesTable.createdAt,
+          resolvedAt: grievancesTable.resolvedAt,
+          wardId: effectiveWardId,
+          lat,
+          lng,
+        })
+        .from(grievancesTable)
+        .leftJoin(pollingStationsTable, eq(grievancesTable.pollingStationId, pollingStationsTable.id))
+        .leftJoin(areasTable, eq(grievancesTable.areaId, areasTable.id))
+        .leftJoin(wardsTable, eq(wardsTable.id, sql`coalesce(${pollingStationsTable.wardId}, ${areasTable.wardId})`))
+        .where(where);
+
+      const byWardMap = new Map<number, { count: number; resolvedSeconds: number; resolvedCount: number }>();
+      const byCategoryMap = new Map<string, number>();
+      const byStatusMap = new Map<string, number>();
+      const byOfficerMap = new Map<number, { count: number; open: number }>();
+      const heatBuckets = new Map<string, { lat: number; lng: number; weight: number }>();
+      let unmappedCount = 0;
+
+      for (const r of rows) {
+        if (r.wardId != null) {
+          const cur = byWardMap.get(r.wardId) ?? { count: 0, resolvedSeconds: 0, resolvedCount: 0 };
+          cur.count += 1;
+          if (r.resolvedAt && r.createdAt) {
+            cur.resolvedSeconds += (r.resolvedAt.getTime() - r.createdAt.getTime()) / 1000;
+            cur.resolvedCount += 1;
+          }
+          byWardMap.set(r.wardId, cur);
+        }
+        if (r.category) byCategoryMap.set(r.category, (byCategoryMap.get(r.category) ?? 0) + 1);
+        if (r.status) byStatusMap.set(r.status, (byStatusMap.get(r.status) ?? 0) + 1);
+        if (r.assignedTo != null) {
+          const cur = byOfficerMap.get(r.assignedTo) ?? { count: 0, open: 0 };
+          cur.count += 1;
+          if (r.status && !["Resolved", "Closed"].includes(r.status)) cur.open += 1;
+          byOfficerMap.set(r.assignedTo, cur);
+        }
+        if (r.lat != null && r.lng != null) {
+          const key = `${r.lat.toFixed(5)},${r.lng.toFixed(5)}`;
+          const cur = heatBuckets.get(key) ?? { lat: r.lat, lng: r.lng, weight: 0 };
+          cur.weight += 1;
+          heatBuckets.set(key, cur);
+        } else {
+          unmappedCount += 1;
+        }
+      }
+
+      const officerIds = Array.from(byOfficerMap.keys());
+      const officerNames = officerIds.length > 0
+        ? await db.select({ id: usersTable.id, name: usersTable.name, role: usersTable.role })
+            .from(usersTable).where(inArray(usersTable.id, officerIds))
+        : [];
+      const officerNameById = new Map(officerNames.map(u => [u.id, { name: u.name, role: u.role }]));
+
+      const wardIds = Array.from(byWardMap.keys());
+      const wardMeta = wardIds.length > 0
+        ? await db.select({ id: wardsTable.id, name: wardsTable.name, nameTa: wardsTable.nameTa })
+            .from(wardsTable).where(inArray(wardsTable.id, wardIds))
+        : [];
+      const wardMetaById = new Map(wardMeta.map(w => [w.id, w]));
+
+      const byWard = Array.from(byWardMap.entries())
+        .map(([id, v]) => ({
+          wardId: id,
+          name: wardMetaById.get(id)?.name ?? `Ward ${id}`,
+          nameTa: wardMetaById.get(id)?.nameTa ?? null,
+          count: v.count,
+          avgResolutionHours: v.resolvedCount > 0
+            ? Math.round((v.resolvedSeconds / v.resolvedCount / 3600) * 10) / 10
+            : null,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      const byCategory = Array.from(byCategoryMap.entries())
+        .map(([category, count]) => ({ category, count }))
+        .sort((a, b) => b.count - a.count);
+
+      const byStatus = Array.from(byStatusMap.entries())
+        .map(([status, count]) => ({ status, count }));
+
+      const byOfficer = Array.from(byOfficerMap.entries())
+        .map(([id, v]) => ({
+          officerId: id,
+          name: officerNameById.get(id)?.name ?? `User #${id}`,
+          role: officerNameById.get(id)?.role ?? null,
+          total: v.count,
+          open: v.open,
+        }))
+        .sort((a, b) => b.total - a.total);
+
+      const payload = {
+        filters: f,
+        totals: {
+          grievances: rows.length,
+          mapped: rows.length - unmappedCount,
+          unmapped: unmappedCount,
+        },
+        heatPoints: Array.from(heatBuckets.values()),
+        byWard: byWard.slice(0, 10),
+        byCategory,
+        byStatus,
+        byOfficer,
+        cachedAt: new Date().toISOString(),
+        cacheTtlSeconds: ANALYTICS_TTL_MS / 1000,
+      };
+      analyticsCache.set(cacheKey, { at: Date.now(), payload });
+      if (analyticsCache.size > 64) {
+        const oldestKey = analyticsCache.keys().next().value;
+        if (oldestKey) analyticsCache.delete(oldestKey);
+      }
+      res.json(payload);
+    } catch (err) {
+      console.error("[admin] analytics error:", err);
+      res.status(500).json({ error: "Failed to load analytics" });
+    }
+  },
+);
+
+router.get("/admin/analytics/officers", requireRole(...ANALYTICS_ROLES), async (_req, res) => {
+  try {
+    const rows = await db
+      .select({ id: usersTable.id, name: usersTable.name, role: usersTable.role })
+      .from(usersTable)
+      .where(sql`role IN ('grievance_officer','constituency_coordinator','admin','super_admin')`)
+      .orderBy(asc(usersTable.name));
+    res.json({ items: rows });
+  } catch (err) {
+    console.error("[admin] analytics/officers error:", err);
+    res.status(500).json({ error: "Failed to load officers" });
+  }
+});
+
 router.get("/admin/assignments/routing-log", requireRole(...WARD_ROLES), async (req, res) => {
   try {
     const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit ?? "50"), 10)));

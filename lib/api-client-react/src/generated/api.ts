@@ -20,10 +20,12 @@ import type {
   Activity,
   ActivityListResponse,
   AdminDeleteWard200,
+  AdminGrievanceAnalyticsParams,
   AdminListAssignmentsParams,
   AdminListRoutingLogParams,
   AdminListVolunteerAssignmentsParams,
   AdminUpdateVolunteerAssignmentBody,
+  AnalyticsOfficerListResponse,
   Area,
   AuthResponse,
   BulkGrievanceAssignBody,
@@ -41,6 +43,7 @@ import type {
   GetFeaturedNewsParams,
   GetRecentActivitiesParams,
   GetUpcomingEventsParams,
+  GrievanceAnalytics,
   GrievanceAssignBody,
   GrievanceHeatmap,
   GrievanceListResponse,
@@ -6007,6 +6010,191 @@ export function useAdminListRoutingLog<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getAdminListRoutingLogQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Aggregated grievance analytics + heatmap points (admin only)
+ */
+export const getAdminGrievanceAnalyticsUrl = (
+  params?: AdminGrievanceAnalyticsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/analytics/grievances?${stringifiedParams}`
+    : `/api/admin/analytics/grievances`;
+};
+
+export const adminGrievanceAnalytics = async (
+  params?: AdminGrievanceAnalyticsParams,
+  options?: RequestInit,
+): Promise<GrievanceAnalytics> => {
+  return customFetch<GrievanceAnalytics>(
+    getAdminGrievanceAnalyticsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getAdminGrievanceAnalyticsQueryKey = (
+  params?: AdminGrievanceAnalyticsParams,
+) => {
+  return [
+    `/api/admin/analytics/grievances`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getAdminGrievanceAnalyticsQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminGrievanceAnalytics>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: AdminGrievanceAnalyticsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminGrievanceAnalytics>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAdminGrievanceAnalyticsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminGrievanceAnalytics>>
+  > = ({ signal }) =>
+    adminGrievanceAnalytics(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminGrievanceAnalytics>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminGrievanceAnalyticsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminGrievanceAnalytics>>
+>;
+export type AdminGrievanceAnalyticsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Aggregated grievance analytics + heatmap points (admin only)
+ */
+
+export function useAdminGrievanceAnalytics<
+  TData = Awaited<ReturnType<typeof adminGrievanceAnalytics>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: AdminGrievanceAnalyticsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminGrievanceAnalytics>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminGrievanceAnalyticsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List officer-eligible users for the analytics filter
+ */
+export const getAdminAnalyticsOfficersUrl = () => {
+  return `/api/admin/analytics/officers`;
+};
+
+export const adminAnalyticsOfficers = async (
+  options?: RequestInit,
+): Promise<AnalyticsOfficerListResponse> => {
+  return customFetch<AnalyticsOfficerListResponse>(
+    getAdminAnalyticsOfficersUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getAdminAnalyticsOfficersQueryKey = () => {
+  return [`/api/admin/analytics/officers`] as const;
+};
+
+export const getAdminAnalyticsOfficersQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminAnalyticsOfficers>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminAnalyticsOfficers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAdminAnalyticsOfficersQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminAnalyticsOfficers>>
+  > = ({ signal }) => adminAnalyticsOfficers({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminAnalyticsOfficers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminAnalyticsOfficersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminAnalyticsOfficers>>
+>;
+export type AdminAnalyticsOfficersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List officer-eligible users for the analytics filter
+ */
+
+export function useAdminAnalyticsOfficers<
+  TData = Awaited<ReturnType<typeof adminAnalyticsOfficers>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminAnalyticsOfficers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminAnalyticsOfficersQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

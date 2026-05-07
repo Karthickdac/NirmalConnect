@@ -900,6 +900,71 @@ export interface GrievanceStaffDetail {
   attachments: GrievanceAttachmentItem[];
 }
 
+export type GrievanceAnalyticsFilters = { [key: string]: unknown };
+
+export type GrievanceAnalyticsTotals = {
+  grievances: number;
+  mapped: number;
+  unmapped: number;
+};
+
+export type GrievanceAnalyticsHeatPointsItem = {
+  lat: number;
+  lng: number;
+  weight: number;
+};
+
+export type GrievanceAnalyticsByWardItem = {
+  wardId: number;
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  count: number;
+  /** @nullable */
+  avgResolutionHours?: number | null;
+};
+
+export type GrievanceAnalyticsByCategoryItem = {
+  category: string;
+  count: number;
+};
+
+export type GrievanceAnalyticsByStatusItem = {
+  status: string;
+  count: number;
+};
+
+export type GrievanceAnalyticsByOfficerItem = {
+  officerId: number;
+  name: string;
+  /** @nullable */
+  role?: string | null;
+  total: number;
+  open: number;
+};
+
+export interface GrievanceAnalytics {
+  filters?: GrievanceAnalyticsFilters;
+  totals: GrievanceAnalyticsTotals;
+  heatPoints: GrievanceAnalyticsHeatPointsItem[];
+  byWard: GrievanceAnalyticsByWardItem[];
+  byCategory: GrievanceAnalyticsByCategoryItem[];
+  byStatus: GrievanceAnalyticsByStatusItem[];
+  byOfficer: GrievanceAnalyticsByOfficerItem[];
+  cachedAt?: string;
+  cacheTtlSeconds?: number;
+}
+
+export type AnalyticsOfficerListResponseItemsItem = {
+  id: number;
+  name: string;
+  role: string;
+};
+
+export interface AnalyticsOfficerListResponse {
+  items: AnalyticsOfficerListResponseItemsItem[];
+}
+
 export type ListNewsParams = {
   page?: number;
   limit?: number;
@@ -986,4 +1051,12 @@ export type AdminUpdateVolunteerAssignmentBody = {
 export type AdminListRoutingLogParams = {
   limit?: number;
   grievanceId?: number;
+};
+
+export type AdminGrievanceAnalyticsParams = {
+  from?: string;
+  to?: string;
+  category?: string;
+  status?: string;
+  officerId?: number;
 };

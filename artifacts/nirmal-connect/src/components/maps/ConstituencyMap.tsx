@@ -3,6 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+import "leaflet.heat";
 import iconUrl from "leaflet/dist/images/marker-icon.png";
 import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
 import shadowUrl from "leaflet/dist/images/marker-shadow.png";
@@ -87,7 +88,7 @@ interface MapData {
   constituencyOutlines?: FeatureCollection;
 }
 
-type LayerKey = "zones" | "wards" | "booths" | "grievances" | "outline";
+type LayerKey = "zones" | "wards" | "booths" | "grievances" | "outline" | "heatmap";
 const LAYER_STORAGE_KEY = "nirmal_map_layers_v1";
 
 function loadLayerPrefs(): Record<LayerKey, boolean> {
@@ -97,6 +98,7 @@ function loadLayerPrefs(): Record<LayerKey, boolean> {
     wards: true,
     booths: true,
     grievances: false,
+    heatmap: false,
   };
   if (typeof window === "undefined") return def;
   try {
@@ -107,6 +109,48 @@ function loadLayerPrefs(): Record<LayerKey, boolean> {
   } catch {
     return def;
   }
+}
+
+
+// Renders a Leaflet.heat overlay using the imperative Leaflet plugin
+// API. We mount/unmount inside a React-Leaflet child so the layer is
+// tied to the parent <MapContainer> lifecycle.
+function HeatmapLayer({
+  points,
+  enabled,
+}: {
+  points: Array<{ lat: number; lng: number; weight: number }>;
+  enabled: boolean;
+}) {
+  const map = useMap();
+  const layerRef = useRef<L.Layer | null>(null);
+  useEffect(() => {
+    if (!enabled || points.length === 0) {
+      if (layerRef.current) {
+        map.removeLayer(layerRef.current);
+        layerRef.current = null;
+      }
+      return;
+    }
+    const tuples = points.map(p => [p.lat, p.lng, p.weight] as [number, number, number]);
+    // Type assertion — leaflet.heat augments the L namespace at runtime.
+    const layer = (L as unknown as { heatLayer: (pts: Array<[number, number, number]>, opts?: Record<string, unknown>) => L.Layer }).heatLayer(tuples, {
+      radius: 28,
+      blur: 22,
+      maxZoom: 17,
+      minOpacity: 0.35,
+      gradient: { 0.2: "#1d4ed8", 0.4: "#22c55e", 0.6: "#eab308", 0.8: "#f97316", 1.0: "#dc2626" },
+    });
+    layer.addTo(map);
+    layerRef.current = layer;
+    return () => {
+      if (layerRef.current) {
+        map.removeLayer(layerRef.current);
+        layerRef.current = null;
+      }
+    };
+  }, [points, enabled, map]);
+  return null;
 }
 
 function FlyToWard({ ward }: { ward: Ward | null }) {
@@ -134,6 +178,10 @@ export interface ConstituencyMapProps {
   officerPollingStationIds?: number[];
   /** Optional fixed height (defaults to full available height) */
   height?: string;
+  /** Optional pre-aggregated heatmap points (lat, lng, weight). When
+   * provided, the "heatmap" layer becomes selectable and renders a
+   * Leaflet.heat overlay instead of fetching its own data. */
+  heatPoints?: Array<{ lat: number; lng: number; weight: number }>;
 }
 
 export default function ConstituencyMap({
@@ -143,6 +191,7 @@ export default function ConstituencyMap({
   officerAreaIds,
   officerPollingStationIds,
   height,
+  heatPoints,
 }: ConstituencyMapProps) {
   const [data, setData] = useState<MapData | null>(null);
   const [pins, setPins] = useState<GrievancePin[]>([]);
@@ -288,7 +337,7 @@ export default function ConstituencyMap({
         <div>
           <h3 className="text-sm font-semibold text-gray-900">{tr.layers}</h3>
           <ul className="mt-2 space-y-1.5">
-            {(["outline", "zones", "wards", "booths", "grievances"] as LayerKey[]).map((k) => (
+            {((heatPoints ? ["outline", "zones", "wards", "booths", "grievances", "heatmap"] : ["outline", "zones", "wards", "booths", "grievances"]) as LayerKey[]).map((k) => (
               <li key={k} className="flex items-center gap-2">
                 <input
                   id={`layer-${k}`}
@@ -526,6 +575,7 @@ export default function ConstituencyMap({
             </LayerGroup>
           )}
 
+          <HeatmapLayer points={heatPoints ?? []} enabled={!!heatPoints && layers.heatmap} />
           <FlyToWard ward={jumpWard} />
         </MapContainer>
 

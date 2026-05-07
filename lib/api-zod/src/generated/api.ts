@@ -1479,6 +1479,78 @@ export const AdminListRoutingLogResponse = zod.object({
 });
 
 /**
+ * @summary Aggregated grievance analytics + heatmap points (admin only)
+ */
+export const AdminGrievanceAnalyticsQueryParams = zod.object({
+  from: zod.date().optional(),
+  to: zod.date().optional(),
+  category: zod.coerce.string().optional(),
+  status: zod.coerce.string().optional(),
+  officerId: zod.coerce.number().optional(),
+});
+
+export const AdminGrievanceAnalyticsResponse = zod.object({
+  filters: zod.record(zod.string(), zod.unknown()).optional(),
+  totals: zod.object({
+    grievances: zod.number(),
+    mapped: zod.number(),
+    unmapped: zod.number(),
+  }),
+  heatPoints: zod.array(
+    zod.object({
+      lat: zod.number(),
+      lng: zod.number(),
+      weight: zod.number(),
+    }),
+  ),
+  byWard: zod.array(
+    zod.object({
+      wardId: zod.number(),
+      name: zod.string(),
+      nameTa: zod.string().nullish(),
+      count: zod.number(),
+      avgResolutionHours: zod.number().nullish(),
+    }),
+  ),
+  byCategory: zod.array(
+    zod.object({
+      category: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+  byStatus: zod.array(
+    zod.object({
+      status: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+  byOfficer: zod.array(
+    zod.object({
+      officerId: zod.number(),
+      name: zod.string(),
+      role: zod.string().nullish(),
+      total: zod.number(),
+      open: zod.number(),
+    }),
+  ),
+  cachedAt: zod.coerce.date().optional(),
+  cacheTtlSeconds: zod.number().optional(),
+});
+
+/**
+ * @summary List officer-eligible users for the analytics filter
+ */
+export const AdminAnalyticsOfficersResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      role: zod.string(),
+    }),
+  ),
+});
+
+/**
  * @summary Bulk-assign grievances to an officer
  */
 export const adminBulkAssignGrievancesBodyIdsMax = 200;
