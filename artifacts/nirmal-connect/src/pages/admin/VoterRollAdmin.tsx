@@ -53,7 +53,7 @@ function fmtBytes(n: number): string {
 
 function StatusPill({ status }: { status: string }) {
   const map: Record<string, { bg: string; label: string }> = {
-    queued:     { bg: "bg-gray-100 text-gray-700",       label: "Queued" },
+    queued:     { bg: "bg-gray-100 text-gray-700",       label: "Queued (waiting to parse)" },
     parsing:    { bg: "bg-blue-100 text-blue-700",       label: "Parsing…" },
     parsed:     { bg: "bg-amber-100 text-amber-800",     label: "Parsed (review)" },
     committing: { bg: "bg-blue-100 text-blue-700",       label: "Committing…" },
@@ -347,10 +347,11 @@ export default function VoterRollAdmin() {
                 <p className="text-xs bg-amber-50 border border-amber-200 rounded p-2 flex gap-2">
                   <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
                   <span>
-                    {detail.ocrPagesCount} page(s) appear to be scanned images
-                    with no text layer. They were skipped — OCR is not yet wired
-                    up. Re-upload after running the PDF through OCR if those
-                    pages contain voters.
+                    {detail.ocrPagesCount} page(s) had no extractable text and
+                    were processed with the built-in OCR fallback (English +
+                    Tamil). Any page where OCR could not recover voter records
+                    is listed in the Skipped section below — re-upload a
+                    higher-quality scan if needed.
                   </span>
                 </p>
               )}

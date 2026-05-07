@@ -57,10 +57,11 @@ async function logVoterAudit(
 
 // ── POST /api/admin/voters/import — upload + parse 1..N PDFs ─────
 //
-// Returns immediately with a list of import IDs. The actual parsing
-// runs synchronously per file (parser is fast for text-extractable
-// PDFs and can complete in a single request) but each file is wrapped
-// so one bad PDF does not abort the rest. UI polls /imports for status.
+// Returns 202 Accepted immediately with `{ imports: [{ id, status: "queued" }] }`.
+// Each file is parsed in a background job (setImmediate) so a 200-page
+// scanned PDF that takes a minute of OCR doesn't time out the request.
+// Status transitions: queued → parsing → parsed | failed. The UI polls
+// /admin/voters/imports until every batch leaves the parsing state.
 router.post(
   "/admin/voters/import",
   ...requireVoterScope,
@@ -81,64 +82,80 @@ router.post(
           ? req.body.expectedBoothNo.trim() || null
           : null;
 
-      const created: Array<{ id: number; filename: string; status: string; error?: string }> = [];
+      const actorId = req.user?.id ?? null;
+      const actorName = req.user?.name ?? "Unknown";
+      const created: Array<{ id: number; filename: string; status: string }> = [];
+
+      // Phase 1 (sync, fast): row-per-file in `queued` so the UI sees
+      // every upload immediately, even before parsing starts.
+      const jobs: Array<{ rowId: number; file: Express.Multer.File }> = [];
       for (const file of files) {
         const sha = createHash("sha256").update(file.buffer).digest("hex");
-
-        // Insert the row up-front so even a parser crash leaves a
-        // breadcrumb for staff to see.
         const [importRow] = await db
           .insert(voterImportsTable)
           .values({
             filename: file.originalname,
             fileSha256: sha,
             fileSizeBytes: file.size,
-            status: "parsing",
+            status: "queued",
             expectedBoothNo,
-            uploadedBy: req.user?.id ?? null,
-            uploadedByName: req.user?.name ?? "Unknown",
+            uploadedBy: actorId,
+            uploadedByName: actorName,
           })
           .returning();
-
-        try {
-          const result = await parseVoterRollPdf(file.buffer);
-          await db
-            .update(voterImportsTable)
-            .set({
-              status: "parsed",
-              pageCount: result.pageCount,
-              ocrPagesCount: result.ocrPagesCount,
-              parsedCount: result.voters.length,
-              skippedCount: result.skipped.length,
-              previewJson: JSON.stringify({
-                partNumber: result.partNumber,
-                pollingStationHint: result.pollingStationHint,
-                voters: result.voters,
-              } satisfies PersistedPreview),
-              skippedJson: JSON.stringify(result.skipped),
-            })
-            .where(eq(voterImportsTable.id, importRow.id));
-          created.push({ id: importRow.id, filename: file.originalname, status: "parsed" });
-        } catch (e) {
-          const msg = (e as Error).message ?? "Parse failed";
-          await db
-            .update(voterImportsTable)
-            .set({ status: "failed", errorMessage: msg })
-            .where(eq(voterImportsTable.id, importRow.id));
-          created.push({ id: importRow.id, filename: file.originalname, status: "failed", error: msg });
-        }
-        await logVoterAudit(
-          req,
-          "VOTER_IMPORT_PARSE",
-          `voter_imports:${importRow.id}`,
-          file.originalname,
-        );
+        jobs.push({ rowId: importRow.id, file });
+        created.push({ id: importRow.id, filename: file.originalname, status: "queued" });
+        await logVoterAudit(req, "VOTER_IMPORT_ENQUEUE", `voter_imports:${importRow.id}`, file.originalname);
       }
-      res.status(201).json({ imports: created });
+
+      // Phase 2 (async): kick off background parsing. We hold the file
+      // buffers in this closure (memory cost is bounded by multer's
+      // 50 MB / 25-file ceiling on the request itself).
+      setImmediate(() => {
+        void runParseJobs(jobs).catch((e) =>
+          console.error("[voters] background parse pipeline error:", e),
+        );
+      });
+
+      res.status(202).json({ imports: created });
       next?.();
     });
   },
 );
+
+async function runParseJobs(jobs: Array<{ rowId: number; file: Express.Multer.File }>): Promise<void> {
+  for (const { rowId, file } of jobs) {
+    await db
+      .update(voterImportsTable)
+      .set({ status: "parsing" })
+      .where(eq(voterImportsTable.id, rowId));
+    try {
+      const result = await parseVoterRollPdf(file.buffer);
+      await db
+        .update(voterImportsTable)
+        .set({
+          status: "parsed",
+          pageCount: result.pageCount,
+          ocrPagesCount: result.ocrPagesCount,
+          parsedCount: result.voters.length,
+          skippedCount: result.skipped.length,
+          previewJson: JSON.stringify({
+            partNumber: result.partNumber,
+            pollingStationHint: result.pollingStationHint,
+            voters: result.voters,
+          } satisfies PersistedPreview),
+          skippedJson: JSON.stringify(result.skipped),
+        })
+        .where(eq(voterImportsTable.id, rowId));
+    } catch (e) {
+      const msg = (e as Error).message ?? "Parse failed";
+      await db
+        .update(voterImportsTable)
+        .set({ status: "failed", errorMessage: msg })
+        .where(eq(voterImportsTable.id, rowId));
+    }
+  }
+}
 
 interface PersistedPreview {
   partNumber: string | null;
@@ -287,14 +304,30 @@ router.post(
         .set({ status: "committing" })
         .where(eq(voterImportsTable.id, id));
 
-      // Detect existing EPICs in one query so we can report inserted vs
-      // updated counts accurately.
+      // Pre-fetch existing rows in full so we can:
+      //   (a) report inserted vs updated counts accurately, and
+      //   (b) compute per-field deltas to write a focused overwrite-audit
+      //       row (old → new, only changed columns) per touched EPIC.
       const epics = previewVoters.map((v) => v.epicNumber);
-      const existing = await db
-        .select({ epic: votersTable.epicNumber })
+      const existing = epics.length === 0 ? [] : await db
+        .select({
+          epic: votersTable.epicNumber,
+          fullName: votersTable.fullName,
+          fullNameTa: votersTable.fullNameTa,
+          age: votersTable.age,
+          gender: votersTable.gender,
+          relationType: votersTable.relationType,
+          relationName: votersTable.relationName,
+          houseNumber: votersTable.houseNumber,
+          addressLine: votersTable.addressLine,
+          pollingStationId: votersTable.pollingStationId,
+          partNumber: votersTable.partNumber,
+          serialInPart: votersTable.serialInPart,
+        })
         .from(votersTable)
         .where(inArray(votersTable.epicNumber, epics));
-      const existingSet = new Set(existing.map((e) => e.epic));
+      const existingByEpic = new Map(existing.map((e) => [e.epic, e]));
+      const existingSet = new Set(existingByEpic.keys());
 
       // Upsert each voter. Done in a single batched insert with ON CONFLICT
       // so we avoid 1000 round-trips for a 1000-row part.
@@ -353,22 +386,60 @@ router.post(
       const insertedCount = values.length - existingSet.size;
       const updatedCount = existingSet.size;
 
-      // DPDP audit: write one audit row per EPIC touched. Batched in
-      // chunks so a 1000-voter commit produces 1000 entries without a
-      // round-trip per row. Failure here must not roll back the commit.
+      // DPDP audit: one row per touched EPIC. For overwrites we compute
+      // a per-field delta (old → new, only changed columns under the
+      // null-safe COALESCE rule) so reviewers can reconstruct exactly
+      // what staff edited and when. Batched in chunks of 500 to bound
+      // round-trips; failure here must not roll back the commit.
       try {
-        const chunkSize = 500;
-        for (let off = 0; off < values.length; off += chunkSize) {
-          const slice = values.slice(off, off + chunkSize);
-          await db.insert(auditLogTable).values(
-            slice.map((v) => ({
+        type ScalarVal = string | number | null;
+        const diffableFields: Array<{ key: keyof typeof values[number]; col: keyof (typeof existing)[number] }> = [
+          { key: "fullName", col: "fullName" },
+          { key: "fullNameTa", col: "fullNameTa" },
+          { key: "age", col: "age" },
+          { key: "gender", col: "gender" },
+          { key: "relationType", col: "relationType" },
+          { key: "relationName", col: "relationName" },
+          { key: "houseNumber", col: "houseNumber" },
+          { key: "addressLine", col: "addressLine" },
+          { key: "pollingStationId", col: "pollingStationId" },
+          { key: "partNumber", col: "partNumber" },
+          { key: "serialInPart", col: "serialInPart" },
+        ];
+        const auditRows = values.map((v) => {
+          const prev = existingByEpic.get(v.epicNumber);
+          if (!prev) {
+            return {
               actorId: req.user?.id ?? null,
               actorName: req.user?.name ?? "Unknown",
-              action: existingSet.has(v.epicNumber) ? "VOTER_WRITE_UPDATE" : "VOTER_WRITE_INSERT",
+              action: "VOTER_WRITE_INSERT",
               target: `voter:${v.epicNumber}`,
               detail: `import:${id} ${batch.filename}`,
-            })),
-          );
+            };
+          }
+          const delta: Record<string, { old: ScalarVal; new: ScalarVal }> = {};
+          for (const { key, col } of diffableFields) {
+            const incoming = (v as Record<string, ScalarVal>)[key as string];
+            const before = (prev as Record<string, ScalarVal>)[col as string];
+            // COALESCE rule: NULL incoming keeps existing → not a change.
+            const effective = incoming ?? before;
+            if (effective !== before) {
+              delta[key as string] = { old: before, new: effective };
+            }
+          }
+          const changedKeys = Object.keys(delta);
+          return {
+            actorId: req.user?.id ?? null,
+            actorName: req.user?.name ?? "Unknown",
+            action: changedKeys.length > 0 ? "VOTER_WRITE_UPDATE" : "VOTER_WRITE_NOOP",
+            target: `voter:${v.epicNumber}`,
+            detail: `import:${id} ${batch.filename}` +
+              (changedKeys.length > 0 ? ` changed=${JSON.stringify(delta)}` : " (no field changes)"),
+          };
+        });
+        const chunkSize = 500;
+        for (let off = 0; off < auditRows.length; off += chunkSize) {
+          await db.insert(auditLogTable).values(auditRows.slice(off, off + chunkSize));
         }
       } catch (e) {
         console.error("[voters] per-EPIC audit insert failed:", e);
@@ -420,10 +491,12 @@ router.delete("/admin/voters/imports/:id", ...requireVoterScope, async (req: Aut
 
 // ── GET /api/admin/voters/coverage — voter counts per polling station ──
 //
-// Aggregate-only (no PII), but still gated behind the same voter scope
-// as every other voter endpoint so we have a single source of truth
-// for "who can see anything about voters".
-router.get("/admin/voters/coverage", ...requireVoterScope, async (req: AuthRequest, res) => {
+// Aggregate-only (no names, no EPICs, no PII) — just count(*) per booth.
+// Visible to *all* staff (requireStaff) so booth-coordinator and
+// hierarchy-admin roles can still see the "voters loaded: N" pill in
+// HierarchyAdmin without being granted super_admin. Every individual
+// voter read remains gated by requireVoterScope.
+router.get("/admin/voters/coverage", requireStaff, async (req: AuthRequest, res) => {
   await logVoterAudit(req, "VOTER_COVERAGE_VIEW", "voters", null);
   try {
     const rows = await db
