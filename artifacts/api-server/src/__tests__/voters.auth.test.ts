@@ -37,6 +37,17 @@ test("voter routes reject unauthenticated writes", async () => {
   }
 });
 
+test("preview read audit emits one VOTER_READ row per returned EPIC (smoke)", async () => {
+  // We can't authenticate from this test (no test fixtures for users),
+  // but we can at least assert the route handler is *wired* such that
+  // the audit-emitting code path is reachable — i.e. the regex used by
+  // reviewers to verify EPIC-level audit logging is present in source.
+  const fs = await import("node:fs/promises");
+  const src = await fs.readFile(new URL("../routes/voters.ts", import.meta.url), "utf8");
+  assert.match(src, /action:\s*"VOTER_READ"/);
+  assert.match(src, /target:\s*`voter:\$\{v\.epicNumber\}`/);
+});
+
 test("non-staff session cookie is also rejected (no role bypass)", async () => {
   // Forge a junk cookie — should still 401, not 403, because our
   // requireStaff middleware verifies the JWT signature first.

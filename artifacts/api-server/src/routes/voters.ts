@@ -19,13 +19,24 @@ import {
 
 const router = Router();
 
-// ── Hard guard: every voter-route accesses personal data. Require
-// staff first, then narrow to super_admin only. The frontend hides
-// the nav entry too, but the backend is the source of truth.
+// Voter-scope policy:
+//
+// `requireVoterScope` — for any endpoint that returns identifiable
+//   voter data (names, EPICs, addresses). super_admin only.
+//
+// `requireVoterAggregateScope` — for endpoints that return ONLY
+//   aggregate counts (count(*) per booth, totals, etc.) with no PII.
+//   Available to all staff, on the documented basis that a per-booth
+//   "voters loaded: N" pill is operational metadata, not personal
+//   data, and broadening it lets booth coordinators see coverage
+//   without granting them super_admin (which would also grant access
+//   to PII rows). The exemption is encoded here as a named array so
+//   it shows up in code review when changed.
 const requireVoterScope = [
   requireStaff,
   requireRole("super_admin"),
 ] as const;
+const requireVoterAggregateScope = [requireStaff] as const;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -227,6 +238,32 @@ router.get("/admin/voters/imports/:id", ...requireVoterScope, async (req: AuthRe
       row.filename,
     );
     const previewVoters = preview?.voters ?? [];
+
+    // Per-EPIC read audit: write one VOTER_READ row per EPIC actually
+    // returned in this response, batched 500 per insert. This satisfies
+    // the DPDP requirement that every read of identifiable voter data
+    // be auditable at row granularity. Failure here must not block the
+    // response — the batch-level row above is the fallback.
+    const returnedVoters = full ? previewVoters : previewVoters.slice(0, 50);
+    if (returnedVoters.length > 0) {
+      try {
+        const actorId = req.user?.id ?? null;
+        const actorName = req.user?.name ?? "Unknown";
+        const auditRows = returnedVoters.map((v) => ({
+          actorId,
+          actorName,
+          action: "VOTER_READ",
+          target: `voter:${v.epicNumber}`,
+          detail: `import:${id} ${row.filename}`,
+        }));
+        const chunkSize = 500;
+        for (let off = 0; off < auditRows.length; off += chunkSize) {
+          await db.insert(auditLogTable).values(auditRows.slice(off, off + chunkSize));
+        }
+      } catch (e) {
+        console.error("[voters] per-EPIC read audit failed:", e);
+      }
+    }
     res.json({
       ...row,
       createdAt: row.createdAt.toISOString(),
@@ -496,7 +533,7 @@ router.delete("/admin/voters/imports/:id", ...requireVoterScope, async (req: Aut
 // hierarchy-admin roles can still see the "voters loaded: N" pill in
 // HierarchyAdmin without being granted super_admin. Every individual
 // voter read remains gated by requireVoterScope.
-router.get("/admin/voters/coverage", requireStaff, async (req: AuthRequest, res) => {
+router.get("/admin/voters/coverage", ...requireVoterAggregateScope, async (req: AuthRequest, res) => {
   await logVoterAudit(req, "VOTER_COVERAGE_VIEW", "voters", null);
   try {
     const rows = await db
