@@ -13,3 +13,4 @@ export * from "./banners";
 export * from "./wards";
 export * from "./hierarchy";
 export * from "./assignments";
+export * from "./voters";

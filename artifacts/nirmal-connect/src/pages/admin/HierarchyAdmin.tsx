@@ -540,8 +540,8 @@ function NodeEditor({
 // Booths panel (loaded on demand when a ward is expanded)
 // ─────────────────────────────────────────────────────────
 function BoothsPanel({
-  wardId, openEdit, onChanged, lang,
-}: { wardId: number; openEdit: (s: EditorState) => void; onChanged: () => void; lang: Language }) {
+  wardId, openEdit, onChanged, lang, voterCoverage,
+}: { wardId: number; openEdit: (s: EditorState) => void; onChanged: () => void; lang: Language; voterCoverage?: Record<string, number> }) {
   const [booths, setBooths] = useState<Booth[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -573,7 +573,9 @@ function BoothsPanel({
         <p className="text-xs text-muted-foreground italic">{tHi(lang, "noBoothsYet")}</p>
       ) : (
         <div className="grid sm:grid-cols-2 gap-1.5">
-          {booths.map(b => (
+          {booths.map(b => {
+            const voterCount = voterCoverage?.[String(b.id)] ?? 0;
+            return (
             <div key={b.id} className="flex items-start justify-between gap-2 text-xs border rounded p-2 bg-white">
               <div className="min-w-0">
                 <p className="font-medium truncate">
@@ -587,6 +589,19 @@ function BoothsPanel({
                     ? `${b.latitude.toFixed(4)}, ${b.longitude.toFixed(4)}`
                     : tHi(lang, "gpsNotSet")}
                 </p>
+                <p className="mt-1">
+                  <span
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                      voterCount > 0
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : "bg-gray-50 text-gray-500 border border-gray-200"
+                    }`}
+                    title="Voters loaded from electoral roll"
+                  >
+                    <Vote className="w-2.5 h-2.5" />
+                    {voterCount > 0 ? `${voterCount.toLocaleString()} voters` : "no roll loaded"}
+                  </span>
+                </p>
               </div>
               <div className="flex gap-0.5 shrink-0">
                 <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit({ kind: "booth", item: b as unknown as Record<string, unknown> })}>
@@ -597,7 +612,8 @@ function BoothsPanel({
                 </Button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -608,13 +624,14 @@ function BoothsPanel({
 // Tree
 // ─────────────────────────────────────────────────────────
 function Tree({
-  zones, orphanWards, openEdit, onChanged, lang,
+  zones, orphanWards, openEdit, onChanged, lang, voterCoverage,
 }: {
   zones: ZoneNode[];
   orphanWards: WardNode[];
   openEdit: (s: EditorState) => void;
   onChanged: () => void;
   lang: Language;
+  voterCoverage?: Record<string, number>;
 }) {
   const [expandedZones, setExpZ] = useState<Set<number>>(new Set());
   const [expandedWards, setExpW] = useState<Set<number>>(new Set());
@@ -702,7 +719,7 @@ function Tree({
                 </div>
               );
             })}
-            <BoothsPanel wardId={w.id} openEdit={openEdit} onChanged={onChanged} lang={lang} />
+            <BoothsPanel wardId={w.id} openEdit={openEdit} onChanged={onChanged} lang={lang} voterCoverage={voterCoverage} />
           </>
         )}
       </div>
@@ -952,6 +969,16 @@ export default function HierarchyAdmin() {
   };
   useEffect(load, []);
 
+  // Per-booth voter coverage (no PII; aggregate counts only). Loaded
+  // alongside the hierarchy and refreshed when the tree reloads so the
+  // pill stays in sync with imports just committed elsewhere.
+  const [voterCoverage, setVoterCoverage] = useState<Record<string, number>>({});
+  useEffect(() => {
+    adminApi.getVoterCoverage()
+      .then((d: { byBooth: Record<string, number> }) => setVoterCoverage(d.byBooth ?? {}))
+      .catch(() => { /* coverage is best-effort */ });
+  }, [zones, orphanWards]);
+
   const totals = useMemo(() => {
     const wardCount = flatWards.length;
     const areaCount = flatWards.reduce((s, w) => s + w.areas.length, 0);
@@ -997,7 +1024,7 @@ export default function HierarchyAdmin() {
           {loading ? (
             <p className="text-sm text-muted-foreground py-8 text-center">{tHi(lang, "loading")}</p>
           ) : (
-            <Tree zones={zones} orphanWards={orphanWards} openEdit={setEditor} onChanged={load} lang={lang} />
+            <Tree zones={zones} orphanWards={orphanWards} openEdit={setEditor} onChanged={load} lang={lang} voterCoverage={voterCoverage} />
           )}
         </TabsContent>
 

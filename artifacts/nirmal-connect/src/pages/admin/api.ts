@@ -104,6 +104,35 @@ export const adminApi = {
   createPincode: (data: unknown) => authFetch("/admin/hierarchy/pincodes", { method: "POST", body: JSON.stringify(data) }),
   updatePincode: (id: number, data: unknown) => authFetch(`/admin/hierarchy/pincodes/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deletePincode: (id: number) => authFetch(`/admin/hierarchy/pincodes/${id}`, { method: "DELETE" }),
+  // Voter Roll
+  getVoterStats:    () => authFetch("/admin/voters/stats"),
+  getVoterCoverage: () => authFetch("/admin/voters/coverage"),
+  getVoterImports:  () => authFetch("/admin/voters/imports"),
+  getVoterImport:   (id: number, full = false) => authFetch(`/admin/voters/imports/${id}${full ? "?full=1" : ""}`),
+  commitVoterImport: (id: number, pollingStationId?: number | null) =>
+    authFetch(`/admin/voters/imports/${id}/commit`, {
+      method: "POST",
+      body: JSON.stringify({ pollingStationId: pollingStationId ?? null }),
+    }),
+  discardVoterImport: (id: number) =>
+    authFetch(`/admin/voters/imports/${id}`, { method: "DELETE" }),
+  // Multipart upload — bypasses authFetch JSON wrapper.
+  uploadVoterPdfs: async (files: File[], expectedBoothNo?: string) => {
+    const fd = new FormData();
+    for (const f of files) fd.append("files", f);
+    if (expectedBoothNo) fd.append("expectedBoothNo", expectedBoothNo);
+    const token = getToken();
+    const res = await fetch(`${BASE}/admin/voters/import`, {
+      method: "POST",
+      body: fd,
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: "Upload failed" }));
+      throw new Error(err.error ?? `HTTP ${res.status}`);
+    }
+    return res.json() as Promise<{ imports: Array<{ id: number; filename: string; status: string; error?: string }> }>;
+  },
   // Grievance bulk assign
   bulkGrievanceAssign: (ids: number[], officerId: number, officerName: string) =>
     authFetch("/admin/grievances/bulk-assign", { method: "POST", body: JSON.stringify({ ids, officerId, officerName }) }),

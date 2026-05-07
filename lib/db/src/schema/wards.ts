@@ -46,6 +46,10 @@ export const wardsTable = pgTable("wards", {
   population: integer("population"),
   households: integer("households"),
   notes: text("notes"),
+  // GeoJSON polygon string (preserved from ward-boundary import).
+  // Kept as nullable text so drizzle-kit doesn't drop the underlying
+  // column on schema push.
+  boundaryGeojson: text("boundary_geojson"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => ({

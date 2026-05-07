@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Newspaper, Calendar, Activity, Image,
   Users, MessageSquare, HelpCircle, UserCircle, LogOut, Menu, X,
-  ChevronRight, Settings, Megaphone, FileText, MapPin, ClipboardList, Network, Map as MapIcon, BarChart3, Home as HomeIcon,
+  ChevronRight, Settings, Megaphone, FileText, MapPin, ClipboardList, Network, Map as MapIcon, BarChart3, Home as HomeIcon, ShieldAlert,
 } from "lucide-react";
 import { isAuthenticated, removeToken, getToken } from "@/lib/auth";
 import { useGetMe } from "@workspace/api-client-react";
@@ -28,6 +28,7 @@ import BannersAdmin from "./admin/BannersAdmin";
 import ConstituencyAdmin from "./admin/ConstituencyAdmin";
 import WardAdmin from "./admin/WardAdmin";
 import HierarchyAdmin from "./admin/HierarchyAdmin";
+import VoterRollAdmin from "./admin/VoterRollAdmin";
 import PressReleasesAdmin from "./admin/PressReleasesAdmin";
 import AssignmentsAdmin from "./admin/AssignmentsAdmin";
 import type { Language } from "@/lib/i18n";
@@ -57,6 +58,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "banners",      label: "Banners",            icon: Megaphone,    roles: ["super_admin", "admin", "pa_staff"] },
   { id: "volunteers",   label: "Volunteers",         icon: Users,        roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator"] },
   { id: "constituency", label: "Constituency & Wards", icon: MapPin,      roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator"] },
+  { id: "voters",       label: "Voter Roll",            icon: ShieldAlert, roles: ["super_admin"] },
   { id: "faqs",         label: "FAQs",               icon: HelpCircle,   roles: ["super_admin", "admin", "pa_staff"] },
   { id: "home",         label: "Home CMS",           icon: HomeIcon,     roles: ["super_admin", "admin"] },
   { id: "about",        label: "About CMS",          icon: UserCircle,   roles: ["super_admin", "admin"] },
@@ -328,6 +330,7 @@ function AdminInner({ lang = "ta" }: AdminProps) {
           {active === "about"        && <AboutAdmin />}
           {active === "settings"     && <SiteSettingsAdmin />}
           {active === "audit"        && <AuditLogAdmin />}
+          {active === "voters"       && <VoterRollAdmin />}
         </main>
       </div>
     </div>
