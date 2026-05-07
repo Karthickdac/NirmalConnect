@@ -15,14 +15,13 @@ import { eq, desc, asc, sql, gte, lte, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
-import fs from "fs";
 import sharp from "sharp";
+import { uploadAdminImage } from "../lib/objectStorage.js";
 
 // ── Image upload config (CMS forms) ────────────────────────
-const adminUploadsDir = path.join(process.cwd(), "uploads", "admin");
-if (!fs.existsSync(adminUploadsDir)) fs.mkdirSync(adminUploadsDir, { recursive: true });
-
-// Use memory storage so we can compress with sharp before writing to disk.
+// Uploads are streamed to Replit Object Storage so they survive redeploys
+// and container restarts. Legacy files under artifacts/api-server/uploads/admin
+// are still served by app.ts for backwards compatibility.
 const adminUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 12 * 1024 * 1024 },
@@ -32,8 +31,17 @@ const adminUpload = multer({
   },
 });
 
+const MIME_BY_EXT: Record<string, string> = {
+  ".svg": "image/svg+xml",
+  ".gif": "image/gif",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+};
+
 // Resize/compress raster images before persisting. SVGs and small images pass
-// through unchanged. Returns the on-disk filename and final byte size, plus
+// through unchanged. Returns the stored filename and final byte size, plus
 // an optional small ~400px WebP thumbnail for snappy listing pages.
 const MAX_DIMENSION = 1600;
 const THUMB_WIDTH = 400;
@@ -54,7 +62,7 @@ async function generateThumbnail(srcBuffer: Buffer, baseName: string): Promise<s
       .webp({ quality: 72, effort: 4 })
       .toBuffer();
     const thumbFilename = `${baseName}.thumb.webp`;
-    await fs.promises.writeFile(path.join(adminUploadsDir, thumbFilename), thumb);
+    await uploadAdminImage(thumbFilename, thumb, "image/webp");
     return thumbFilename;
   } catch (e) {
     console.warn("[admin] thumbnail generation failed:", e);
@@ -66,23 +74,31 @@ async function persistAdminUpload(file: Express.Multer.File): Promise<PersistedU
   const ext = path.extname(file.originalname).toLowerCase();
   const baseName = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
+  const writeBuffer = async (
+    filename: string,
+    buf: Buffer,
+    mime: string,
+    thumbnailFilename?: string,
+  ): Promise<PersistedUpload> => {
+    await uploadAdminImage(filename, buf, mime);
+    return { filename, size: buf.length, mimeType: mime, thumbnailFilename };
+  };
+
   // Pass-through for SVG and animated GIF — sharp doesn't usefully compress these here.
   // SVGs are already tiny and resolution-independent; GIFs may be animated and we
   // don't want to drop frames. No thumbnail is generated for these.
   if (ext === ".svg" || ext === ".gif") {
-    const filename = `${baseName}${ext}`;
-    await fs.promises.writeFile(path.join(adminUploadsDir, filename), file.buffer);
-    return { filename, size: file.buffer.length, mimeType: file.mimetype };
+    const mime = MIME_BY_EXT[ext] ?? file.mimetype;
+    return writeBuffer(`${baseName}${ext}`, file.buffer, mime);
   }
 
-  // Try to read metadata; if sharp can't decode it, fall back to writing original bytes.
+  // Try to read metadata; if sharp can't decode it, fall back to original bytes.
   let metadata: sharp.Metadata;
   try {
     metadata = await sharp(file.buffer).metadata();
   } catch {
-    const filename = `${baseName}${ext}`;
-    await fs.promises.writeFile(path.join(adminUploadsDir, filename), file.buffer);
-    return { filename, size: file.buffer.length, mimeType: file.mimetype };
+    const mime = MIME_BY_EXT[ext] ?? file.mimetype;
+    return writeBuffer(`${baseName}${ext}`, file.buffer, mime);
   }
 
   const width = metadata.width ?? 0;
@@ -95,9 +111,8 @@ async function persistAdminUpload(file: Express.Multer.File): Promise<PersistedU
   const thumbnailFilename = await generateThumbnail(file.buffer, baseName);
 
   if (!needsResize && !needsRecompress) {
-    const filename = `${baseName}${ext}`;
-    await fs.promises.writeFile(path.join(adminUploadsDir, filename), file.buffer);
-    return { filename, size: file.buffer.length, mimeType: file.mimetype, thumbnailFilename };
+    const mime = MIME_BY_EXT[ext] ?? file.mimetype;
+    return writeBuffer(`${baseName}${ext}`, file.buffer, mime, thumbnailFilename);
   }
 
   const pipeline = sharp(file.buffer, { failOn: "none" }).rotate();
@@ -112,21 +127,20 @@ async function persistAdminUpload(file: Express.Multer.File): Promise<PersistedU
 
   // Re-encode as WebP for best size/quality tradeoff while preserving alpha.
   const out = await pipeline.webp({ quality: 82, effort: 4 }).toBuffer();
-  const filename = `${baseName}.webp`;
-  await fs.promises.writeFile(path.join(adminUploadsDir, filename), out);
-  return { filename, size: out.length, mimeType: "image/webp", thumbnailFilename };
+  return writeBuffer(`${baseName}.webp`, out, "image/webp", thumbnailFilename);
 }
 
-/** Accepts an http(s) URL OR a server-relative path under /uploads or /api/uploads. */
+/** Accepts an http(s) URL OR a server-relative path under /api/storage, /uploads, or /api/uploads. */
 const ImageRef = z
   .string()
   .refine(
     (v) =>
       v === "" ||
       /^https?:\/\//i.test(v) ||
+      v.startsWith("/api/storage/") ||
       v.startsWith("/uploads/") ||
       v.startsWith("/api/uploads/"),
-    { message: "Must be a URL or an /uploads/ path" },
+    { message: "Must be a URL or an /api/storage/ path" },
   );
 
 // ── Role constants used across routes ──────────────────────
@@ -271,11 +285,12 @@ router.post(
       }
       try {
         const saved = await persistAdminUpload(req.file);
-        // Use /api/uploads so the dev/prod path-based proxy (which only routes /api
-        // to this service) can serve the file directly from <web origin>/api/uploads/…
-        const url = `/api/uploads/admin/${saved.filename}`;
+        // /api/storage/admin/* serves directly from Replit Object Storage (where
+        // the file was just written). It is mounted under /api so the dev/prod
+        // path-based proxy (which only routes /api to this service) can reach it.
+        const url = `/api/storage/admin/${saved.filename}`;
         const thumbnailUrl = saved.thumbnailFilename
-          ? `/api/uploads/admin/${saved.thumbnailFilename}`
+          ? `/api/storage/admin/${saved.thumbnailFilename}`
           : null;
         logAudit(req, "UPLOAD", `image:${saved.filename}`, `${req.file.originalname} (${req.file.size}→${saved.size} bytes)`).catch(() => null);
         res.status(201).json({

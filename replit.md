@@ -11,6 +11,7 @@ Bilingual (Tamil-default) political leader website + grievance management platfo
 - `pnpm --filter @workspace/api-spec run codegen` — regen API hooks + Zod from OpenAPI
 - `cd lib/db && npx tsc -p tsconfig.json` — must run after adding new schema tables
 - Required env: `DATABASE_URL`, `JWT_SECRET` (auto-generated ephemerally if absent in dev)
+- CMS image storage uses Replit Object Storage. Provision once via the Object Storage tool (or `setupObjectStorage()` in the code-execution sandbox); this populates `DEFAULT_OBJECT_STORAGE_BUCKET_ID`, `PUBLIC_OBJECT_SEARCH_PATHS`, and `PRIVATE_OBJECT_DIR`. New admin uploads stream to `${PRIVATE_OBJECT_DIR}/admin/<filename>`; legacy files under `artifacts/api-server/uploads/admin/` continue to serve from disk.
 
 ## Stack
 
