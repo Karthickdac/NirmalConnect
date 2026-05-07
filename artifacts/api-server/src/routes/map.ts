@@ -162,6 +162,8 @@ router.get("/map/grievance-pins", async (_req, res) => {
         status: grievancesTable.status,
         category: grievancesTable.category,
         wardId: pollingStationsTable.wardId,
+        areaId: pollingStationsTable.areaId,
+        pollingStationId: pollingStationsTable.id,
         latitude: pollingStationsTable.latitude,
         longitude: pollingStationsTable.longitude,
         createdAt: grievancesTable.createdAt,

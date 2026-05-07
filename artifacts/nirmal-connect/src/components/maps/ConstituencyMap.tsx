@@ -73,6 +73,8 @@ interface GrievancePin {
   status: string;
   category: string | null;
   wardId: number | null;
+  areaId: number | null;
+  pollingStationId: number | null;
   latitude: number | null;
   longitude: number | null;
   createdAt: string;
@@ -244,12 +246,25 @@ export default function ConstituencyMap({
   }, [data, mineOnly, officerWardIds, officerAreaIds, officerPollingStationIds]);
 
   const filteredPins = useMemo(() => {
-    if (mineOnly && officerWardIds && officerWardIds.length > 0) {
-      const set = new Set(officerWardIds);
-      return pins.filter((p) => p.wardId != null && set.has(p.wardId));
+    if (!mineOnly) return pins;
+    const stationSet = new Set(officerPollingStationIds ?? []);
+    const areaSet = new Set(officerAreaIds ?? []);
+    const wardSet = new Set(officerWardIds ?? []);
+    // Mirror the booth-layer scoping: most-specific assignment wins so
+    // an area- or booth-scoped officer never sees grievance pins from
+    // outside their assignment, even though all parent wards still
+    // appear on the wards layer for context.
+    if (stationSet.size > 0) {
+      return pins.filter((p) => p.pollingStationId != null && stationSet.has(p.pollingStationId));
+    }
+    if (areaSet.size > 0) {
+      return pins.filter((p) => p.areaId != null && areaSet.has(p.areaId));
+    }
+    if (wardSet.size > 0) {
+      return pins.filter((p) => p.wardId != null && wardSet.has(p.wardId));
     }
     return pins;
-  }, [pins, mineOnly, officerWardIds]);
+  }, [pins, mineOnly, officerWardIds, officerAreaIds, officerPollingStationIds]);
 
   const jumpWard = useMemo(
     () => (jumpWardId ? (data?.wards.find((w) => w.id === jumpWardId) ?? null) : null),
@@ -406,6 +421,7 @@ export default function ConstituencyMap({
                   );
                 }
                 if (w.latitude != null && w.longitude != null) {
+                  const primary = lang === "ta" && w.nameTa ? w.nameTa : w.name;
                   return (
                     <CircleMarker
                       key={`c-${w.id}`}
@@ -413,9 +429,26 @@ export default function ConstituencyMap({
                       radius={8}
                       pathOptions={{ color: "#f59e0b", fillColor: "#fde68a", fillOpacity: 0.8, weight: 2 }}
                     >
+                      {/* Always-visible label for unmapped wards so the
+                          centroid pin is identifiable at a glance,
+                          per task spec ("labelled centroid pin"). */}
+                      <Tooltip
+                        direction="top"
+                        offset={[0, -8]}
+                        opacity={0.95}
+                        permanent
+                        className="ward-centroid-label"
+                      >
+                        {primary} <span style={{ opacity: 0.7 }}>· {tr.boundaryNotMapped}</span>
+                      </Tooltip>
                       <Popup>
-                        <strong>{lang === "ta" && w.nameTa ? w.nameTa : w.name}</strong>
-                        <div className="text-xs mt-1 text-amber-700">{tr.boundaryNotMapped}</div>
+                        <div>
+                          <strong>{w.name}</strong>
+                          {w.nameTa && (
+                            <div className="text-xs" lang="ta">{w.nameTa}</div>
+                          )}
+                          <div className="text-xs mt-1 text-amber-700">{tr.boundaryNotMapped}</div>
+                        </div>
                       </Popup>
                     </CircleMarker>
                   );
@@ -433,15 +466,26 @@ export default function ConstituencyMap({
             >
               {filteredBooths.map((b) => (
                 <Marker key={b.id} position={[b.latitude!, b.longitude!]}>
+                  {/* Bilingual popup per task spec — always show both
+                      English and Tamil when the Tamil field exists,
+                      gracefully omitting the missing side. */}
                   <Popup>
                     <div className="text-sm">
                       <div className="font-semibold">
                         {tr.booth} #{b.boothNo}
                       </div>
-                      <div>{lang === "ta" && b.nameTa ? b.nameTa : b.name}</div>
-                      {(lang === "ta" && b.addressTa ? b.addressTa : b.address) && (
+                      <div>{b.name}</div>
+                      {b.nameTa && (
+                        <div lang="ta">{b.nameTa}</div>
+                      )}
+                      {b.address && (
                         <div className="text-xs text-muted-foreground mt-1">
-                          {lang === "ta" && b.addressTa ? b.addressTa : b.address}
+                          {b.address}
+                        </div>
+                      )}
+                      {b.addressTa && (
+                        <div className="text-xs text-muted-foreground" lang="ta">
+                          {b.addressTa}
                         </div>
                       )}
                       {b.wardId && (
