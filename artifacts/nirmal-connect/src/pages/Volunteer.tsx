@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SectionHeader } from "@/components/SectionHeader";
 import { CheckCircle, Users, Heart, Star } from "lucide-react";
 import { useRegisterVolunteer } from "@workspace/api-client-react";
 import type { Language } from "@/lib/i18n";
+import { useWards } from "@/lib/useWards";
 
 interface VolunteerProps { lang: Language; }
 
@@ -29,6 +31,7 @@ type FormData = z.infer<typeof schema>;
 export default function Volunteer({ lang }: VolunteerProps) {
   const [submitted, setSubmitted] = useState(false);
   const mutation = useRegisterVolunteer();
+  const { data: wards = [] } = useWards();
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -140,7 +143,24 @@ export default function Volunteer({ lang }: VolunteerProps) {
                       <FormField control={form.control} name="ward" render={({ field }) => (
                         <FormItem>
                           <FormLabel>{lang === "ta" ? "வார்டு / பகுதி" : "Ward / Area"}</FormLabel>
-                          <FormControl><Input data-testid="input-ward" {...field} /></FormControl>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger data-testid="input-ward">
+                                <SelectValue placeholder={
+                                  wards.length === 0
+                                    ? (lang === "ta" ? "வார்டுகள் இல்லை" : "No wards configured")
+                                    : (lang === "ta" ? "வார்டை தேர்ந்தெடுங்கள்" : "Select a ward")
+                                } />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {wards.map((w) => (
+                                <SelectItem key={w.id} value={w.name}>
+                                  {w.name}{w.area ? ` — ${w.area}` : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )} />

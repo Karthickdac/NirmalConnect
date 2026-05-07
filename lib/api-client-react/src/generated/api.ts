@@ -60,6 +60,7 @@ import type {
   VolunteerRegistrationBody,
   Ward,
   WardBody,
+  WardSummary,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -2365,6 +2366,82 @@ export const useAssignGrievance = <
 > => {
   return useMutation(getAssignGrievanceMutationOptions(options));
 };
+
+/**
+ * Public list of wards used to populate ward dropdowns on the Grievance and Volunteer forms. Coordinator contact details are not exposed.
+ * @summary List wards/areas (public, summary only)
+ */
+export const getListPublicWardsUrl = () => {
+  return `/api/wards`;
+};
+
+export const listPublicWards = async (
+  options?: RequestInit,
+): Promise<WardSummary[]> => {
+  return customFetch<WardSummary[]>(getListPublicWardsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPublicWardsQueryKey = () => {
+  return [`/api/wards`] as const;
+};
+
+export const getListPublicWardsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPublicWards>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicWards>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPublicWardsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPublicWards>>> = ({
+    signal,
+  }) => listPublicWards({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicWards>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPublicWardsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPublicWards>>
+>;
+export type ListPublicWardsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List wards/areas (public, summary only)
+ */
+
+export function useListPublicWards<
+  TData = Awaited<ReturnType<typeof listPublicWards>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicWards>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPublicWardsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary List all wards/areas

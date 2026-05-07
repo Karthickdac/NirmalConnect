@@ -25,6 +25,7 @@ import {
   updateGrievancePriority,
 } from "@workspace/api-client-react";
 import type { GrievanceListItem } from "@workspace/api-client-react";
+import { useWards } from "@/lib/useWards";
 
 interface GrievanceOfficerProps { lang: Language; token: string }
 
@@ -121,6 +122,7 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
   const [filterConstituency, setFilterConstituency] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
+  const { data: wardList = [] } = useWards();
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkStatus, setBulkStatus] = useState("");
   const [bulkAssignId, setBulkAssignId] = useState("");
@@ -408,12 +410,20 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
                 {PRIORITY_OPTS.map((p) => <SelectItem key={p || "all"} value={p || "all"}>{p || (lang === "ta" ? "அனைத்தும்" : "All")}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Input
-              className="w-28 h-8 text-sm"
-              placeholder={lang === "ta" ? "வார்டு" : "Ward"}
-              value={filterWard}
-              onChange={(e) => { setFilterWard(e.target.value); setPage(1); }}
-            />
+            <Select
+              value={filterWard || "all"}
+              onValueChange={(v) => { setFilterWard(v === "all" ? "" : v); setPage(1); }}
+            >
+              <SelectTrigger className="w-40 h-8 text-sm">
+                <SelectValue placeholder={lang === "ta" ? "வார்டு" : "Ward"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{lang === "ta" ? "அனைத்தும்" : "All wards"}</SelectItem>
+                {wardList.map((w) => (
+                  <SelectItem key={w.id} value={w.name}>{w.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Input
               className="w-40 h-8 text-sm"
               placeholder={lang === "ta" ? "தொகுதி" : "Constituency"}

@@ -341,6 +341,13 @@ export interface GrievanceOfficerList {
   officers: GrievanceOfficerItem[];
 }
 
+export interface WardSummary {
+  id: number;
+  name: string;
+  /** @nullable */
+  area?: string | null;
+}
+
 export interface Ward {
   id: number;
   name: string;

@@ -621,6 +621,17 @@ export const AssignGrievanceResponse = zod.object({
 });
 
 /**
+ * Public list of wards used to populate ward dropdowns on the Grievance and Volunteer forms. Coordinator contact details are not exposed.
+ * @summary List wards/areas (public, summary only)
+ */
+export const ListPublicWardsResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  area: zod.string().nullish(),
+});
+export const ListPublicWardsResponse = zod.array(ListPublicWardsResponseItem);
+
+/**
  * @summary List all wards/areas
  */
 export const AdminListWardsResponseItem = zod.object({

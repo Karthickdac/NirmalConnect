@@ -22,6 +22,7 @@ import {
 import type { Language } from "@/lib/i18n";
 import { submitGrievance, trackGrievance, getGrievanceHeatmap } from "@workspace/api-client-react";
 import type { GrievanceTrackResponse } from "@workspace/api-client-react";
+import { useWards } from "@/lib/useWards";
 
 interface GrievanceProps { lang: Language; }
 
@@ -178,6 +179,7 @@ export default function Grievance({ lang }: GrievanceProps) {
   const [copied, setCopied] = useState(false);
   const [isTracking, setIsTracking] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const { data: wardList = [] } = useWards();
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -360,7 +362,24 @@ export default function Grievance({ lang }: GrievanceProps) {
                       <FormField control={form.control} name="ward" render={({ field }) => (
                         <FormItem>
                           <FormLabel>{lang === "ta" ? "வார்டு / பகுதி" : "Ward / Area"}</FormLabel>
-                          <FormControl><Input data-testid="grievance-ward" {...field} /></FormControl>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger data-testid="grievance-ward">
+                                <SelectValue placeholder={
+                                  wardList.length === 0
+                                    ? (lang === "ta" ? "வார்டுகள் இல்லை" : "No wards configured")
+                                    : (lang === "ta" ? "வார்டை தேர்ந்தெடுங்கள்" : "Select a ward")
+                                } />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {wardList.map((w) => (
+                                <SelectItem key={w.id} value={w.name}>
+                                  {w.name}{w.area ? ` — ${w.area}` : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )} />

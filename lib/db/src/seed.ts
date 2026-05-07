@@ -7,6 +7,7 @@ import {
   galleryTable,
   faqsTable,
   constituencyStatsTable,
+  wardsTable,
 } from "./schema/index.js";
 import { createHmac, randomBytes } from "crypto";
 
@@ -219,6 +220,22 @@ async function seed() {
     { title: "Water Tank Inauguration", mediaUrl: "https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=800", thumbnailUrl: "https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400", mediaType: "photo", album: "development" },
     { title: "Assembly Session – Chennai", mediaUrl: "https://images.unsplash.com/photo-1551818255-e6e10975bc17?w=800", thumbnailUrl: "https://images.unsplash.com/photo-1551818255-e6e10975bc17?w=400", mediaType: "photo", album: "assembly" },
     { title: "Women's SHG Launch", mediaUrl: "https://images.unsplash.com/photo-1573497019236-17f8177b81e8?w=800", thumbnailUrl: "https://images.unsplash.com/photo-1573497019236-17f8177b81e8?w=400", mediaType: "photo", album: "welfare" },
+  ]).onConflictDoNothing();
+
+  // Wards / Areas — Tirupparankundram constituency (Madurai District, TN-199)
+  // Coordinator contact details intentionally left blank — staff can fill
+  // them in via Admin → Constituency & Wards once real assignments are made.
+  await db.insert(wardsTable).values([
+    { name: "Tirupparankundram Town", area: "Town Panchayat", notes: "Constituency headquarters area" },
+    { name: "Pasumalai", area: "South Zone" },
+    { name: "Avaniyapuram", area: "South Zone" },
+    { name: "Thirumohur", area: "East Zone" },
+    { name: "Vandiyur", area: "East Zone" },
+    { name: "Sakkudi", area: "West Zone" },
+    { name: "Manalur", area: "West Zone" },
+    { name: "Vellaripatti", area: "West Zone" },
+    { name: "Madurai Corporation – Zone 4", area: "Madurai South" },
+    { name: "Madurai Corporation – Zone 5", area: "Madurai South" },
   ]).onConflictDoNothing();
 
   // FAQs

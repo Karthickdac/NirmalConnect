@@ -706,6 +706,22 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /wards:
+    get:
+      operationId: listPublicWards
+      tags: [stats]
+      summary: List wards/areas (public, summary only)
+      description: Public list of wards used to populate ward dropdowns on the Grievance and Volunteer forms. Coordinator contact details are not exposed.
+      responses:
+        "200":
+          description: Ward list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WardSummary"
+
   /admin/wards:
     get:
       operationId: adminListWards
@@ -1609,6 +1625,19 @@ components:
             $ref: "#/components/schemas/GrievanceOfficerItem"
       required:
         - officers
+
+    WardSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        area:
+          type: ["string", "null"]
+      required:
+        - id
+        - name
 
     Ward:
       type: object
