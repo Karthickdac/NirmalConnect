@@ -4,66 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, RefreshCw, Eye } from "lucide-react";
+import { Save, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { adminApi } from "./api";
-
-interface AboutConfig {
-  name: string;
-  nameTa: string;
-  designation: string;
-  designationTa: string;
-  constituency: string;
-  constituencyTa: string;
-  party: string;
-  partyTa: string;
-  photoUrl: string;
-  bioBrief: string;
-  bioBriefTa: string;
-  bioFull: string;
-  bioFullTa: string;
-  education: string;
-  born: string;
-  phone: string;
-  email: string;
-  officeAddress: string;
-  officeAddressTa: string;
-  facebook: string;
-  twitter: string;
-  instagram: string;
-  youtube: string;
-  highlights: { title: string; titleTa: string; value: string; icon: string }[];
-}
+import { AboutView, DEFAULT_ABOUT_CONFIG, type AboutConfig } from "@/components/AboutView";
 
 const DEFAULT_CONFIG: AboutConfig = {
-  name: "C.T.R. Nirmal Kumar",
-  nameTa: "சி.டி.ஆர். நிர்மல் குமார்",
-  designation: "Member of Legislative Assembly",
-  designationTa: "சட்டமன்ற உறுப்பினர்",
-  constituency: "Tirupparankundram",
-  constituencyTa: "திருப்பரங்குன்றம்",
-  party: "Tamilaga Vettri Kazhagam (TVK)",
-  partyTa: "தமிழக வெற்றி கழகம்",
-  photoUrl: "",
+  ...DEFAULT_ABOUT_CONFIG,
   bioBrief: "Serving the people of Tirupparankundram with dedication and commitment.",
   bioBriefTa: "திருப்பரங்குன்றம் மக்களுக்கு அர்ப்பணிப்புடன் சேவை செய்கிறோம்.",
   bioFull: "",
   bioFullTa: "",
-  education: "",
-  born: "",
-  phone: "+91 98765 43210",
-  email: "mla.tirupparankundram@tn.gov.in",
-  officeAddress: "MLA Office, Tirupparankundram, Madurai District, Tamil Nadu - 625005",
-  officeAddressTa: "சட்டமன்ற உறுப்பினர் அலுவலகம், திருப்பரங்குன்றம், மதுரை மாவட்டம்",
-  facebook: "",
-  twitter: "",
-  instagram: "",
-  youtube: "",
-  highlights: [
-    { title: "Roads Built", titleTa: "சாலைகள்", value: "120+ km", icon: "Road" },
-    { title: "Schools Upgraded", titleTa: "பள்ளிகள்", value: "45+", icon: "School" },
-    { title: "Water Projects", titleTa: "நீர் திட்டங்கள்", value: "30+", icon: "Droplets" },
-    { title: "Jobs Created", titleTa: "வேலைவாய்ப்பு", value: "5000+", icon: "Briefcase" },
-  ],
 };
 
 const URL_RE = /^https?:\/\/[^\s]+$/i;
@@ -98,6 +48,8 @@ export default function AboutAdmin() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [showPreview, setShowPreview] = useState(true);
+  const [previewLang, setPreviewLang] = useState<"en" | "ta">("en");
 
   useEffect(() => {
     adminApi.getAbout()
@@ -147,16 +99,26 @@ export default function AboutAdmin() {
   if (loading) return <div className="py-20 text-center text-muted-foreground">Loading…</div>;
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-xl font-bold">About Page CMS</h2>
-          <p className="text-sm text-muted-foreground">Edit the leader's bio, contact details, and highlights. Changes appear live on the About page.</p>
+          <p className="text-sm text-muted-foreground">Edit the leader's bio, contact details, and highlights. Changes appear in the live preview as you type.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowPreview((v) => !v)}
+            data-testid="about-preview-toggle"
+            className="gap-1.5"
+          >
+            {showPreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            {showPreview ? "Hide preview" : "Show preview"}
+          </Button>
           <Button variant="outline" size="sm" asChild>
             <a href="/about" target="_blank" className="gap-1.5">
-              <Eye className="w-3.5 h-3.5" /> Preview
+              <Eye className="w-3.5 h-3.5" /> Open public page
             </a>
           </Button>
           <Button onClick={handleSave} disabled={saving} className="gap-2 bg-primary hover:bg-primary/90">
@@ -168,6 +130,9 @@ export default function AboutAdmin() {
 
       {error && <p className="text-red-500 text-sm bg-red-50 border border-red-200 rounded-md px-3 py-2">{error}</p>}
       {saved && <p className="text-green-600 text-sm bg-green-50 border border-green-200 rounded-md px-3 py-2">Changes saved successfully.</p>}
+
+      <div className={showPreview ? "grid grid-cols-1 xl:grid-cols-2 gap-6 items-start" : ""}>
+        <div className={`space-y-6 ${showPreview ? "" : "max-w-3xl"}`}>
 
       {/* Basic Info */}
       <Card>
@@ -357,6 +322,41 @@ export default function AboutAdmin() {
           {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {saved ? "Saved!" : "Save All Changes"}
         </Button>
+      </div>
+        </div>
+
+        {showPreview && (
+          <div className="xl:sticky xl:top-4 self-start" data-testid="about-preview-panel">
+            <Card className="overflow-hidden">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2 bg-muted/40 border-b">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-primary" /> Live preview
+                </CardTitle>
+                <div className="flex gap-1 rounded-md border bg-background p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewLang("en")}
+                    data-testid="about-preview-lang-en"
+                    className={`px-2 py-0.5 text-xs rounded ${previewLang === "en" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    EN
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewLang("ta")}
+                    data-testid="about-preview-lang-ta"
+                    className={`px-2 py-0.5 text-xs rounded ${previewLang === "ta" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    தமிழ்
+                  </button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 max-h-[calc(100vh-12rem)] overflow-y-auto bg-background">
+                <AboutView config={config} lang={previewLang} embedded />
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
