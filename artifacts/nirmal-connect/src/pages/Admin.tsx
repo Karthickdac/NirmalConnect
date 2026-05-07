@@ -74,6 +74,21 @@ export default function Admin({ lang = "ta" }: AdminProps) {
 
   const token = getToken() ?? "";
   const role = me?.role ?? "";
+  const isAdminRole = ["super_admin", "admin", "constituency_coordinator"].includes(role);
+  const [mapHeatPoints, setMapHeatPoints] = useState<Array<{ lat: number; lng: number; weight: number }> | undefined>(undefined);
+  useEffect(() => {
+    if (!isAdminRole) { setMapHeatPoints(undefined); return; }
+    const t = getToken();
+    if (!t) return;
+    let cancelled = false;
+    fetch(`/api/admin/analytics/grievances`, { headers: { Authorization: `Bearer ${t}` } })
+      .then(r => (r.ok ? r.json() : null))
+      .then((j: { heatPoints?: Array<{ lat: number; lng: number; weight: number }> } | null) => {
+        if (!cancelled && j?.heatPoints) setMapHeatPoints(j.heatPoints);
+      })
+      .catch(() => { /* non-fatal */ });
+    return () => { cancelled = true; };
+  }, [isAdminRole]);
 
   // Fetch the logged-in officer's assignments so the embedded map can offer
   // a "show only my ward" toggle. Skipped for super_admin/admin who already
@@ -255,6 +270,7 @@ export default function Admin({ lang = "ta" }: AdminProps) {
                 officerAreaIds={isOfficer ? officerAreaIds : undefined}
                 officerPollingStationIds={isOfficer ? officerPollingStationIds : undefined}
                 height="calc(100vh - 130px)"
+                heatPoints={isAdminRole ? mapHeatPoints : undefined}
               />
             </Suspense>
           )}

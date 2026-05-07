@@ -1991,6 +1991,7 @@ router.get(
       const byCategoryMap = new Map<string, number>();
       const byStatusMap = new Map<string, number>();
       const byOfficerMap = new Map<number, { count: number; open: number }>();
+      const byWardCategoryMap = new Map<string, number>(); // key = wardId|category
       const heatBuckets = new Map<string, { lat: number; lng: number; weight: number }>();
       let unmappedCount = 0;
 
@@ -2003,6 +2004,10 @@ router.get(
             cur.resolvedCount += 1;
           }
           byWardMap.set(r.wardId, cur);
+          if (r.category) {
+            const wcKey = `${r.wardId}|${r.category}`;
+            byWardCategoryMap.set(wcKey, (byWardCategoryMap.get(wcKey) ?? 0) + 1);
+          }
         }
         if (r.category) byCategoryMap.set(r.category, (byCategoryMap.get(r.category) ?? 0) + 1);
         if (r.status) byStatusMap.set(r.status, (byStatusMap.get(r.status) ?? 0) + 1);
@@ -2073,7 +2078,19 @@ router.get(
           unmapped: unmappedCount,
         },
         heatPoints: Array.from(heatBuckets.values()),
-        byWard: byWard.slice(0, 10),
+        byWard,
+        byWardTop10: byWard.slice(0, 10),
+        byWardCategory: Array.from(byWardCategoryMap.entries()).map(([key, count]) => {
+          const [wardIdStr, category] = key.split("|");
+          const wid = Number(wardIdStr);
+          return {
+            wardId: wid,
+            wardName: wardMetaById.get(wid)?.name ?? `Ward ${wid}`,
+            wardNameTa: wardMetaById.get(wid)?.nameTa ?? null,
+            category,
+            count,
+          };
+        }),
         byCategory,
         byStatus,
         byOfficer,

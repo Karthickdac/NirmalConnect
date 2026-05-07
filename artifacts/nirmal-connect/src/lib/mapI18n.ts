@@ -89,6 +89,7 @@ export const analyticsTranslations = {
     total: "Total",
     heatmapTitle: "Grievance heatmap",
     analytics: "Analytics",
+    categoryByWard: "Category breakdown per ward (top 10)",
   },
   ta: {
     title: "புகார் பகுப்பாய்வு",
@@ -115,6 +116,7 @@ export const analyticsTranslations = {
     total: "மொத்தம்",
     heatmapTitle: "புகார் வெப்பப்படம்",
     analytics: "பகுப்பாய்வு",
+    categoryByWard: "வார்டு வாரியாக வகை விவரம் (முதல் 10)",
   },
 } as const;
 

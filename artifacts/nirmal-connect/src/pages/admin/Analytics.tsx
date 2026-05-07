@@ -19,6 +19,8 @@ interface AnalyticsResponse {
   totals: { grievances: number; mapped: number; unmapped: number };
   heatPoints: Array<{ lat: number; lng: number; weight: number }>;
   byWard: Array<{ wardId: number; name: string; nameTa: string | null; count: number; avgResolutionHours: number | null }>;
+  byWardTop10: Array<{ wardId: number; name: string; nameTa: string | null; count: number; avgResolutionHours: number | null }>;
+  byWardCategory: Array<{ wardId: number; wardName: string; wardNameTa: string | null; category: string; count: number }>;
   byCategory: Array<{ category: string; count: number }>;
   byStatus: Array<{ status: string; count: number }>;
   byOfficer: Array<{ officerId: number; name: string; role: string | null; total: number; open: number }>;
@@ -246,7 +248,7 @@ export default function Analytics({ lang, officerWardIds, officerAreaIds, office
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={data.byWard.map(w => ({ name: lang === "ta" && w.nameTa ? w.nameTa : w.name, count: w.count }))}>
+                  <BarChart data={data.byWardTop10.map(w => ({ name: lang === "ta" && w.nameTa ? w.nameTa : w.name, count: w.count }))}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-25} textAnchor="end" height={60} interval={0} />
                     <YAxis tick={{ fontSize: 11 }} />
@@ -324,6 +326,39 @@ export default function Analytics({ lang, officerWardIds, officerAreaIds, office
               </CardContent>
             </Card>
           </div>
+
+          {/* Category breakdown per ward (stacked) */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">{t("categoryByWard")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart data={(() => {
+                  // Pivot byWardCategory[] into [{ name, [cat]: count, ... }]
+                  const topWardIds = new Set(data.byWardTop10.map(w => w.wardId));
+                  const rowsByWard = new Map<number, Record<string, string | number>>();
+                  for (const row of data.byWardCategory) {
+                    if (!topWardIds.has(row.wardId)) continue;
+                    const key = lang === "ta" && row.wardNameTa ? row.wardNameTa : row.wardName;
+                    const r = rowsByWard.get(row.wardId) ?? { name: key };
+                    r[row.category] = (r[row.category] as number ?? 0) + row.count;
+                    rowsByWard.set(row.wardId, r);
+                  }
+                  return Array.from(rowsByWard.values());
+                })()}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-25} textAnchor="end" height={60} interval={0} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  {data.byCategory.slice(0, 8).map((c, i) => (
+                    <Bar key={c.category} dataKey={c.category} stackId="cats" fill={COLORS[i % COLORS.length]} />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
           {/* Map with heatmap overlay */}
           <Card>
