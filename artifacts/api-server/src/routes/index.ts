@@ -12,6 +12,7 @@ import grievancesRouter from "./grievances.js";
 import adminRouter from "./admin.js";
 import votersRouter from "./voters.js";
 import householdsRouter from "./households.js";
+import voterExportsRouter from "./voter_exports.js";
 import siteRouter from "./site.js";
 import mapRouter from "./map.js";
 
@@ -32,5 +33,6 @@ router.use(mapRouter);
 router.use(adminRouter);
 router.use(votersRouter);
 router.use(householdsRouter);
+router.use(voterExportsRouter);
 
 export default router;

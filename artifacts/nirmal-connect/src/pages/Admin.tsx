@@ -31,6 +31,8 @@ import HierarchyAdmin from "./admin/HierarchyAdmin";
 import VoterRollAdmin from "./admin/VoterRollAdmin";
 import VotersAdmin from "./admin/VotersAdmin";
 import VoterTagsAdmin from "./admin/VoterTagsAdmin";
+import VoterExportsAdmin from "./admin/VoterExportsAdmin";
+import { Download } from "lucide-react";
 import PressReleasesAdmin from "./admin/PressReleasesAdmin";
 import AssignmentsAdmin from "./admin/AssignmentsAdmin";
 import type { Language } from "@/lib/i18n";
@@ -63,6 +65,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "voters-search", label: "Voters",               icon: Users,        roles: ["super_admin", "admin", "constituency_coordinator", "grievance_officer", "pa_staff"] },
   { id: "voters",       label: "Voter Roll",            icon: ShieldAlert, roles: ["super_admin"] },
   { id: "voter-tags",   label: "Voter Tags",            icon: ShieldAlert, roles: ["super_admin"] },
+  { id: "voter-exports", label: "Voter Exports",        icon: Download,    roles: ["super_admin"] },
   { id: "faqs",         label: "FAQs",               icon: HelpCircle,   roles: ["super_admin", "admin", "pa_staff"] },
   { id: "home",         label: "Home CMS",           icon: HomeIcon,     roles: ["super_admin", "admin"] },
   { id: "about",        label: "About CMS",          icon: UserCircle,   roles: ["super_admin", "admin"] },
@@ -356,6 +359,7 @@ function AdminInner({ lang = "ta" }: AdminProps) {
           {active === "voters"       && <VoterRollAdmin />}
           {active === "voters-search" && <VotersAdmin lang={lang} />}
           {active === "voter-tags" && <VoterTagsAdmin />}
+          {active === "voter-exports" && <VoterExportsAdmin />}
         </main>
       </div>
     </div>

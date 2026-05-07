@@ -17,7 +17,7 @@ import {
 import { useWards } from "@/lib/useWards";
 import { getToken } from "@/lib/auth";
 import { useGetMe } from "@workspace/api-client-react";
-import { Loader2, Search, ChevronLeft, ChevronRight, FileText, Tag as TagIcon, Plus, Pencil, Trash2, X } from "lucide-react";
+import { Loader2, Search, ChevronLeft, ChevronRight, FileText, Tag as TagIcon, Plus, Pencil, Trash2, X, Download } from "lucide-react";
 import type { Language } from "@/lib/i18n";
 import { useVoterTags, type VoterTag } from "./VoterTagsAdmin";
 import HouseholdsTab from "./HouseholdsTab";
@@ -430,6 +430,7 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
               </Button>
             </div>
           </div>
+          <ExportBar filters={filters} total={total} />
         </CardContent>
       </Card>
 
@@ -945,6 +946,167 @@ function NotesPanel({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ── Export bar (task #47) ────────────────────────────────
+// Renders below the filter inputs in the Voters tab. Submits the
+// currently-applied filter set to POST /api/admin/voters/export and
+// streams the response as a download. Above the server-side row
+// threshold the API replies 403 password_required — we surface a
+// password prompt and retry once with the same filter payload.
+function ExportBar({
+  filters,
+  total,
+}: {
+  filters: { q: string; wardId: string; boothId: string; gender: string; minAge: string; maxAge: string; tagIds: number[] };
+  total: number;
+}) {
+  const [running, setRunning] = useState<null | "csv" | "xlsx">(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pwGate, setPwGate] = useState<null | {
+    format: "csv" | "xlsx"; rowCount: number; threshold: number;
+  }>(null);
+  const [password, setPassword] = useState("");
+
+  function buildPayload(): Record<string, unknown> {
+    const f: Record<string, unknown> = {};
+    if (filters.q) f.q = filters.q;
+    if (filters.wardId !== "all") f.wardId = parseInt(filters.wardId, 10);
+    if (filters.boothId !== "all") f.boothId = parseInt(filters.boothId, 10);
+    if (filters.gender !== "all") f.gender = filters.gender;
+    if (filters.minAge) f.minAge = parseInt(filters.minAge, 10);
+    if (filters.maxAge) f.maxAge = parseInt(filters.maxAge, 10);
+    if (filters.tagIds.length > 0) f.tagIds = filters.tagIds;
+    return f;
+  }
+
+  async function runExport(format: "csv" | "xlsx", pw?: string) {
+    setRunning(format);
+    setStatus("Preparing export…");
+    setError(null);
+    try {
+      const tok = getToken();
+      const r = await fetch(`${BASE}/api/admin/voters/export`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(tok ? { Authorization: `Bearer ${tok}` } : {}),
+        },
+        body: JSON.stringify({ format, filters: buildPayload(), ...(pw ? { password: pw } : {}) }),
+      });
+      if (r.status === 403) {
+        const body = await r.json().catch(() => ({}));
+        if (body.error === "password_required") {
+          setRunning(null);
+          setStatus(null);
+          setPwGate({ format, rowCount: body.rowCount ?? 0, threshold: body.threshold ?? 0 });
+          return;
+        }
+        throw new Error(body.message ?? "Forbidden");
+      }
+      if (r.status === 401) {
+        const body = await r.json().catch(() => ({}));
+        throw new Error(body.message ?? "Incorrect password.");
+      }
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        throw new Error(body.error ?? `HTTP ${r.status}`);
+      }
+      const rows = r.headers.get("X-Voter-Export-Rows") ?? "?";
+      setStatus(`Streaming ${rows} rows…`);
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const filename = (r.headers.get("Content-Disposition") ?? "")
+        .match(/filename="([^"]+)"/)?.[1] ?? `voters.${format}`;
+      const a = document.createElement("a");
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+      setStatus(`Downloaded ${rows} rows as ${filename}`);
+      setPwGate(null);
+      setPassword("");
+    } catch (e) {
+      setError((e as Error).message);
+      setStatus(null);
+    } finally {
+      setRunning(null);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2 border-t pt-3 flex-wrap" data-testid="voter-export-bar">
+      <span className="text-xs text-muted-foreground mr-1">
+        Export current filter ({total.toLocaleString()} match{total === 1 ? "" : "es"}):
+      </span>
+      <Button
+        size="sm" variant="outline" className="h-8 text-xs"
+        disabled={running !== null || total === 0}
+        onClick={() => runExport("csv")}
+        data-testid="button-export-csv"
+      >
+        {running === "csv" ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1" />}
+        Export CSV
+      </Button>
+      <Button
+        size="sm" variant="outline" className="h-8 text-xs"
+        disabled={running !== null || total === 0}
+        onClick={() => runExport("xlsx")}
+        data-testid="button-export-xlsx"
+      >
+        {running === "xlsx" ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1" />}
+        Export Excel
+      </Button>
+      {status && <span className="text-xs text-muted-foreground">{status}</span>}
+      {error && <span className="text-xs text-destructive" data-testid="voter-export-error">{error}</span>}
+
+      {pwGate && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => { if (running === null) { setPwGate(null); setPassword(""); } }}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-md w-full p-5 space-y-3"
+            onClick={(e) => e.stopPropagation()}
+            data-testid="voter-export-password-modal"
+          >
+            <h3 className="font-semibold text-base">Confirm large export</h3>
+            <p className="text-sm text-muted-foreground">
+              You're about to download <strong>{pwGate.rowCount.toLocaleString()}</strong> voter records,
+              which is above the {pwGate.threshold.toLocaleString()}-row threshold. Re-enter your account
+              password to confirm.
+            </p>
+            <Input
+              type="password"
+              autoFocus
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && password) runExport(pwGate.format, password); }}
+              placeholder="Your password"
+              data-testid="input-export-password"
+            />
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                variant="ghost" size="sm"
+                disabled={running !== null}
+                onClick={() => { setPwGate(null); setPassword(""); }}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm" className="bg-primary text-white"
+                disabled={!password || running !== null}
+                onClick={() => runExport(pwGate.format, password)}
+                data-testid="button-confirm-export-password"
+              >
+                {running ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : null}
+                Confirm export
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

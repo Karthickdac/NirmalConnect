@@ -16,3 +16,4 @@ export * from "./assignments";
 export * from "./voters";
 export * from "./voter_tags";
 export * from "./households";
+export * from "./voter_exports";
