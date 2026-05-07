@@ -42,6 +42,8 @@ export interface NewsArticle {
   contentTa?: string | null;
   /** @nullable */
   imageUrl?: string | null;
+  /** @nullable */
+  thumbnailUrl?: string | null;
   category: string;
   featured: boolean;
   /** @nullable */
@@ -67,6 +69,8 @@ export interface Event {
   descriptionTa?: string | null;
   /** @nullable */
   imageUrl?: string | null;
+  /** @nullable */
+  thumbnailUrl?: string | null;
   venue: string;
   eventDate: string;
   /** @nullable */
@@ -93,6 +97,8 @@ export interface Activity {
   descriptionTa?: string | null;
   /** @nullable */
   imageUrl?: string | null;
+  /** @nullable */
+  thumbnailUrl?: string | null;
   activityDate: string;
   /** @nullable */
   location?: string | null;

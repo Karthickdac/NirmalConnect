@@ -35,6 +35,14 @@ export default function Activities({ lang }: ActivitiesProps) {
             {data.items.map((activity, idx) => (
               <Card key={activity.id} data-testid={`activity-card-${activity.id}`} className="hover:shadow-md transition-all">
                 <CardContent className="p-5 flex gap-4">
+                  {(activity.thumbnailUrl || activity.imageUrl) && (
+                    <img
+                      src={activity.thumbnailUrl || activity.imageUrl || undefined}
+                      alt={activity.title}
+                      loading="lazy"
+                      className="flex-shrink-0 w-16 h-16 rounded-lg object-cover"
+                    />
+                  )}
                   {/* Date pill */}
                   <div className="flex-shrink-0 text-center bg-primary/10 rounded-xl px-3 py-2 min-w-[56px]">
                     <div className="text-xs text-primary font-bold uppercase">

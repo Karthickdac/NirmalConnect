@@ -36,9 +36,9 @@ export default function Events({ lang }: EventsProps) {
             {data.items.map((event) => (
               <Link key={event.id} href={`/events/${event.id}`}>
                 <Card data-testid={`event-card-${event.id}`} className="group cursor-pointer hover:shadow-lg transition-all hover:-translate-y-1 overflow-hidden h-full">
-                  {event.imageUrl && (
+                  {(event.thumbnailUrl ?? event.imageUrl) && (
                     <div className="h-44 overflow-hidden">
-                      <img src={event.imageUrl} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      <img src={event.thumbnailUrl || event.imageUrl || undefined} alt={event.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                     </div>
                   )}
                   <CardContent className="p-5">

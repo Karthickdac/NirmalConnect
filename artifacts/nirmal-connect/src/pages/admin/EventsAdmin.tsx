@@ -17,6 +17,7 @@ interface EventItem {
   titleTa?: string | null;
   description?: string | null;
   imageUrl?: string | null;
+  thumbnailUrl?: string | null;
   venue: string;
   eventDate: string;
   endDate?: string | null;
@@ -26,7 +27,7 @@ interface EventItem {
 
 const emptyForm = {
   title: "", titleTa: "", description: "", descriptionTa: "",
-  imageUrl: "", venue: "", eventDate: "", endDate: "", category: "general",
+  imageUrl: "", thumbnailUrl: "", venue: "", eventDate: "", endDate: "", category: "general",
 };
 
 export default function EventsAdmin() {
@@ -60,7 +61,8 @@ export default function EventsAdmin() {
     setEditing(item);
     setForm({
       title: item.title, titleTa: item.titleTa ?? "", description: item.description ?? "",
-      descriptionTa: "", imageUrl: item.imageUrl ?? "", venue: item.venue,
+      descriptionTa: "", imageUrl: item.imageUrl ?? "", thumbnailUrl: item.thumbnailUrl ?? "",
+      venue: item.venue,
       eventDate: item.eventDate.slice(0, 10), endDate: item.endDate?.slice(0, 10) ?? "",
       category: item.category,
     });
@@ -71,7 +73,8 @@ export default function EventsAdmin() {
     setSaving(true);
     try {
       const payload = {
-        ...form, imageUrl: form.imageUrl || null, titleTa: form.titleTa || null,
+        ...form, imageUrl: form.imageUrl || null, thumbnailUrl: form.thumbnailUrl || null,
+        titleTa: form.titleTa || null,
         description: form.description || null, endDate: form.endDate || null,
       };
       if (editing) await adminApi.updateEvent(editing.id, payload);
@@ -113,6 +116,14 @@ export default function EventsAdmin() {
             return (
               <Card key={item.id} className="hover:shadow-sm transition-shadow">
                 <CardContent className="p-4 flex items-start gap-4">
+                  {(item.thumbnailUrl ?? item.imageUrl) && (
+                    <img
+                      src={item.thumbnailUrl ?? item.imageUrl ?? ""}
+                      alt=""
+                      loading="lazy"
+                      className="w-14 h-14 rounded-lg object-cover shrink-0"
+                    />
+                  )}
                   <div className="text-center shrink-0 w-12">
                     <p className="text-lg font-bold text-primary leading-none">
                       {new Date(item.eventDate).getDate()}
@@ -201,6 +212,7 @@ export default function EventsAdmin() {
               label="Image"
               value={form.imageUrl}
               onChange={(url) => setForm(f => ({ ...f, imageUrl: url }))}
+              onThumbnailChange={(url) => setForm(f => ({ ...f, thumbnailUrl: url }))}
             />
           </div>
           <DialogFooter>

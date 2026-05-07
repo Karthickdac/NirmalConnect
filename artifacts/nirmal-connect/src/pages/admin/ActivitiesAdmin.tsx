@@ -17,6 +17,7 @@ interface ActivityItem {
   titleTa?: string | null;
   description?: string | null;
   imageUrl?: string | null;
+  thumbnailUrl?: string | null;
   activityDate: string;
   location?: string | null;
   category: string;
@@ -25,7 +26,7 @@ interface ActivityItem {
 
 const emptyForm = {
   title: "", titleTa: "", description: "", descriptionTa: "",
-  imageUrl: "", activityDate: "", location: "", category: "general",
+  imageUrl: "", thumbnailUrl: "", activityDate: "", location: "", category: "general",
 };
 
 export default function ActivitiesAdmin() {
@@ -54,7 +55,7 @@ export default function ActivitiesAdmin() {
     setEditing(item);
     setForm({
       title: item.title, titleTa: item.titleTa ?? "", description: item.description ?? "",
-      descriptionTa: "", imageUrl: item.imageUrl ?? "",
+      descriptionTa: "", imageUrl: item.imageUrl ?? "", thumbnailUrl: item.thumbnailUrl ?? "",
       activityDate: item.activityDate.slice(0, 10), location: item.location ?? "", category: item.category,
     });
     setOpen(true);
@@ -64,7 +65,8 @@ export default function ActivitiesAdmin() {
     setSaving(true);
     try {
       const payload = {
-        ...form, imageUrl: form.imageUrl || null, titleTa: form.titleTa || null,
+        ...form, imageUrl: form.imageUrl || null, thumbnailUrl: form.thumbnailUrl || null,
+        titleTa: form.titleTa || null,
         description: form.description || null, location: form.location || null,
       };
       if (editing) await adminApi.updateActivity(editing.id, payload);
@@ -104,8 +106,8 @@ export default function ActivitiesAdmin() {
           {items.map((item) => (
             <Card key={item.id} className="hover:shadow-sm transition-shadow">
               <CardContent className="p-4 flex items-start gap-4">
-                {item.imageUrl && (
-                  <img src={item.imageUrl} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
+                {(item.thumbnailUrl ?? item.imageUrl) && (
+                  <img src={item.thumbnailUrl ?? item.imageUrl ?? ""} alt="" loading="lazy" className="w-14 h-14 rounded-lg object-cover shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -186,6 +188,7 @@ export default function ActivitiesAdmin() {
               label="Image"
               value={form.imageUrl}
               onChange={(url) => setForm(f => ({ ...f, imageUrl: url }))}
+              onThumbnailChange={(url) => setForm(f => ({ ...f, thumbnailUrl: url }))}
             />
           </div>
           <DialogFooter>

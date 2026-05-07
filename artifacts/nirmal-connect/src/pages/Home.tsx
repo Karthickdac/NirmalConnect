@@ -239,11 +239,12 @@ export default function Home({ lang }: HomeProps) {
                   data-testid={`news-card-${article.id}`}
                   className="group cursor-pointer hover:shadow-lg transition-all hover:-translate-y-1 overflow-hidden"
                 >
-                  {article.imageUrl && (
+                  {(article.thumbnailUrl ?? article.imageUrl) && (
                     <div className="h-40 overflow-hidden">
                       <img
-                        src={article.imageUrl}
+                        src={article.thumbnailUrl || article.imageUrl || undefined}
                         alt={article.title}
+                        loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
@@ -286,9 +287,9 @@ export default function Home({ lang }: HomeProps) {
                     data-testid={`event-card-${event.id}`}
                     className="group cursor-pointer hover:shadow-md transition-all overflow-hidden"
                   >
-                    {event.imageUrl && (
+                    {(event.thumbnailUrl ?? event.imageUrl) && (
                       <div className="h-36 overflow-hidden">
-                        <img src={event.imageUrl} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        <img src={event.thumbnailUrl || event.imageUrl || undefined} alt={event.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                       </div>
                     )}
                     <CardContent className="p-4">
@@ -330,8 +331,9 @@ export default function Home({ lang }: HomeProps) {
                 className="aspect-square rounded-lg overflow-hidden group cursor-pointer"
               >
                 <img
-                  src={item.mediaUrl}
+                  src={item.thumbnailUrl || item.mediaUrl}
                   alt={item.title}
+                  loading="lazy"
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                 />
               </div>

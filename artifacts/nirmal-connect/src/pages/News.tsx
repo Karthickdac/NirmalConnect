@@ -58,9 +58,9 @@ export default function News({ lang }: NewsProps) {
             {filtered.map((article) => (
               <Link key={article.id} href={`/news/${article.id}`}>
                 <Card data-testid={`news-card-${article.id}`} className="group cursor-pointer hover:shadow-lg transition-all hover:-translate-y-1 overflow-hidden h-full">
-                  {article.imageUrl && (
+                  {(article.thumbnailUrl ?? article.imageUrl) && (
                     <div className="h-48 overflow-hidden">
-                      <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <img src={article.thumbnailUrl || article.imageUrl || undefined} alt={article.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     </div>
                   )}
                   <CardContent className="p-5 flex flex-col gap-2">

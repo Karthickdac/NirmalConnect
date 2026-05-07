@@ -1576,6 +1576,8 @@ components:
           type: ["string", "null"]
         imageUrl:
           type: ["string", "null"]
+        thumbnailUrl:
+          type: ["string", "null"]
         category:
           type: string
         featured:
@@ -1627,6 +1629,8 @@ components:
         descriptionTa:
           type: ["string", "null"]
         imageUrl:
+          type: ["string", "null"]
+        thumbnailUrl:
           type: ["string", "null"]
         venue:
           type: string
@@ -1682,6 +1686,8 @@ components:
         descriptionTa:
           type: ["string", "null"]
         imageUrl:
+          type: ["string", "null"]
+        thumbnailUrl:
           type: ["string", "null"]
         activityDate:
           type: string

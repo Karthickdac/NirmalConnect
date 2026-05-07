@@ -9,6 +9,7 @@ export const eventsTable = pgTable("events", {
   description: text("description"),
   descriptionTa: text("description_ta"),
   imageUrl: text("image_url"),
+  thumbnailUrl: text("thumbnail_url"),
   venue: text("venue").notNull(),
   eventDate: timestamp("event_date", { withTimezone: true }).notNull(),
   endDate: timestamp("end_date", { withTimezone: true }),

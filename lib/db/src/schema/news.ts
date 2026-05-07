@@ -9,6 +9,7 @@ export const newsTable = pgTable("news", {
   content: text("content").notNull(),
   contentTa: text("content_ta"),
   imageUrl: text("image_url"),
+  thumbnailUrl: text("thumbnail_url"),
   category: text("category").notNull().default("general"),
   featured: boolean("featured").notNull().default(false),
   publishedAt: timestamp("published_at", { withTimezone: true }),

@@ -39,6 +39,12 @@ function ensureGlobalPasteListener() {
 interface ImageUploaderProps {
   value: string;
   onChange: (url: string) => void;
+  /**
+   * Called with the small (~400px) WebP thumbnail URL produced by the upload
+   * endpoint. Receives an empty string when the image is cleared or when the
+   * server didn't generate a thumbnail (e.g. SVG/GIF).
+   */
+  onThumbnailChange?: (thumbnailUrl: string) => void;
   label?: string;
   placeholder?: string;
   accept?: string;
@@ -48,6 +54,7 @@ interface ImageUploaderProps {
 export default function ImageUploader({
   value,
   onChange,
+  onThumbnailChange,
   label = "Image",
   placeholder = "https://… or upload below",
   accept = "image/*",
@@ -79,6 +86,7 @@ export default function ImageUploader({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? `Upload failed (${res.status})`);
       onChange(data.url as string);
+      onThumbnailChange?.((data.thumbnailUrl as string | null) ?? "");
     } catch (e: unknown) {
       setError((e as Error).message);
     } finally {
@@ -164,7 +172,7 @@ export default function ImageUploader({
             />
             <button
               type="button"
-              onClick={() => onChange("")}
+              onClick={() => { onChange(""); onThumbnailChange?.(""); }}
               className="absolute -top-1.5 -right-1.5 bg-white border rounded-full p-0.5 shadow hover:bg-red-50"
               title="Remove image"
             >

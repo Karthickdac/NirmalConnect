@@ -33,14 +33,42 @@ const adminUpload = multer({
 });
 
 // Resize/compress raster images before persisting. SVGs and small images pass
-// through unchanged. Returns the on-disk filename and final byte size.
+// through unchanged. Returns the on-disk filename and final byte size, plus
+// an optional small ~400px WebP thumbnail for snappy listing pages.
 const MAX_DIMENSION = 1600;
+const THUMB_WIDTH = 400;
 const COMPRESS_THRESHOLD_BYTES = 300 * 1024; // skip re-encoding for already-small files
-async function persistAdminUpload(file: Express.Multer.File): Promise<{ filename: string; size: number; mimeType: string }> {
+
+type PersistedUpload = {
+  filename: string;
+  size: number;
+  mimeType: string;
+  thumbnailFilename?: string;
+};
+
+async function generateThumbnail(srcBuffer: Buffer, baseName: string): Promise<string | undefined> {
+  try {
+    const thumb = await sharp(srcBuffer, { failOn: "none" })
+      .rotate()
+      .resize({ width: THUMB_WIDTH, withoutEnlargement: true })
+      .webp({ quality: 72, effort: 4 })
+      .toBuffer();
+    const thumbFilename = `${baseName}.thumb.webp`;
+    await fs.promises.writeFile(path.join(adminUploadsDir, thumbFilename), thumb);
+    return thumbFilename;
+  } catch (e) {
+    console.warn("[admin] thumbnail generation failed:", e);
+    return undefined;
+  }
+}
+
+async function persistAdminUpload(file: Express.Multer.File): Promise<PersistedUpload> {
   const ext = path.extname(file.originalname).toLowerCase();
   const baseName = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   // Pass-through for SVG and animated GIF — sharp doesn't usefully compress these here.
+  // SVGs are already tiny and resolution-independent; GIFs may be animated and we
+  // don't want to drop frames. No thumbnail is generated for these.
   if (ext === ".svg" || ext === ".gif") {
     const filename = `${baseName}${ext}`;
     await fs.promises.writeFile(path.join(adminUploadsDir, filename), file.buffer);
@@ -62,10 +90,14 @@ async function persistAdminUpload(file: Express.Multer.File): Promise<{ filename
   const needsResize = width > MAX_DIMENSION || height > MAX_DIMENSION;
   const needsRecompress = file.buffer.length > COMPRESS_THRESHOLD_BYTES;
 
+  // Always try to produce a small WebP thumbnail for raster images, even when
+  // the original passes through unchanged — listing pages still benefit.
+  const thumbnailFilename = await generateThumbnail(file.buffer, baseName);
+
   if (!needsResize && !needsRecompress) {
     const filename = `${baseName}${ext}`;
     await fs.promises.writeFile(path.join(adminUploadsDir, filename), file.buffer);
-    return { filename, size: file.buffer.length, mimeType: file.mimetype };
+    return { filename, size: file.buffer.length, mimeType: file.mimetype, thumbnailFilename };
   }
 
   const pipeline = sharp(file.buffer, { failOn: "none" }).rotate();
@@ -82,7 +114,7 @@ async function persistAdminUpload(file: Express.Multer.File): Promise<{ filename
   const out = await pipeline.webp({ quality: 82, effort: 4 }).toBuffer();
   const filename = `${baseName}.webp`;
   await fs.promises.writeFile(path.join(adminUploadsDir, filename), out);
-  return { filename, size: out.length, mimeType: "image/webp" };
+  return { filename, size: out.length, mimeType: "image/webp", thumbnailFilename };
 }
 
 /** Accepts an http(s) URL OR a server-relative path under /uploads or /api/uploads. */
@@ -242,10 +274,15 @@ router.post(
         // Use /api/uploads so the dev/prod path-based proxy (which only routes /api
         // to this service) can serve the file directly from <web origin>/api/uploads/…
         const url = `/api/uploads/admin/${saved.filename}`;
+        const thumbnailUrl = saved.thumbnailFilename
+          ? `/api/uploads/admin/${saved.thumbnailFilename}`
+          : null;
         logAudit(req, "UPLOAD", `image:${saved.filename}`, `${req.file.originalname} (${req.file.size}→${saved.size} bytes)`).catch(() => null);
         res.status(201).json({
           url,
+          thumbnailUrl,
           filename: saved.filename,
+          thumbnailFilename: saved.thumbnailFilename ?? null,
           originalName: req.file.originalname,
           size: saved.size,
           originalSize: req.file.size,
@@ -269,6 +306,7 @@ const NewsBody = z.object({
   content: z.string().min(10),
   contentTa: z.string().optional().nullable(),
   imageUrl: ImageRef.optional().nullable(),
+  thumbnailUrl: ImageRef.optional().nullable(),
   category: z.string().default("general"),
   featured: z.boolean().default(false),
   publishedAt: z.string().optional().nullable(),
@@ -278,10 +316,11 @@ router.post("/admin/news", requireRole(...CMS_ROLES), async (req: AuthRequest, r
   try {
     const body = NewsBody.safeParse(req.body);
     if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
-    const { publishedAt, imageUrl, ...rest } = body.data;
+    const { publishedAt, imageUrl, thumbnailUrl, ...rest } = body.data;
     const [item] = await db.insert(newsTable).values({
       ...rest,
       imageUrl: imageUrl || null,
+      thumbnailUrl: thumbnailUrl || null,
       publishedAt: publishedAt ? new Date(publishedAt) : new Date(),
     }).returning();
     await logAudit(req, "CREATE", `news:${item.id}`, item.title);
@@ -297,10 +336,11 @@ router.put("/admin/news/:id", requireRole(...CMS_ROLES), async (req: AuthRequest
     const id = parseInt(req.params["id"] as string);
     const body = NewsBody.partial().safeParse(req.body);
     if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
-    const { publishedAt, imageUrl, ...rest } = body.data;
+    const { publishedAt, imageUrl, thumbnailUrl, ...rest } = body.data;
     const [item] = await db.update(newsTable).set({
       ...rest,
       ...(imageUrl !== undefined && { imageUrl: imageUrl || null }),
+      ...(thumbnailUrl !== undefined && { thumbnailUrl: thumbnailUrl || null }),
       ...(publishedAt !== undefined && { publishedAt: publishedAt ? new Date(publishedAt) : null }),
     }).where(eq(newsTable.id, id)).returning();
     if (!item) { res.status(404).json({ error: "Not found" }); return; }
@@ -333,6 +373,7 @@ const EventBody = z.object({
   description: z.string().optional().nullable(),
   descriptionTa: z.string().optional().nullable(),
   imageUrl: ImageRef.optional().nullable(),
+  thumbnailUrl: ImageRef.optional().nullable(),
   venue: z.string().min(2),
   eventDate: z.string(),
   endDate: z.string().optional().nullable(),
@@ -343,10 +384,11 @@ router.post("/admin/events", requireRole(...EVENTS_ROLES), async (req: AuthReque
   try {
     const body = EventBody.safeParse(req.body);
     if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
-    const { imageUrl, endDate, ...rest } = body.data;
+    const { imageUrl, thumbnailUrl, endDate, ...rest } = body.data;
     const [item] = await db.insert(eventsTable).values({
       ...rest,
       imageUrl: imageUrl || null,
+      thumbnailUrl: thumbnailUrl || null,
       eventDate: new Date(rest.eventDate),
       endDate: endDate ? new Date(endDate) : null,
     }).returning();
@@ -363,10 +405,11 @@ router.put("/admin/events/:id", requireRole(...EVENTS_ROLES), async (req: AuthRe
     const id = parseInt(req.params["id"] as string);
     const body = EventBody.partial().safeParse(req.body);
     if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
-    const { imageUrl, eventDate, endDate, ...rest } = body.data;
+    const { imageUrl, thumbnailUrl, eventDate, endDate, ...rest } = body.data;
     const [item] = await db.update(eventsTable).set({
       ...rest,
       ...(imageUrl !== undefined && { imageUrl: imageUrl || null }),
+      ...(thumbnailUrl !== undefined && { thumbnailUrl: thumbnailUrl || null }),
       ...(eventDate && { eventDate: new Date(eventDate) }),
       ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
     }).where(eq(eventsTable.id, id)).returning();
@@ -400,6 +443,7 @@ const ActivityBody = z.object({
   description: z.string().optional().nullable(),
   descriptionTa: z.string().optional().nullable(),
   imageUrl: ImageRef.optional().nullable(),
+  thumbnailUrl: ImageRef.optional().nullable(),
   activityDate: z.string(),
   location: z.string().optional().nullable(),
   category: z.string().default("general"),
@@ -409,10 +453,11 @@ router.post("/admin/activities", requireRole(...EVENTS_ROLES), async (req: AuthR
   try {
     const body = ActivityBody.safeParse(req.body);
     if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
-    const { imageUrl, ...rest } = body.data;
+    const { imageUrl, thumbnailUrl, ...rest } = body.data;
     const [item] = await db.insert(activitiesTable).values({
       ...rest,
       imageUrl: imageUrl || null,
+      thumbnailUrl: thumbnailUrl || null,
       activityDate: new Date(rest.activityDate),
     }).returning();
     await logAudit(req, "CREATE", `activities:${item.id}`, item.title);
@@ -428,10 +473,11 @@ router.put("/admin/activities/:id", requireRole(...EVENTS_ROLES), async (req: Au
     const id = parseInt(req.params["id"] as string);
     const body = ActivityBody.partial().safeParse(req.body);
     if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
-    const { imageUrl, activityDate, ...rest } = body.data;
+    const { imageUrl, thumbnailUrl, activityDate, ...rest } = body.data;
     const [item] = await db.update(activitiesTable).set({
       ...rest,
       ...(imageUrl !== undefined && { imageUrl: imageUrl || null }),
+      ...(thumbnailUrl !== undefined && { thumbnailUrl: thumbnailUrl || null }),
       ...(activityDate && { activityDate: new Date(activityDate) }),
     }).where(eq(activitiesTable.id, id)).returning();
     if (!item) { res.status(404).json({ error: "Not found" }); return; }

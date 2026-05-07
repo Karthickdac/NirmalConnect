@@ -20,6 +20,7 @@ interface NewsItem {
   content: string;
   contentTa?: string | null;
   imageUrl?: string | null;
+  thumbnailUrl?: string | null;
   category: string;
   featured: boolean;
   publishedAt?: string | null;
@@ -40,7 +41,7 @@ export default function NewsAdmin({ fixedCategory, categoryLabel = "Article", se
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<NewsItem | null>(null);
-  const [form, setForm] = useState({ title: "", titleTa: "", content: "", contentTa: "", imageUrl: "", category: defaultCategory, featured: false, publishedAt: "" });
+  const [form, setForm] = useState({ title: "", titleTa: "", content: "", contentTa: "", imageUrl: "", thumbnailUrl: "", category: defaultCategory, featured: false, publishedAt: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,7 +57,7 @@ export default function NewsAdmin({ fixedCategory, categoryLabel = "Article", se
 
   function openCreate() {
     setEditing(null);
-    setForm({ title: "", titleTa: "", content: "", contentTa: "", imageUrl: "", category: defaultCategory, featured: false, publishedAt: "" });
+    setForm({ title: "", titleTa: "", content: "", contentTa: "", imageUrl: "", thumbnailUrl: "", category: defaultCategory, featured: false, publishedAt: "" });
     setOpen(true);
   }
 
@@ -65,6 +66,7 @@ export default function NewsAdmin({ fixedCategory, categoryLabel = "Article", se
     setForm({
       title: item.title, titleTa: item.titleTa ?? "", content: item.content,
       contentTa: item.contentTa ?? "", imageUrl: item.imageUrl ?? "",
+      thumbnailUrl: item.thumbnailUrl ?? "",
       category: item.category, featured: item.featured,
       publishedAt: item.publishedAt ? item.publishedAt.slice(0, 10) : "",
     });
@@ -77,6 +79,7 @@ export default function NewsAdmin({ fixedCategory, categoryLabel = "Article", se
       const payload = {
         ...form,
         imageUrl: form.imageUrl || null,
+        thumbnailUrl: form.thumbnailUrl || null,
         titleTa: form.titleTa || null,
         contentTa: form.contentTa || null,
         publishedAt: form.publishedAt || null,
@@ -127,8 +130,8 @@ export default function NewsAdmin({ fixedCategory, categoryLabel = "Article", se
           {items.map((item) => (
             <Card key={item.id} className="hover:shadow-sm transition-shadow">
               <CardContent className="p-4 flex items-start gap-4">
-                {item.imageUrl && (
-                  <img src={item.imageUrl} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
+                {(item.thumbnailUrl ?? item.imageUrl) && (
+                  <img src={item.thumbnailUrl ?? item.imageUrl ?? ""} alt="" loading="lazy" className="w-14 h-14 rounded-lg object-cover shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -201,6 +204,7 @@ export default function NewsAdmin({ fixedCategory, categoryLabel = "Article", se
               label="Image"
               value={form.imageUrl}
               onChange={(url) => setForm(f => ({ ...f, imageUrl: url }))}
+              onThumbnailChange={(url) => setForm(f => ({ ...f, thumbnailUrl: url }))}
             />
             <div>
               <Label className="text-xs">{categoryLabel ? "Category" : "Category"}</Label>
