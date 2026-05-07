@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell, Legend, LineChart, Line,
 } from "recharts";
-import { BarChart3, MapPin, Filter as FilterIcon, AlertTriangle, Download, FileText } from "lucide-react";
+import { BarChart3, MapPin, Filter as FilterIcon, AlertTriangle, Download, FileText, TrendingUp } from "lucide-react";
 import { getToken } from "@/lib/auth";
 import type { Language } from "@/lib/i18n";
 import { tAnalytics } from "@/lib/mapI18n";
@@ -26,6 +26,8 @@ interface AnalyticsResponse {
   byCategory: Array<{ category: string; count: number }>;
   byStatus: Array<{ status: string; count: number }>;
   byOfficer: Array<{ officerId: number; name: string; role: string | null; total: number; open: number }>;
+  trend: Array<{ bucket: string; submitted: number; resolved: number }>;
+  trendGranularity: "day" | "week" | "month";
   cachedAt: string;
   cacheTtlSeconds: number;
 }
@@ -287,6 +289,38 @@ export default function Analytics({ lang, officerWardIds, officerAreaIds, office
               </CardContent>
             </Card>
           </div>
+
+          {/* Trend over time */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary" />
+                {t("trendTitle")}
+                <span className="text-xs font-normal text-muted-foreground ml-1">
+                  {data.trendGranularity === "day" ? t("trendByDay") : data.trendGranularity === "week" ? t("trendByWeek") : t("trendByMonth")}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.trend.length === 0 || data.trend.every(p => p.submitted === 0 && p.resolved === 0) ? (
+                <div className="text-center text-sm text-muted-foreground py-10" data-testid="analytics-trend-empty">
+                  {t("trendEmpty")}
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <LineChart data={data.trend} data-testid="analytics-trend-chart">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="bucket" tick={{ fontSize: 11 }} angle={-25} textAnchor="end" height={60} interval="preserveStartEnd" />
+                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                    <Tooltip />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Line type="monotone" dataKey="submitted" name={t("trendSubmitted")} stroke="#c9181e" strokeWidth={2} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="resolved" name={t("trendResolved")} stroke="#16a34a" strokeWidth={2} dot={{ r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Charts grid */}
           <div ref={chartsRef} className="grid grid-cols-1 lg:grid-cols-2 gap-4">

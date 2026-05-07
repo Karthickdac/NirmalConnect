@@ -93,6 +93,13 @@ export const analyticsTranslations = {
     downloadCsv: "Download CSV",
     downloadPdf: "Download PDF",
     exporting: "Preparing export…",
+    trendTitle: "Submitted vs resolved over time",
+    trendSubmitted: "Submitted",
+    trendResolved: "Resolved",
+    trendByDay: "by day",
+    trendByWeek: "by week",
+    trendByMonth: "by month",
+    trendEmpty: "No grievances in this date range.",
   },
   ta: {
     title: "புகார் பகுப்பாய்வு",
@@ -123,6 +130,13 @@ export const analyticsTranslations = {
     downloadCsv: "CSV பதிவிறக்கம்",
     downloadPdf: "PDF பதிவிறக்கம்",
     exporting: "ஏற்றுமதி தயாராகிறது…",
+    trendTitle: "காலப்போக்கில் பெறப்பட்டவை vs தீர்க்கப்பட்டவை",
+    trendSubmitted: "பெறப்பட்டவை",
+    trendResolved: "தீர்க்கப்பட்டவை",
+    trendByDay: "நாள் வாரியாக",
+    trendByWeek: "வாரம் வாரியாக",
+    trendByMonth: "மாதம் வாரியாக",
+    trendEmpty: "இந்த தேதி வரம்பில் புகார்கள் இல்லை.",
   },
 } as const;
 

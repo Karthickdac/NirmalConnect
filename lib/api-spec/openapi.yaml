@@ -2913,6 +2913,18 @@ components:
               total: { type: integer }
               open: { type: integer }
             required: [officerId, name, total, open]
+        trend:
+          type: array
+          items:
+            type: object
+            properties:
+              bucket: { type: string, description: "ISO date (YYYY-MM-DD) anchoring the bucket start" }
+              submitted: { type: integer }
+              resolved: { type: integer }
+            required: [bucket, submitted, resolved]
+        trendGranularity:
+          type: string
+          enum: [day, week, month]
         cachedAt: { type: string, format: date-time }
         cacheTtlSeconds: { type: integer }
       required: [totals, heatPoints, byWard, byWardTop10, byWardCategory, byCategory, byStatus, byOfficer]

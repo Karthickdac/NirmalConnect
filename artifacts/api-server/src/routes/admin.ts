@@ -2114,6 +2114,64 @@ router.get(
       const heatBuckets = new Map<string, { lat: number; lng: number; weight: number }>();
       let unmappedCount = 0;
 
+      // Trend buckets: pick granularity from the resolved date range so the
+      // chart stays readable for both 7-day and 2-year windows.
+      let minTs = Number.POSITIVE_INFINITY;
+      let maxTs = Number.NEGATIVE_INFINITY;
+      for (const r of rows) {
+        if (r.createdAt) {
+          const t = r.createdAt.getTime();
+          if (t < minTs) minTs = t;
+          if (t > maxTs) maxTs = t;
+        }
+        if (r.resolvedAt) {
+          const t = r.resolvedAt.getTime();
+          if (t < minTs) minTs = t;
+          if (t > maxTs) maxTs = t;
+        }
+      }
+      const rangeStartTs = fromDate && !isNaN(fromDate.getTime()) ? fromDate.getTime() : (Number.isFinite(minTs) ? minTs : Date.now());
+      const rangeEndTs = toDate && !isNaN(toDate.getTime()) ? toDate.getTime() : (Number.isFinite(maxTs) ? maxTs : Date.now());
+      const rangeDays = Math.max(1, Math.ceil((rangeEndTs - rangeStartTs) / 86_400_000));
+      const granularity: "day" | "week" | "month" =
+        rangeDays <= 31 ? "day" : rangeDays <= 180 ? "week" : "month";
+
+      const bucketKey = (d: Date): string => {
+        const u = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+        if (granularity === "day") {
+          return u.toISOString().slice(0, 10);
+        }
+        if (granularity === "week") {
+          // ISO week: Monday-start; key = Monday of that week (YYYY-MM-DD)
+          const day = u.getUTCDay(); // 0..6, 0=Sun
+          const diff = (day + 6) % 7; // days since Monday
+          u.setUTCDate(u.getUTCDate() - diff);
+          return u.toISOString().slice(0, 10);
+        }
+        // month: YYYY-MM-01
+        return `${u.getUTCFullYear()}-${String(u.getUTCMonth() + 1).padStart(2, "0")}-01`;
+      };
+      const trendMap = new Map<string, { submitted: number; resolved: number }>();
+      const seedBucket = (k: string) => {
+        if (!trendMap.has(k)) trendMap.set(k, { submitted: 0, resolved: 0 });
+      };
+      // Pre-seed buckets across the full range so the chart shows zero-points
+      // (avoids visual gaps when a week/day has no activity).
+      const seedStart = new Date(rangeStartTs);
+      const seedEnd = new Date(rangeEndTs);
+      const startKey = bucketKey(seedStart);
+      const endKey = bucketKey(seedEnd);
+      let cursor = new Date(`${startKey}T00:00:00.000Z`);
+      const stop = new Date(`${endKey}T00:00:00.000Z`);
+      // Cap at 366 buckets defensively
+      let safety = 366;
+      while (cursor.getTime() <= stop.getTime() && safety-- > 0) {
+        seedBucket(bucketKey(cursor));
+        if (granularity === "day") cursor.setUTCDate(cursor.getUTCDate() + 1);
+        else if (granularity === "week") cursor.setUTCDate(cursor.getUTCDate() + 7);
+        else cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1));
+      }
+
       for (const r of rows) {
         if (r.wardId != null) {
           const cur = byWardMap.get(r.wardId) ?? { count: 0, resolvedSeconds: 0, resolvedCount: 0 };
@@ -2144,7 +2202,20 @@ router.get(
         } else {
           unmappedCount += 1;
         }
+        if (r.createdAt) {
+          const k = bucketKey(r.createdAt);
+          seedBucket(k);
+          trendMap.get(k)!.submitted += 1;
+        }
+        if (r.resolvedAt) {
+          const k = bucketKey(r.resolvedAt);
+          seedBucket(k);
+          trendMap.get(k)!.resolved += 1;
+        }
       }
+      const trend = Array.from(trendMap.entries())
+        .map(([bucket, v]) => ({ bucket, submitted: v.submitted, resolved: v.resolved }))
+        .sort((a, b) => a.bucket.localeCompare(b.bucket));
 
       const officerIds = Array.from(byOfficerMap.keys());
       const officerNames = officerIds.length > 0
@@ -2213,6 +2284,8 @@ router.get(
         byCategory,
         byStatus,
         byOfficer,
+        trend,
+        trendGranularity: granularity,
         cachedAt: new Date().toISOString(),
         cacheTtlSeconds: ANALYTICS_TTL_MS / 1000,
       };

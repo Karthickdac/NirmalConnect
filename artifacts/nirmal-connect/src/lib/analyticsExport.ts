@@ -9,6 +9,8 @@ export interface AnalyticsExportData {
   byCategory: Array<{ category: string; count: number }>;
   byOfficer: Array<{ officerId: number; name: string; role: string | null; total: number; open: number }>;
   byStatus: Array<{ status: string; count: number }>;
+  trend?: Array<{ bucket: string; submitted: number; resolved: number }>;
+  trendGranularity?: "day" | "week" | "month";
   cachedAt: string;
 }
 
