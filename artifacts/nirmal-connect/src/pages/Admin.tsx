@@ -86,8 +86,11 @@ function AdminInner({ lang = "ta" }: AdminProps) {
   useEffect(() => { if (!isAuthenticated()) setLocation("/login"); }, []);
   useEffect(() => { if (error) { removeToken(); setLocation("/login"); } }, [error]);
 
-  function logout() {
-    if (!confirmDiscard("You have unsaved changes. Discard them and sign out?")) return;
+  async function logout() {
+    const ok = await confirmDiscard(
+      "You have unsaved changes. If you sign out now, they will be lost.",
+    );
+    if (!ok) return;
     removeToken();
     setLocation("/login");
   }
@@ -175,9 +178,12 @@ function AdminInner({ lang = "ta" }: AdminProps) {
     }
   }, [role]);
 
-  function navigate(id: string) {
+  async function navigate(id: string) {
     if (id === active) { setSidebarOpen(false); return; }
-    if (!confirmDiscard()) return;
+    const ok = await confirmDiscard(
+      "You have unsaved changes on this page. Switch sections and discard them?",
+    );
+    if (!ok) return;
     setActive(id);
     setSidebarOpen(false);
   }
