@@ -14,3 +14,4 @@ export * from "./wards";
 export * from "./hierarchy";
 export * from "./assignments";
 export * from "./voters";
+export * from "./voter_tags";

@@ -7,8 +7,9 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import {
   votersTable, voterImportsTable, pollingStationsTable, auditLogTable,
+  voterTagsTable, voterTagAssignmentsTable, voterNotesTable,
 } from "@workspace/db/schema";
-import { eq, desc, sql, and, inArray, or, gte, lte } from "drizzle-orm";
+import { eq, desc, asc, sql, and, inArray, or, gte, lte } from "drizzle-orm";
 import { z } from "zod";
 import multer from "multer";
 import { createHash } from "node:crypto";
@@ -617,6 +618,8 @@ const searchQuerySchema = z.object({
   gender: z.enum(["M", "F", "O"]).optional(),
   minAge: z.coerce.number().int().min(0).max(150).optional(),
   maxAge: z.coerce.number().int().min(0).max(150).optional(),
+  // Comma-separated tag-id list. Voters matching ANY of the tags pass.
+  tagIds: z.string().trim().max(200).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(25),
 });
@@ -634,7 +637,11 @@ router.get("/admin/voters", requireStaff, async (req: AuthRequest, res) => {
       res.status(400).json({ error: "Invalid query", details: parsed.error.flatten() });
       return;
     }
-    const { q, boothId, wardId, gender, minAge, maxAge, page, limit } = parsed.data;
+    const { q, boothId, wardId, gender, minAge, maxAge, tagIds: tagIdsRaw, page, limit } = parsed.data;
+    const tagIdList = (tagIdsRaw ?? "")
+      .split(",")
+      .map((s) => Number.parseInt(s.trim(), 10))
+      .filter((n) => Number.isFinite(n) && n > 0);
 
     const scope = await getVoterScopeForUser(req.user);
     const scopedBoothIds = await resolveScopeBoothIds(scope);
@@ -677,6 +684,15 @@ router.get("/admin/voters", requireStaff, async (req: AuthRequest, res) => {
     if (gender) conds.push(eq(votersTable.gender, gender));
     if (minAge != null) conds.push(gte(votersTable.age, minAge));
     if (maxAge != null) conds.push(lte(votersTable.age, maxAge));
+    if (tagIdList.length > 0) {
+      // "Has any of these tags" — EXISTS subquery is index-friendly via
+      // the (voter_id, tag_id) PK and the tag_id helper index.
+      const taggedVoters = db
+        .select({ vid: voterTagAssignmentsTable.voterId })
+        .from(voterTagAssignmentsTable)
+        .where(inArray(voterTagAssignmentsTable.tagId, tagIdList));
+      conds.push(inArray(votersTable.id, taggedVoters));
+    }
 
     // EPIC short-circuit: exact match overrides fuzzy name search.
     let usedEpicShortCircuit = false;
@@ -809,14 +825,470 @@ router.get("/admin/voters/:id", requireStaff, async (req: AuthRequest, res) => {
       }
     }
 
+    // Include current tag assignments inline so the detail panel
+    // doesn't need a second round-trip.
+    const tagRows = await db
+      .select({
+        id: voterTagsTable.id,
+        name: voterTagsTable.name,
+        nameTa: voterTagsTable.nameTa,
+        color: voterTagsTable.color,
+        sortOrder: voterTagsTable.sortOrder,
+      })
+      .from(voterTagAssignmentsTable)
+      .innerJoin(voterTagsTable, eq(voterTagsTable.id, voterTagAssignmentsTable.tagId))
+      .where(eq(voterTagAssignmentsTable.voterId, row.id))
+      .orderBy(asc(voterTagsTable.sortOrder), asc(voterTagsTable.id));
+
     await logVoterAudit(req, "VOTER_READ", `voter:${row.epicNumber}`, `voter_id=${row.id}`);
+    res.json({
+      ...row,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+      tags: tagRows,
+    });
+  } catch (err) {
+    console.error("[voters] detail:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Voter tags & private notes (task #44) ────────────────────────
+//
+// Tag catalog is super-admin–maintained. Per-voter tag assignment and
+// note CRUD respect the same area scope as voter search/detail —
+// out-of-scope writes return 404 (not 403) to avoid leaking voter
+// existence outside an officer's wards.
+
+const DEFAULT_VOTER_TAGS: Array<{ name: string; nameTa: string; color: string; sortOrder: number }> = [
+  { name: "Supporter",        nameTa: "ஆதரவாளர்",         color: "#16a34a", sortOrder: 10 },
+  { name: "Likely Supporter", nameTa: "சாத்தியமான ஆதரவாளர்", color: "#65a30d", sortOrder: 20 },
+  { name: "Undecided",        nameTa: "முடிவெடுக்கவில்லை",    color: "#a16207", sortOrder: 30 },
+  { name: "Likely Opposed",   nameTa: "சாத்தியமான எதிர்ப்பு",   color: "#ea580c", sortOrder: 40 },
+  { name: "Opposed",          nameTa: "எதிர்ப்பு",             color: "#dc2626", sortOrder: 50 },
+  { name: "Contacted",        nameTa: "தொடர்பு கொள்ளப்பட்டது",  color: "#2563eb", sortOrder: 60 },
+  { name: "Do Not Contact",   nameTa: "தொடர்பு கொள்ள வேண்டாம்", color: "#475569", sortOrder: 70 },
+];
+
+let didSeedDefaultTags = false;
+async function ensureDefaultVoterTags(): Promise<void> {
+  if (didSeedDefaultTags) return;
+  didSeedDefaultTags = true;
+  try {
+    const [{ n }] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(voterTagsTable);
+    if (n === 0) {
+      await db.insert(voterTagsTable).values(DEFAULT_VOTER_TAGS).onConflictDoNothing();
+    }
+  } catch (e) {
+    // Don't crash boot — leave seeding to the next call.
+    didSeedDefaultTags = false;
+    console.warn("[voters] default tag seed failed:", e);
+  }
+}
+
+// ── Tag catalog CRUD ─────────────────────────────────────────────
+router.get("/admin/voter-tags", requireStaff, async (_req: AuthRequest, res) => {
+  try {
+    await ensureDefaultVoterTags();
+    const rows = await db
+      .select()
+      .from(voterTagsTable)
+      .orderBy(asc(voterTagsTable.sortOrder), asc(voterTagsTable.id));
+    res.json({
+      items: rows.map((r) => ({
+        ...r,
+        createdAt: r.createdAt.toISOString(),
+        updatedAt: r.updatedAt.toISOString(),
+      })),
+    });
+  } catch (err) {
+    console.error("[voters] list tags:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const tagBodySchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  nameTa: z.string().trim().max(80).optional().nullable(),
+  color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  sortOrder: z.coerce.number().int().min(0).max(9999).optional(),
+});
+
+router.post(
+  "/admin/voter-tags",
+  requireStaff,
+  requireRole("super_admin"),
+  async (req: AuthRequest, res) => {
+    try {
+      const parsed = tagBodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid", details: parsed.error.flatten() });
+        return;
+      }
+      const [row] = await db
+        .insert(voterTagsTable)
+        .values({
+          name: parsed.data.name,
+          nameTa: parsed.data.nameTa ?? null,
+          color: parsed.data.color ?? "#6366f1",
+          sortOrder: parsed.data.sortOrder ?? 100,
+          createdBy: req.user?.id ?? null,
+        })
+        .returning();
+      await logVoterAudit(req, "VOTER_TAG_CREATE", `voter_tag:${row.id}`, row.name);
+      res.status(201).json({
+        ...row,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      if (/unique/i.test(msg)) {
+        res.status(409).json({ error: "A tag with that name already exists" });
+        return;
+      }
+      console.error("[voters] create tag:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+router.put(
+  "/admin/voter-tags/:id",
+  requireStaff,
+  requireRole("super_admin"),
+  async (req: AuthRequest, res) => {
+    try {
+      const id = Number.parseInt(String(req.params.id), 10);
+      if (!Number.isFinite(id) || id <= 0) { res.status(400).json({ error: "Invalid id" }); return; }
+      const parsed = tagBodySchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid", details: parsed.error.flatten() });
+        return;
+      }
+      const patch: Record<string, unknown> = {};
+      if (parsed.data.name != null) patch.name = parsed.data.name;
+      if (parsed.data.nameTa !== undefined) patch.nameTa = parsed.data.nameTa ?? null;
+      if (parsed.data.color != null) patch.color = parsed.data.color;
+      if (parsed.data.sortOrder != null) patch.sortOrder = parsed.data.sortOrder;
+      const [row] = await db
+        .update(voterTagsTable)
+        .set(patch)
+        .where(eq(voterTagsTable.id, id))
+        .returning();
+      if (!row) { res.status(404).json({ error: "Not found" }); return; }
+      await logVoterAudit(req, "VOTER_TAG_UPDATE", `voter_tag:${row.id}`, row.name);
+      res.json({
+        ...row,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+      });
+    } catch (err) {
+      console.error("[voters] update tag:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+router.delete(
+  "/admin/voter-tags/:id",
+  requireStaff,
+  requireRole("super_admin"),
+  async (req: AuthRequest, res) => {
+    try {
+      const id = Number.parseInt(String(req.params.id), 10);
+      if (!Number.isFinite(id) || id <= 0) { res.status(400).json({ error: "Invalid id" }); return; }
+      const [row] = await db
+        .delete(voterTagsTable)
+        .where(eq(voterTagsTable.id, id))
+        .returning();
+      if (!row) { res.status(404).json({ error: "Not found" }); return; }
+      await logVoterAudit(req, "VOTER_TAG_DELETE", `voter_tag:${id}`, row.name);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("[voters] delete tag:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+// ── Per-voter scope helper ────────────────────────────────────────
+// Returns the voter row (epic + boothId) when the user may access it,
+// otherwise null. Callers should respond with 404 (not 403) so we
+// don't leak voter existence outside an officer's assigned wards.
+async function loadVoterForUser(
+  user: { id: number; role: string },
+  voterId: number,
+): Promise<{ id: number; epicNumber: string; pollingStationId: number | null } | null> {
+  const [row] = await db
+    .select({
+      id: votersTable.id,
+      epicNumber: votersTable.epicNumber,
+      pollingStationId: votersTable.pollingStationId,
+    })
+    .from(votersTable)
+    .where(eq(votersTable.id, voterId))
+    .limit(1);
+  if (!row) return null;
+  const scope = await getVoterScopeForUser(user);
+  if (scope.unrestricted) return row;
+  const allowed = await resolveScopeBoothIds(scope);
+  const inScope =
+    row.pollingStationId != null &&
+    (allowed?.includes(row.pollingStationId) ?? false);
+  return inScope ? row : null;
+}
+
+// ── Per-voter tags ───────────────────────────────────────────────
+router.get("/admin/voters/:id/tags", requireStaff, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const id = Number.parseInt(String(req.params.id), 10);
+    if (!Number.isFinite(id) || id <= 0) { res.status(400).json({ error: "Invalid id" }); return; }
+    const voter = await loadVoterForUser(req.user, id);
+    if (!voter) { res.status(404).json({ error: "Not found" }); return; }
+    const rows = await db
+      .select({
+        id: voterTagsTable.id,
+        name: voterTagsTable.name,
+        nameTa: voterTagsTable.nameTa,
+        color: voterTagsTable.color,
+        sortOrder: voterTagsTable.sortOrder,
+        assignedBy: voterTagAssignmentsTable.assignedBy,
+        assignedByName: voterTagAssignmentsTable.assignedByName,
+        assignedAt: voterTagAssignmentsTable.assignedAt,
+      })
+      .from(voterTagAssignmentsTable)
+      .innerJoin(voterTagsTable, eq(voterTagsTable.id, voterTagAssignmentsTable.tagId))
+      .where(eq(voterTagAssignmentsTable.voterId, id))
+      .orderBy(asc(voterTagsTable.sortOrder), asc(voterTagsTable.id));
+    await logVoterAudit(req, "VOTER_TAG_READ", `voter:${voter.epicNumber}`, `count=${rows.length}`);
+    res.json({
+      items: rows.map((r) => ({ ...r, assignedAt: r.assignedAt.toISOString() })),
+    });
+  } catch (err) {
+    console.error("[voters] list voter tags:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const tagAssignBodySchema = z.object({
+  tagIds: z.array(z.number().int().positive()).max(50),
+});
+
+router.put("/admin/voters/:id/tags", requireStaff, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const id = Number.parseInt(String(req.params.id), 10);
+    if (!Number.isFinite(id) || id <= 0) { res.status(400).json({ error: "Invalid id" }); return; }
+    const parsed = tagAssignBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid", details: parsed.error.flatten() });
+      return;
+    }
+    const voter = await loadVoterForUser(req.user, id);
+    if (!voter) {
+      await logVoterAudit(req, "VOTER_TAG_DENIED", `voter:${id}`, "out_of_scope");
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    const wanted = Array.from(new Set(parsed.data.tagIds));
+    // Validate every requested tag exists (avoids dangling FK errors and
+    // gives the UI a clearer 400 than the raw FK violation).
+    if (wanted.length > 0) {
+      const known = await db
+        .select({ id: voterTagsTable.id })
+        .from(voterTagsTable)
+        .where(inArray(voterTagsTable.id, wanted));
+      if (known.length !== wanted.length) {
+        res.status(400).json({ error: "Unknown tag id" });
+        return;
+      }
+    }
+    // Replace strategy: delete-then-insert in a transaction. Tag count
+    // per voter is small (<10 typically) so a full rewrite is cheaper
+    // than diffing.
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(voterTagAssignmentsTable)
+        .where(eq(voterTagAssignmentsTable.voterId, id));
+      if (wanted.length > 0) {
+        await tx.insert(voterTagAssignmentsTable).values(
+          wanted.map((tagId) => ({
+            voterId: id,
+            tagId,
+            assignedBy: req.user!.id,
+            assignedByName: req.user!.name,
+          })),
+        );
+      }
+    });
+    await logVoterAudit(
+      req, "VOTER_TAG_ASSIGN",
+      `voter:${voter.epicNumber}`,
+      `tags=${wanted.join(",")}`,
+    );
+    // Re-read assigned tags so the response matches GET shape
+    // (UI caches this as the source of truth for the chip list).
+    const assigned = wanted.length === 0 ? [] : await db
+      .select({
+        id: voterTagsTable.id,
+        name: voterTagsTable.name,
+        nameTa: voterTagsTable.nameTa,
+        color: voterTagsTable.color,
+        sortOrder: voterTagsTable.sortOrder,
+      })
+      .from(voterTagsTable)
+      .where(inArray(voterTagsTable.id, wanted))
+      .orderBy(asc(voterTagsTable.sortOrder), asc(voterTagsTable.id));
+    res.json({ items: assigned });
+  } catch (err) {
+    console.error("[voters] assign tags:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Per-voter notes ──────────────────────────────────────────────
+router.get("/admin/voters/:id/notes", requireStaff, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const id = Number.parseInt(String(req.params.id), 10);
+    if (!Number.isFinite(id) || id <= 0) { res.status(400).json({ error: "Invalid id" }); return; }
+    const voter = await loadVoterForUser(req.user, id);
+    if (!voter) { res.status(404).json({ error: "Not found" }); return; }
+    const rows = await db
+      .select()
+      .from(voterNotesTable)
+      .where(eq(voterNotesTable.voterId, id))
+      .orderBy(desc(voterNotesTable.createdAt));
+    await logVoterAudit(req, "VOTER_NOTE_READ", `voter:${voter.epicNumber}`, `count=${rows.length}`);
+    res.json({
+      items: rows.map((r) => ({
+        ...r,
+        createdAt: r.createdAt.toISOString(),
+        updatedAt: r.updatedAt.toISOString(),
+      })),
+    });
+  } catch (err) {
+    console.error("[voters] list notes:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const noteBodySchema = z.object({
+  body: z.string().trim().min(1).max(4000),
+});
+
+router.post("/admin/voters/:id/notes", requireStaff, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const id = Number.parseInt(String(req.params.id), 10);
+    if (!Number.isFinite(id) || id <= 0) { res.status(400).json({ error: "Invalid id" }); return; }
+    const parsed = noteBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid", details: parsed.error.flatten() });
+      return;
+    }
+    const voter = await loadVoterForUser(req.user, id);
+    if (!voter) {
+      await logVoterAudit(req, "VOTER_NOTE_DENIED", `voter:${id}`, "out_of_scope");
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    const [row] = await db
+      .insert(voterNotesTable)
+      .values({
+        voterId: id,
+        body: parsed.data.body,
+        authorId: req.user.id,
+        authorName: req.user.name,
+      })
+      .returning();
+    await logVoterAudit(req, "VOTER_NOTE_CREATE", `voter:${voter.epicNumber}`, `note_id=${row.id}`);
+    res.status(201).json({
+      ...row,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    });
+  } catch (err) {
+    console.error("[voters] create note:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const ADMIN_NOTE_ROLES = new Set(["super_admin", "admin"]);
+
+router.put("/admin/voters/:id/notes/:noteId", requireStaff, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const voterId = Number.parseInt(String(req.params.id), 10);
+    const noteId = Number.parseInt(String(req.params.noteId), 10);
+    if (!Number.isFinite(voterId) || !Number.isFinite(noteId)) {
+      res.status(400).json({ error: "Invalid id" }); return;
+    }
+    const parsed = noteBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid", details: parsed.error.flatten() });
+      return;
+    }
+    const voter = await loadVoterForUser(req.user, voterId);
+    if (!voter) { res.status(404).json({ error: "Not found" }); return; }
+    const [existing] = await db
+      .select()
+      .from(voterNotesTable)
+      .where(and(eq(voterNotesTable.id, noteId), eq(voterNotesTable.voterId, voterId)))
+      .limit(1);
+    if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+    const isOwner = existing.authorId === req.user.id;
+    if (!isOwner && !ADMIN_NOTE_ROLES.has(req.user.role)) {
+      res.status(403).json({ error: "Only the author or an admin can edit this note" });
+      return;
+    }
+    const [row] = await db
+      .update(voterNotesTable)
+      .set({ body: parsed.data.body })
+      .where(eq(voterNotesTable.id, noteId))
+      .returning();
+    await logVoterAudit(req, "VOTER_NOTE_UPDATE", `voter:${voter.epicNumber}`, `note_id=${noteId}`);
     res.json({
       ...row,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     });
   } catch (err) {
-    console.error("[voters] detail:", err);
+    console.error("[voters] update note:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/admin/voters/:id/notes/:noteId", requireStaff, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const voterId = Number.parseInt(String(req.params.id), 10);
+    const noteId = Number.parseInt(String(req.params.noteId), 10);
+    if (!Number.isFinite(voterId) || !Number.isFinite(noteId)) {
+      res.status(400).json({ error: "Invalid id" }); return;
+    }
+    const voter = await loadVoterForUser(req.user, voterId);
+    if (!voter) { res.status(404).json({ error: "Not found" }); return; }
+    const [existing] = await db
+      .select()
+      .from(voterNotesTable)
+      .where(and(eq(voterNotesTable.id, noteId), eq(voterNotesTable.voterId, voterId)))
+      .limit(1);
+    if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+    const isOwner = existing.authorId === req.user.id;
+    if (!isOwner && !ADMIN_NOTE_ROLES.has(req.user.role)) {
+      res.status(403).json({ error: "Only the author or an admin can delete this note" });
+      return;
+    }
+    await db.delete(voterNotesTable).where(eq(voterNotesTable.id, noteId));
+    await logVoterAudit(req, "VOTER_NOTE_DELETE", `voter:${voter.epicNumber}`, `note_id=${noteId}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[voters] delete note:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -58,6 +58,29 @@ test("voter search & detail routes also reject unauthenticated requests", async 
   assert.ok(!JSON.stringify(r2.body).match(/epic|fullName/i));
 });
 
+test("voter tag and note routes reject unauthenticated requests", async () => {
+  const cases: Array<["get" | "post" | "put" | "delete", string]> = [
+    ["get", "/api/admin/voter-tags"],
+    ["post", "/api/admin/voter-tags"],
+    ["put", "/api/admin/voter-tags/1"],
+    ["delete", "/api/admin/voter-tags/1"],
+    ["get", "/api/admin/voters/1/tags"],
+    ["put", "/api/admin/voters/1/tags"],
+    ["get", "/api/admin/voters/1/notes"],
+    ["post", "/api/admin/voters/1/notes"],
+    ["put", "/api/admin/voters/1/notes/1"],
+    ["delete", "/api/admin/voters/1/notes/1"],
+  ];
+  for (const [method, path] of cases) {
+    const res = await request(app)[method](path);
+    assert.equal(res.status, 401, `${method.toUpperCase()} ${path} expected 401 got ${res.status}`);
+    assert.ok(
+      !JSON.stringify(res.body).match(/epic|fullName/i),
+      `${path} response leaked voter fields: ${JSON.stringify(res.body)}`,
+    );
+  }
+});
+
 test("voter scope helper is wired into search & detail routes (source check)", async () => {
   // Reviewers rely on this regex to confirm scope filtering is applied
   // and that out-of-scope detail look-ups return 404 (not 403).
