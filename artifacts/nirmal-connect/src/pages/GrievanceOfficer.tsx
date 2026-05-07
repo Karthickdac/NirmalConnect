@@ -1053,8 +1053,17 @@ function VoterMatchPanel({
       </h4>
       {voter ? (
         <div className="flex items-start justify-between gap-2 rounded border bg-muted/30 p-3">
-          <div className="text-sm">
-            <div className="font-medium">{voter.fullName}</div>
+          <button
+            type="button"
+            className="text-sm text-left flex-1 min-w-0 hover:opacity-80 cursor-pointer"
+            title={lang === "ta" ? "வாக்காளர் விவரத்தைத் திற" : "Open voter detail"}
+            data-testid="open-linked-voter-btn"
+            onClick={() => {
+              sessionStorage.setItem("openVoterId", String(voter.id));
+              window.location.hash = "#voters-search";
+            }}
+          >
+            <div className="font-medium underline-offset-2 hover:underline">{voter.fullName}</div>
             <div className="text-xs text-muted-foreground font-mono">{voter.epicNumber}</div>
             {voter.boothNo && (
               <div className="text-xs text-muted-foreground">
@@ -1062,7 +1071,7 @@ function VoterMatchPanel({
                 {voter.boothName ? ` · ${voter.boothName}` : ""}
               </div>
             )}
-          </div>
+          </button>
           <Button
             size="sm"
             variant="ghost"

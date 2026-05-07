@@ -183,6 +183,15 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
 
   // Detail panel
   const [detailId, setDetailId] = useState<number | null>(null);
+  // Deep-link from GrievanceOfficer: clicking a linked-voter chip
+  // stashes the voter id in sessionStorage and navigates here.
+  useEffect(() => {
+    const pending = sessionStorage.getItem("openVoterId");
+    if (!pending) return;
+    sessionStorage.removeItem("openVoterId");
+    const vid = parseInt(pending, 10);
+    if (Number.isFinite(vid) && vid > 0) setDetailId(vid);
+  }, []);
   const { data: detail, isFetching: detailLoading, error: detailError } = useQuery<VoterDetail>({
     queryKey: ["voter-detail", detailId],
     queryFn: () => authJson<VoterDetail>(`/admin/voters/${detailId}`),
