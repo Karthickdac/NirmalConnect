@@ -80,7 +80,11 @@ export default function Admin({ lang = "ta" }: AdminProps) {
   // Read assignments via the dedicated /admin/my-assignments endpoint —
   // /admin/assignments requires WARD_ROLES, which excludes grievance_officer,
   // so officers must use this self-scoped route instead.
-  const { data: myAssignments } = useQuery<{ items: Array<{ wardId: number | null }> }>({
+  const { data: myAssignments } = useQuery<{
+    items: Array<{ wardId: number | null; areaId: number | null; pollingStationId: number | null }>;
+    wardIds: number[];
+    pollingStationIds: number[];
+  }>({
     queryKey: ["map-my-assignments", me?.id],
     queryFn: async () => {
       const tok = getToken();
@@ -94,12 +98,13 @@ export default function Admin({ lang = "ta" }: AdminProps) {
     enabled: Boolean(me?.id && isOfficer),
     staleTime: 60_000,
   });
-  const officerWardIds = useMemo(() => {
-    const items = myAssignments?.items ?? [];
-    const ids = new Set<number>();
-    for (const r of items) if (r.wardId != null) ids.add(r.wardId);
-    return Array.from(ids);
-  }, [myAssignments]);
+  // Server returns the full ward set already expanded across ward/area/booth
+  // assignments, so the map filter honours every assignment granularity.
+  const officerWardIds = useMemo(() => myAssignments?.wardIds ?? [], [myAssignments]);
+  const officerPollingStationIds = useMemo(
+    () => myAssignments?.pollingStationIds ?? [],
+    [myAssignments],
+  );
 
   const STAFF_ROLES = ["super_admin", "admin", "pa_staff", "media_team", "constituency_coordinator", "grievance_officer", "minister", "staff"];
 
@@ -243,6 +248,7 @@ export default function Admin({ lang = "ta" }: AdminProps) {
                 lang={lang}
                 adminMode
                 officerWardIds={isOfficer ? officerWardIds : undefined}
+                officerPollingStationIds={isOfficer ? officerPollingStationIds : undefined}
                 height="calc(100vh - 130px)"
               />
             </Suspense>

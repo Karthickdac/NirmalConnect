@@ -1529,6 +1529,16 @@ const AssignmentBody = z.object({
 // GET /admin/my-assignments — any staff can read their own assignments.
 // Used by the embedded constituency map's "show only my ward" toggle so
 // grievance officers (who are not in WARD_ROLES) can still scope the map.
+//
+// Returns:
+//   - items: raw assignment rows (ward / area / pollingStation granularity)
+//   - wardIds: derived union of every ward implied by those rows. Direct
+//       wardId rows contribute themselves; areaId rows resolve through
+//       areas.ward_id; pollingStationId rows resolve through
+//       polling_stations.ward_id. The map uses this to scope ward and
+//       booth filtering regardless of assignment granularity.
+//   - pollingStationIds: explicit booth-level scope for officers
+//       assigned to specific polling stations.
 router.get("/admin/my-assignments", requireStaff, async (req: AuthRequest, res) => {
   try {
     const uid = req.user?.id;
@@ -1543,7 +1553,35 @@ router.get("/admin/my-assignments", requireStaff, async (req: AuthRequest, res) 
       })
       .from(officerAssignmentsTable)
       .where(eq(officerAssignmentsTable.userId, uid));
-    res.json({ items });
+
+    const wardIds = new Set<number>();
+    const areaIds = new Set<number>();
+    const pollingStationIds = new Set<number>();
+    for (const r of items) {
+      if (r.wardId != null) wardIds.add(r.wardId);
+      if (r.areaId != null) areaIds.add(r.areaId);
+      if (r.pollingStationId != null) pollingStationIds.add(r.pollingStationId);
+    }
+    if (areaIds.size > 0) {
+      const rows = await db
+        .select({ wardId: areasTable.wardId })
+        .from(areasTable)
+        .where(inArray(areasTable.id, Array.from(areaIds)));
+      for (const r of rows) if (r.wardId != null) wardIds.add(r.wardId);
+    }
+    if (pollingStationIds.size > 0) {
+      const rows = await db
+        .select({ wardId: pollingStationsTable.wardId })
+        .from(pollingStationsTable)
+        .where(inArray(pollingStationsTable.id, Array.from(pollingStationIds)));
+      for (const r of rows) if (r.wardId != null) wardIds.add(r.wardId);
+    }
+
+    res.json({
+      items,
+      wardIds: Array.from(wardIds),
+      pollingStationIds: Array.from(pollingStationIds),
+    });
   } catch (err) {
     console.error("[admin] my-assignments error:", err);
     res.status(500).json({ error: "Failed to load assignments" });

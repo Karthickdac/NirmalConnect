@@ -117,8 +117,12 @@ export interface ConstituencyMapProps {
   lang: Language;
   /** Admin embed mode: shows the jump-to-ward dropdown above the map */
   adminMode?: boolean;
-  /** Officer focus: when set, the "show only my ward" toggle is offered */
+  /** Officer focus: union of every ward implied by the officer's
+   * ward / area / booth assignments (server-derived). */
   officerWardIds?: number[];
+  /** Officer focus: explicit polling-station scope for booth-level
+   * assignments — used to narrow the booth layer further than wardIds. */
+  officerPollingStationIds?: number[];
   /** Optional fixed height (defaults to full available height) */
   height?: string;
 }
@@ -127,6 +131,7 @@ export default function ConstituencyMap({
   lang,
   adminMode = false,
   officerWardIds,
+  officerPollingStationIds,
   height,
 }: ConstituencyMapProps) {
   const [data, setData] = useState<MapData | null>(null);
@@ -207,12 +212,18 @@ export default function ConstituencyMap({
 
   const filteredBooths = useMemo(() => {
     if (!data) return [] as Booth[];
-    if (mineOnly && officerWardIds && officerWardIds.length > 0) {
-      const set = new Set(officerWardIds);
-      return data.pollingStations.filter((b) => b.wardId != null && set.has(b.wardId));
-    }
-    return data.pollingStations;
-  }, [data, mineOnly, officerWardIds]);
+    if (!mineOnly) return data.pollingStations;
+    const wardSet = new Set(officerWardIds ?? []);
+    const stationSet = new Set(officerPollingStationIds ?? []);
+    if (wardSet.size === 0 && stationSet.size === 0) return data.pollingStations;
+    // A booth is "mine" if it sits in one of my wards OR is one of the
+    // specific polling stations I'm assigned to.
+    return data.pollingStations.filter(
+      (b) =>
+        (b.wardId != null && wardSet.has(b.wardId)) ||
+        stationSet.has(b.id),
+    );
+  }, [data, mineOnly, officerWardIds, officerPollingStationIds]);
 
   const filteredPins = useMemo(() => {
     if (mineOnly && officerWardIds && officerWardIds.length > 0) {
@@ -281,7 +292,7 @@ export default function ConstituencyMap({
           </div>
         )}
 
-        {adminMode && officerWardIds && officerWardIds.length > 0 && (
+        {adminMode && ((officerWardIds && officerWardIds.length > 0) || (officerPollingStationIds && officerPollingStationIds.length > 0)) && (
           <div className="flex items-center gap-2">
             <input
               id="mine-only"
