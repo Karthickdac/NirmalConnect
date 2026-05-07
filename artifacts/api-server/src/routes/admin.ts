@@ -16,26 +16,74 @@ import { z } from "zod";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import sharp from "sharp";
 
 // ── Image upload config (CMS forms) ────────────────────────
 const adminUploadsDir = path.join(process.cwd(), "uploads", "admin");
 if (!fs.existsSync(adminUploadsDir)) fs.mkdirSync(adminUploadsDir, { recursive: true });
 
-const adminUploadStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, adminUploadsDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
-  },
-});
+// Use memory storage so we can compress with sharp before writing to disk.
 const adminUpload = multer({
-  storage: adminUploadStorage,
-  limits: { fileSize: 8 * 1024 * 1024 },
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 12 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = /^\.(jpe?g|png|gif|webp|svg)$/i;
     cb(null, allowed.test(path.extname(file.originalname)));
   },
 });
+
+// Resize/compress raster images before persisting. SVGs and small images pass
+// through unchanged. Returns the on-disk filename and final byte size.
+const MAX_DIMENSION = 1600;
+const COMPRESS_THRESHOLD_BYTES = 300 * 1024; // skip re-encoding for already-small files
+async function persistAdminUpload(file: Express.Multer.File): Promise<{ filename: string; size: number; mimeType: string }> {
+  const ext = path.extname(file.originalname).toLowerCase();
+  const baseName = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  // Pass-through for SVG and animated GIF — sharp doesn't usefully compress these here.
+  if (ext === ".svg" || ext === ".gif") {
+    const filename = `${baseName}${ext}`;
+    await fs.promises.writeFile(path.join(adminUploadsDir, filename), file.buffer);
+    return { filename, size: file.buffer.length, mimeType: file.mimetype };
+  }
+
+  // Try to read metadata; if sharp can't decode it, fall back to writing original bytes.
+  let metadata: sharp.Metadata;
+  try {
+    metadata = await sharp(file.buffer).metadata();
+  } catch {
+    const filename = `${baseName}${ext}`;
+    await fs.promises.writeFile(path.join(adminUploadsDir, filename), file.buffer);
+    return { filename, size: file.buffer.length, mimeType: file.mimetype };
+  }
+
+  const width = metadata.width ?? 0;
+  const height = metadata.height ?? 0;
+  const needsResize = width > MAX_DIMENSION || height > MAX_DIMENSION;
+  const needsRecompress = file.buffer.length > COMPRESS_THRESHOLD_BYTES;
+
+  if (!needsResize && !needsRecompress) {
+    const filename = `${baseName}${ext}`;
+    await fs.promises.writeFile(path.join(adminUploadsDir, filename), file.buffer);
+    return { filename, size: file.buffer.length, mimeType: file.mimetype };
+  }
+
+  const pipeline = sharp(file.buffer, { failOn: "none" }).rotate();
+  if (needsResize) {
+    pipeline.resize({
+      width: MAX_DIMENSION,
+      height: MAX_DIMENSION,
+      fit: "inside",
+      withoutEnlargement: true,
+    });
+  }
+
+  // Re-encode as WebP for best size/quality tradeoff while preserving alpha.
+  const out = await pipeline.webp({ quality: 82, effort: 4 }).toBuffer();
+  const filename = `${baseName}.webp`;
+  await fs.promises.writeFile(path.join(adminUploadsDir, filename), out);
+  return { filename, size: out.length, mimeType: "image/webp" };
+}
 
 /** Accepts an http(s) URL OR a server-relative path under /uploads or /api/uploads. */
 const ImageRef = z
@@ -179,7 +227,7 @@ router.post(
   "/admin/upload",
   requireRole(...CMS_ROLES, "constituency_coordinator"),
   (req: AuthRequest, res, next) => {
-    adminUpload.single("file")(req, res, (err) => {
+    adminUpload.single("file")(req, res, async (err) => {
       if (err) {
         const msg = err instanceof Error ? err.message : "Upload failed";
         res.status(400).json({ error: msg });
@@ -189,18 +237,25 @@ router.post(
         res.status(400).json({ error: "No file uploaded (field name: 'file')" });
         return;
       }
-      // Use /api/uploads so the dev/prod path-based proxy (which only routes /api
-      // to this service) can serve the file directly from <web origin>/api/uploads/…
-      const url = `/api/uploads/admin/${req.file.filename}`;
-      logAudit(req, "UPLOAD", `image:${req.file.filename}`, req.file.originalname).catch(() => null);
-      res.status(201).json({
-        url,
-        filename: req.file.filename,
-        originalName: req.file.originalname,
-        size: req.file.size,
-        mimeType: req.file.mimetype,
-      });
-      next?.();
+      try {
+        const saved = await persistAdminUpload(req.file);
+        // Use /api/uploads so the dev/prod path-based proxy (which only routes /api
+        // to this service) can serve the file directly from <web origin>/api/uploads/…
+        const url = `/api/uploads/admin/${saved.filename}`;
+        logAudit(req, "UPLOAD", `image:${saved.filename}`, `${req.file.originalname} (${req.file.size}→${saved.size} bytes)`).catch(() => null);
+        res.status(201).json({
+          url,
+          filename: saved.filename,
+          originalName: req.file.originalname,
+          size: saved.size,
+          originalSize: req.file.size,
+          mimeType: saved.mimeType,
+        });
+        next?.();
+      } catch (e) {
+        console.error("[admin] upload processing error:", e);
+        res.status(500).json({ error: "Failed to process image" });
+      }
     });
   },
 );
