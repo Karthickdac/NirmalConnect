@@ -2927,7 +2927,7 @@ components:
           enum: [day, week, month]
         cachedAt: { type: string, format: date-time }
         cacheTtlSeconds: { type: integer }
-      required: [totals, heatPoints, byWard, byWardTop10, byWardCategory, byCategory, byStatus, byOfficer]
+      required: [totals, heatPoints, byWard, byWardTop10, byWardCategory, byCategory, byStatus, byOfficer, trend, trendGranularity]
 
     AnalyticsOfficerListResponse:
       type: object
