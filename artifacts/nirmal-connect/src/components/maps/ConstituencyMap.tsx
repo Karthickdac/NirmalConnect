@@ -64,6 +64,7 @@ interface Booth {
   address: string | null;
   addressTa: string | null;
   wardId: number | null;
+  areaId: number | null;
   latitude: number | null;
   longitude: number | null;
 }
@@ -120,10 +121,14 @@ export interface ConstituencyMapProps {
   /** Admin embed mode: shows the jump-to-ward dropdown above the map */
   adminMode?: boolean;
   /** Officer focus: union of every ward implied by the officer's
-   * ward / area / booth assignments (server-derived). */
+   * ward / area / booth assignments (server-derived). Used as the
+   * coarsest fallback when no area or booth assignments exist. */
   officerWardIds?: number[];
+  /** Officer focus: explicit area-level assignments. Booths are filtered
+   * to only those whose `areaId` is in this set when present. */
+  officerAreaIds?: number[];
   /** Officer focus: explicit polling-station scope for booth-level
-   * assignments — used to narrow the booth layer further than wardIds. */
+   * assignments — the most-specific filter, applied first. */
   officerPollingStationIds?: number[];
   /** Optional fixed height (defaults to full available height) */
   height?: string;
@@ -133,6 +138,7 @@ export default function ConstituencyMap({
   lang,
   adminMode = false,
   officerWardIds,
+  officerAreaIds,
   officerPollingStationIds,
   height,
 }: ConstituencyMapProps) {
@@ -216,21 +222,26 @@ export default function ConstituencyMap({
     if (!data) return [] as Booth[];
     if (!mineOnly) return data.pollingStations;
     const stationSet = new Set(officerPollingStationIds ?? []);
+    const areaSet = new Set(officerAreaIds ?? []);
     const wardSet = new Set(officerWardIds ?? []);
-    // Honour the most specific assignment available: when an officer has
-    // explicit polling-station assignments, the booth layer is restricted
-    // to exactly those booths instead of being widened to "every booth in
-    // the parent ward". This prevents over-broad visibility for booth- or
-    // area-scoped officers (the parent ward still appears in the wards
-    // layer, but only the assigned booths render).
+    // Most-specific-first scoping: booth → area → ward. We never widen
+    // an area- or booth-scoped officer up to the parent ward, since that
+    // would expose data outside their actual assignment.
     if (stationSet.size > 0) {
       return data.pollingStations.filter((b) => stationSet.has(b.id));
     }
+    if (areaSet.size > 0) {
+      return data.pollingStations.filter(
+        (b) => b.areaId != null && areaSet.has(b.areaId),
+      );
+    }
     if (wardSet.size > 0) {
-      return data.pollingStations.filter((b) => b.wardId != null && wardSet.has(b.wardId));
+      return data.pollingStations.filter(
+        (b) => b.wardId != null && wardSet.has(b.wardId),
+      );
     }
     return data.pollingStations;
-  }, [data, mineOnly, officerWardIds, officerPollingStationIds]);
+  }, [data, mineOnly, officerWardIds, officerAreaIds, officerPollingStationIds]);
 
   const filteredPins = useMemo(() => {
     if (mineOnly && officerWardIds && officerWardIds.length > 0) {

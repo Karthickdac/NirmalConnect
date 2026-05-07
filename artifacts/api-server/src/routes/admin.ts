@@ -1580,6 +1580,7 @@ router.get("/admin/my-assignments", requireStaff, async (req: AuthRequest, res) 
     res.json({
       items,
       wardIds: Array.from(wardIds),
+      areaIds: Array.from(areaIds),
       pollingStationIds: Array.from(pollingStationIds),
     });
   } catch (err) {

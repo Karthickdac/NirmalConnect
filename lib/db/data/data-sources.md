@@ -22,10 +22,10 @@
   feature, and commit the merged file. Wards without a matching
   feature fall back to a labelled centroid pin on the public map (the
   popup shows "boundary not yet mapped"), so partial coverage is fine.
-- **Per-row override:** `wards.boundary_geojson` (TEXT) accepts a
-  GeoJSON `Feature` for an individual ward and wins over the file when
-  both are present — useful when staff hand-correct a single boundary
-  without touching the shipped dataset.
+- **Single source of truth:** boundaries are read **only** from the
+  file above. There is intentionally no DB column for per-row
+  boundaries, so the map endpoint never depends on a schema migration
+  to render polygons. Hand-corrections happen by editing the file.
 
 ---
 

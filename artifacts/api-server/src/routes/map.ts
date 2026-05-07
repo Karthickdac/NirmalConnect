@@ -97,7 +97,6 @@ router.get("/map/data", async (_req, res) => {
         wardType: wardsTable.wardType,
         latitude: wardsTable.latitude,
         longitude: wardsTable.longitude,
-        boundaryGeojson: wardsTable.boundaryGeojson,
       }).from(wardsTable).orderBy(asc(wardsTable.name)),
       db.select({
         id: pollingStationsTable.id,
@@ -107,6 +106,7 @@ router.get("/map/data", async (_req, res) => {
         address: pollingStationsTable.address,
         addressTa: pollingStationsTable.addressTa,
         wardId: pollingStationsTable.wardId,
+        areaId: pollingStationsTable.areaId,
         latitude: pollingStationsTable.latitude,
         longitude: pollingStationsTable.longitude,
       })
@@ -115,22 +115,16 @@ router.get("/map/data", async (_req, res) => {
         .orderBy(asc(pollingStationsTable.slNo)),
     ]);
 
-    // Merge file-based boundaries with any per-row boundary stored in
-    // wards.boundary_geojson. Per-row data wins when both exist.
+    // Boundaries come exclusively from the file-based dataset documented
+    // in lib/db/data/data-sources.md. There is intentionally no DB column
+    // for per-row boundaries — the file is the canonical source so this
+    // endpoint never depends on a schema migration.
     const fileBoundaries = loadBoundaryFeatures();
     const fileMap = new Map<number, GeoJsonFeature>();
     for (const b of fileBoundaries) fileMap.set(b.wardId, b.feature);
 
     const wardsOut = wards.map((w) => {
-      let boundary: GeoJsonFeature | null = null;
-      if (w.boundaryGeojson) {
-        try {
-          boundary = JSON.parse(w.boundaryGeojson) as GeoJsonFeature;
-        } catch {
-          boundary = null;
-        }
-      }
-      if (!boundary && fileMap.has(w.id)) boundary = fileMap.get(w.id) ?? null;
+      const boundary = fileMap.get(w.id) ?? null;
       return {
         id: w.id,
         name: w.name,

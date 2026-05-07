@@ -83,6 +83,7 @@ export default function Admin({ lang = "ta" }: AdminProps) {
   const { data: myAssignments } = useQuery<{
     items: Array<{ wardId: number | null; areaId: number | null; pollingStationId: number | null }>;
     wardIds: number[];
+    areaIds: number[];
     pollingStationIds: number[];
   }>({
     queryKey: ["map-my-assignments", me?.id],
@@ -101,6 +102,7 @@ export default function Admin({ lang = "ta" }: AdminProps) {
   // Server returns the full ward set already expanded across ward/area/booth
   // assignments, so the map filter honours every assignment granularity.
   const officerWardIds = useMemo(() => myAssignments?.wardIds ?? [], [myAssignments]);
+  const officerAreaIds = useMemo(() => myAssignments?.areaIds ?? [], [myAssignments]);
   const officerPollingStationIds = useMemo(
     () => myAssignments?.pollingStationIds ?? [],
     [myAssignments],
@@ -248,6 +250,7 @@ export default function Admin({ lang = "ta" }: AdminProps) {
                 lang={lang}
                 adminMode
                 officerWardIds={isOfficer ? officerWardIds : undefined}
+                officerAreaIds={isOfficer ? officerAreaIds : undefined}
                 officerPollingStationIds={isOfficer ? officerPollingStationIds : undefined}
                 height="calc(100vh - 130px)"
               />
