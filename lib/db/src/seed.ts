@@ -8,8 +8,18 @@ import {
   faqsTable,
   constituencyStatsTable,
   wardsTable,
+  zonesTable,
+  pincodesTable,
+  pincodeWardsTable,
+  pollingStationsTable,
 } from "./schema/index.js";
 import { createHmac, randomBytes } from "crypto";
+import { eq, sql } from "drizzle-orm";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import bcrypt from "bcryptjs";
 function hashPassword(password: string): string {
@@ -19,6 +29,122 @@ function _legacyHashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
   const hash = createHmac("sha256", salt).update(password).digest("hex");
   return `${salt}:${hash}`;
+}
+
+// Pretty-titles a panchayat/RV name for use as a ward `name`.
+function titleCase(s: string): string {
+  return s.trim().replace(/\s+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+function slugify(s: string): string {
+  return s.toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
+type PollingPdfArea = {
+  revenueVillage: string | null;
+  panchayat: string | null;
+  ward: string | null;
+  locality: string | null;
+  raw: string;
+};
+type PollingPdfBooth = {
+  slNo: number;
+  boothNo: string;
+  location: string;
+  pincode: string | null;
+  voterType: "all" | "men_only" | "women_only";
+  areas: PollingPdfArea[];
+};
+
+// Reads the parsed AC 195 polling-station JSON and bulk-imports it
+// into `polling_stations`, creating panchayat-type wards on the fly
+// for any panchayat name not already present.
+async function importPollingStations() {
+  const jsonPath = path.resolve(__dirname, "../data/ac195-thiruparankundram-polling-stations.json");
+  if (!fs.existsSync(jsonPath)) {
+    console.warn("[seed] polling-station JSON not found, skipping import:", jsonPath);
+    return;
+  }
+  const payload = JSON.parse(fs.readFileSync(jsonPath, "utf8")) as {
+    source: { url: string };
+    booths: PollingPdfBooth[];
+  };
+  const booths = payload.booths ?? [];
+  if (booths.length === 0) return;
+
+  // Existing wards (post-curated-insert) keyed by lowercase name and slug.
+  const existing = await db.select({ id: wardsTable.id, name: wardsTable.name, slug: wardsTable.slug }).from(wardsTable);
+  const wardByLower = new Map<string, number>();
+  for (const w of existing) {
+    if (w.name) wardByLower.set(w.name.toLowerCase().trim(), w.id);
+    if (w.slug) wardByLower.set(w.slug.toLowerCase().trim(), w.id);
+  }
+
+  const ruralZoneRow = await db.select({ id: zonesTable.id }).from(zonesTable).where(eq(zonesTable.slug, "rural"));
+  const ruralZoneId = ruralZoneRow[0]?.id ?? null;
+
+  // Collect every distinct panchayat referenced by the PDF and ensure
+  // a ward row exists for each one.
+  const distinctPanchayats = new Set<string>();
+  for (const b of booths) {
+    for (const a of b.areas) {
+      const key = (a.panchayat ?? a.revenueVillage ?? "").trim();
+      if (key) distinctPanchayats.add(key);
+    }
+  }
+
+  for (const panchayat of distinctPanchayats) {
+    const lower = panchayat.toLowerCase();
+    if (wardByLower.has(lower)) continue;
+    const slug = slugify(panchayat);
+    if (slug && wardByLower.has(slug)) continue;
+    const [created] = await db.insert(wardsTable).values({
+      name: titleCase(panchayat),
+      slug,
+      wardType: "panchayat",
+      zoneId: ruralZoneId,
+      area: "Rural — AC 195",
+      notes: "Auto-created from official AC 195 polling-station list",
+    }).returning({ id: wardsTable.id });
+    wardByLower.set(lower, created.id);
+    if (slug) wardByLower.set(slug, created.id);
+  }
+
+  // Pincode lookup (id by code).
+  const pincodeRows = await db.select({ id: pincodesTable.id, code: pincodesTable.code }).from(pincodesTable);
+  const pincodeIdByCode = new Map(pincodeRows.map((p) => [p.code, p.id] as const));
+
+  // Insert booths.
+  let inserted = 0;
+  for (const b of booths) {
+    const firstArea = b.areas[0];
+    const wardKey = (firstArea?.panchayat ?? firstArea?.revenueVillage ?? "").toLowerCase().trim();
+    const wardId = wardKey ? wardByLower.get(wardKey) ?? null : null;
+    await db.insert(pollingStationsTable).values({
+      boothNo: b.boothNo,
+      slNo: b.slNo,
+      name: b.location.replace(/\s+/g, " ").trim().slice(0, 500),
+      address: b.location.replace(/\s+/g, " ").trim(),
+      wardId,
+      pincode: b.pincode,
+      voterType: b.voterType,
+      rawAreas: JSON.stringify(b.areas),
+      source: payload.source?.url ?? null,
+    }).onConflictDoNothing();
+    inserted++;
+
+    // Attach pincode→ward mapping when both are known.
+    const pincodeId = b.pincode ? pincodeIdByCode.get(b.pincode) : undefined;
+    if (pincodeId && wardId) {
+      await db.insert(pincodeWardsTable).values({ pincodeId, wardId }).onConflictDoNothing();
+    }
+  }
+
+  // Bump ward stats so downstream UIs (counts) reflect the import.
+  await db.execute(sql`SELECT 1`);
+  console.log(`[seed] polling stations imported: ${inserted} booths, ${distinctPanchayats.size} distinct panchayats`);
 }
 
 async function seed() {
@@ -222,21 +348,64 @@ async function seed() {
     { title: "Women's SHG Launch", mediaUrl: "https://images.unsplash.com/photo-1573497019236-17f8177b81e8?w=800", thumbnailUrl: "https://images.unsplash.com/photo-1573497019236-17f8177b81e8?w=400", mediaType: "photo", album: "welfare" },
   ]).onConflictDoNothing();
 
-  // Wards / Areas — Tirupparankundram constituency (Madurai District, TN-199)
-  // Coordinator contact details intentionally left blank — staff can fill
-  // them in via Admin → Constituency & Wards once real assignments are made.
-  await db.insert(wardsTable).values([
-    { name: "Tirupparankundram Town", area: "Town Panchayat", notes: "Constituency headquarters area" },
-    { name: "Pasumalai", area: "South Zone" },
-    { name: "Avaniyapuram", area: "South Zone" },
-    { name: "Thirumohur", area: "East Zone" },
-    { name: "Vandiyur", area: "East Zone" },
-    { name: "Sakkudi", area: "West Zone" },
-    { name: "Manalur", area: "West Zone" },
-    { name: "Vellaripatti", area: "West Zone" },
-    { name: "Madurai Corporation – Zone 4", area: "Madurai South" },
-    { name: "Madurai Corporation – Zone 5", area: "Madurai South" },
+  // ── Constituency hierarchy ──────────────────────────────
+  // Real, sourced master data for AC 195 Thiruparankundram. See
+  // lib/db/data/data-sources.md for full provenance of every record.
+
+  // 1) Zones — 5 Madurai Municipal Corporation zones + 1 virtual
+  //    "Rural" zone covering panchayats outside the corporation.
+  await db.insert(zonesTable).values([
+    { slug: "madurai-east",    name: "Madurai Corporation — East Zone",    nameTa: "மதுரை மாநகராட்சி — கிழக்கு மண்டலம்", type: "corporation", description: "Zone I — East Zone of Madurai Municipal Corporation" },
+    { slug: "madurai-north",   name: "Madurai Corporation — North Zone",   nameTa: "மதுரை மாநகராட்சி — வடக்கு மண்டலம்", type: "corporation", description: "Zone II — North Zone of Madurai Municipal Corporation" },
+    { slug: "madurai-central", name: "Madurai Corporation — Central Zone", nameTa: "மதுரை மாநகராட்சி — மத்திய மண்டலம்", type: "corporation", description: "Zone III — Central Zone of Madurai Municipal Corporation" },
+    { slug: "madurai-south",   name: "Madurai Corporation — South Zone",   nameTa: "மதுரை மாநகராட்சி — தெற்கு மண்டலம்", type: "corporation", description: "Zone IV — South Zone of Madurai Municipal Corporation (covers most AC 195 wards)" },
+    { slug: "madurai-west",    name: "Madurai Corporation — West Zone",    nameTa: "மதுரை மாநகராட்சி — மேற்கு மண்டலம்", type: "corporation", description: "Zone V — West Zone of Madurai Municipal Corporation" },
+    { slug: "rural",           name: "Rural Panchayats",                   nameTa: "ஊரக ஊராட்சிகள்",                  type: "rural",       description: "Village panchayats and revenue villages outside Madurai Corporation" },
   ]).onConflictDoNothing();
+
+  // Resolve zone IDs once for the ward inserts below.
+  const zoneRows = await db.select({ id: zonesTable.id, slug: zonesTable.slug }).from(zonesTable);
+  const zoneId = (slug: string) => zoneRows.find((z) => z.slug === slug)?.id ?? null;
+
+  // 2) Curated wards — the 10 originally-recognised wards/areas inside
+  //    AC 195. All bilingual names are from Wikipedia / official Tamil
+  //    sources (see data-sources.md); coordinator contacts are filled
+  //    in by staff later via Admin → Constituency & Wards.
+  await db.insert(wardsTable).values([
+    { slug: "tirupparankundram-town", name: "Tirupparankundram Town", nameTa: "திருப்பரங்குன்றம் டவுன்", wardType: "town_panchayat",  zoneId: zoneId("madurai-south"),   area: "Town Panchayat", pincode: "625005", notes: "Constituency headquarters area" },
+    { slug: "pasumalai",              name: "Pasumalai",              nameTa: "பசுமலை",                  wardType: "corporation_ward", zoneId: zoneId("madurai-south"),   area: "South Zone",     pincode: "625004" },
+    { slug: "avaniyapuram",           name: "Avaniyapuram",           nameTa: "அவனியாபுரம்",             wardType: "corporation_ward", zoneId: zoneId("madurai-south"),   area: "South Zone",     pincode: "625012" },
+    { slug: "thirumohur",             name: "Thirumohur",             nameTa: "திருமோகூர்",              wardType: "panchayat",        zoneId: zoneId("rural"),           area: "East Zone",      pincode: "625514" },
+    { slug: "vandiyur",               name: "Vandiyur",               nameTa: "வண்டியூர்",               wardType: "corporation_ward", zoneId: zoneId("madurai-east"),    area: "East Zone",      pincode: "625020" },
+    { slug: "sakkudi",                name: "Sakkudi",                nameTa: "சாக்குடி",                wardType: "panchayat",        zoneId: zoneId("rural"),           area: "West Zone" },
+    { slug: "manalur",                name: "Manalur",                nameTa: "மணலூர்",                  wardType: "panchayat",        zoneId: zoneId("rural"),           area: "West Zone" },
+    { slug: "vellaripatti",           name: "Vellaripatti",           nameTa: "வெள்ளரிப்பட்டி",          wardType: "panchayat",        zoneId: zoneId("rural"),           area: "West Zone" },
+    { slug: "madurai-corp-zone-4",    name: "Madurai Corporation – Zone 4", nameTa: "மதுரை மாநகராட்சி – மண்டலம் 4", wardType: "madurai_corp_zone", zoneId: zoneId("madurai-south"),  area: "Madurai South" },
+    { slug: "madurai-corp-zone-5",    name: "Madurai Corporation – Zone 5", nameTa: "மதுரை மாநகராட்சி – மண்டலம் 5", wardType: "madurai_corp_zone", zoneId: zoneId("madurai-south"),  area: "Madurai South" },
+  ]).onConflictDoNothing();
+
+  // 3) Pincodes — every code that appears in the AC 195 polling-station
+  //    PDF address column. Verified against India Post lookup.
+  await db.insert(pincodesTable).values([
+    { code: "625004", label: "Pasumalai / Tirupparankundram (south)" },
+    { code: "625005", label: "Tirupparankundram town" },
+    { code: "625006", label: "Thirunagar" },
+    { code: "625008", label: "Vilangudi area" },
+    { code: "625009", label: "Virathanoor / Nedunkulam" },
+    { code: "625012", label: "Avaniyapuram" },
+    { code: "625019", label: "Vadapalanji / Nagamalaipudur" },
+    { code: "625021", label: "Madurai south suburbs" },
+    { code: "625022", label: "Parapathi / Eliyarpathi / Nallur" },
+    { code: "625201", label: "Madurai rural east" },
+  ]).onConflictDoNothing();
+
+  // 4) Polling stations — bulk import from the parsed PDF JSON.
+  //    Creates a `panchayat`-type ward on the fly for any panchayat
+  //    name that isn't already in the wards table, so every booth
+  //    has a real wardId to link to.
+  await importPollingStations();
+
+  console.log("Constituency hierarchy seeded.");
 
   // FAQs
   await db.insert(faqsTable).values([

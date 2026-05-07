@@ -20,6 +20,7 @@ import type {
   Activity,
   ActivityListResponse,
   AdminDeleteWard200,
+  Area,
   AuthResponse,
   BulkGrievanceAssignBody,
   BulkUpdateResult,
@@ -54,6 +55,8 @@ import type {
   LoginBody,
   NewsArticle,
   NewsListResponse,
+  PincodePublic,
+  PollingStation,
   SiteSummary,
   User,
   Volunteer,
@@ -61,6 +64,7 @@ import type {
   Ward,
   WardBody,
   WardSummary,
+  Zone,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -2435,6 +2439,503 @@ export function useListPublicWards<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getListPublicWardsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List Madurai Corporation zones (public)
+ */
+export const getListPublicZonesUrl = () => {
+  return `/api/zones`;
+};
+
+export const listPublicZones = async (
+  options?: RequestInit,
+): Promise<Zone[]> => {
+  return customFetch<Zone[]>(getListPublicZonesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPublicZonesQueryKey = () => {
+  return [`/api/zones`] as const;
+};
+
+export const getListPublicZonesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPublicZones>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicZones>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPublicZonesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPublicZones>>> = ({
+    signal,
+  }) => listPublicZones({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicZones>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPublicZonesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPublicZones>>
+>;
+export type ListPublicZonesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List Madurai Corporation zones (public)
+ */
+
+export function useListPublicZones<
+  TData = Awaited<ReturnType<typeof listPublicZones>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicZones>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPublicZonesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List wards inside a zone (public)
+ */
+export const getListPublicWardsByZoneUrl = (id: number) => {
+  return `/api/zones/${id}/wards`;
+};
+
+export const listPublicWardsByZone = async (
+  id: number,
+  options?: RequestInit,
+): Promise<WardSummary[]> => {
+  return customFetch<WardSummary[]>(getListPublicWardsByZoneUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPublicWardsByZoneQueryKey = (id: number) => {
+  return [`/api/zones/${id}/wards`] as const;
+};
+
+export const getListPublicWardsByZoneQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPublicWardsByZone>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPublicWardsByZone>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListPublicWardsByZoneQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listPublicWardsByZone>>
+  > = ({ signal }) => listPublicWardsByZone(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicWardsByZone>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPublicWardsByZoneQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPublicWardsByZone>>
+>;
+export type ListPublicWardsByZoneQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List wards inside a zone (public)
+ */
+
+export function useListPublicWardsByZone<
+  TData = Awaited<ReturnType<typeof listPublicWardsByZone>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPublicWardsByZone>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPublicWardsByZoneQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List sub-areas inside a ward (public)
+ */
+export const getListPublicAreasByWardUrl = (id: number) => {
+  return `/api/wards/${id}/areas`;
+};
+
+export const listPublicAreasByWard = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Area[]> => {
+  return customFetch<Area[]>(getListPublicAreasByWardUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPublicAreasByWardQueryKey = (id: number) => {
+  return [`/api/wards/${id}/areas`] as const;
+};
+
+export const getListPublicAreasByWardQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPublicAreasByWard>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPublicAreasByWard>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListPublicAreasByWardQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listPublicAreasByWard>>
+  > = ({ signal }) => listPublicAreasByWard(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicAreasByWard>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPublicAreasByWardQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPublicAreasByWard>>
+>;
+export type ListPublicAreasByWardQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List sub-areas inside a ward (public)
+ */
+
+export function useListPublicAreasByWard<
+  TData = Awaited<ReturnType<typeof listPublicAreasByWard>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPublicAreasByWard>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPublicAreasByWardQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List polling stations (booths) inside a ward (public)
+ */
+export const getListPublicPollingStationsByWardUrl = (id: number) => {
+  return `/api/wards/${id}/polling-stations`;
+};
+
+export const listPublicPollingStationsByWard = async (
+  id: number,
+  options?: RequestInit,
+): Promise<PollingStation[]> => {
+  return customFetch<PollingStation[]>(
+    getListPublicPollingStationsByWardUrl(id),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListPublicPollingStationsByWardQueryKey = (id: number) => {
+  return [`/api/wards/${id}/polling-stations`] as const;
+};
+
+export const getListPublicPollingStationsByWardQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPublicPollingStationsByWard>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPublicPollingStationsByWard>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListPublicPollingStationsByWardQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listPublicPollingStationsByWard>>
+  > = ({ signal }) =>
+    listPublicPollingStationsByWard(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicPollingStationsByWard>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPublicPollingStationsByWardQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPublicPollingStationsByWard>>
+>;
+export type ListPublicPollingStationsByWardQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List polling stations (booths) inside a ward (public)
+ */
+
+export function useListPublicPollingStationsByWard<
+  TData = Awaited<ReturnType<typeof listPublicPollingStationsByWard>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPublicPollingStationsByWard>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPublicPollingStationsByWardQueryOptions(
+    id,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List all polling stations (booths) in the constituency (public)
+ */
+export const getListPublicPollingStationsUrl = () => {
+  return `/api/polling-stations`;
+};
+
+export const listPublicPollingStations = async (
+  options?: RequestInit,
+): Promise<PollingStation[]> => {
+  return customFetch<PollingStation[]>(getListPublicPollingStationsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPublicPollingStationsQueryKey = () => {
+  return [`/api/polling-stations`] as const;
+};
+
+export const getListPublicPollingStationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPublicPollingStations>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicPollingStations>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListPublicPollingStationsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listPublicPollingStations>>
+  > = ({ signal }) => listPublicPollingStations({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicPollingStations>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPublicPollingStationsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPublicPollingStations>>
+>;
+export type ListPublicPollingStationsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all polling stations (booths) in the constituency (public)
+ */
+
+export function useListPublicPollingStations<
+  TData = Awaited<ReturnType<typeof listPublicPollingStations>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicPollingStations>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPublicPollingStationsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List pincodes covering the constituency (public)
+ */
+export const getListPublicPincodesUrl = () => {
+  return `/api/pincodes`;
+};
+
+export const listPublicPincodes = async (
+  options?: RequestInit,
+): Promise<PincodePublic[]> => {
+  return customFetch<PincodePublic[]>(getListPublicPincodesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPublicPincodesQueryKey = () => {
+  return [`/api/pincodes`] as const;
+};
+
+export const getListPublicPincodesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPublicPincodes>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicPincodes>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPublicPincodesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listPublicPincodes>>
+  > = ({ signal }) => listPublicPincodes({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicPincodes>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPublicPincodesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPublicPincodes>>
+>;
+export type ListPublicPincodesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List pincodes covering the constituency (public)
+ */
+
+export function useListPublicPincodes<
+  TData = Awaited<ReturnType<typeof listPublicPincodes>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicPincodes>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPublicPincodesQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

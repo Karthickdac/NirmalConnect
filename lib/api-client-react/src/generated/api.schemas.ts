@@ -345,7 +345,72 @@ export interface WardSummary {
   id: number;
   name: string;
   /** @nullable */
+  nameTa?: string | null;
+  /** @nullable */
+  slug?: string | null;
+  /**
+   * One of corporation_ward, madurai_corp_zone, town_panchayat, panchayat, revenue_village
+   * @nullable
+   */
+  wardType?: string | null;
+  /** @nullable */
+  zoneId?: number | null;
+  /** @nullable */
   area?: string | null;
+  /** @nullable */
+  pincode?: string | null;
+}
+
+export interface Zone {
+  id: number;
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  slug: string;
+  /** corporation | rural */
+  type: string;
+  /** @nullable */
+  description?: string | null;
+}
+
+export interface Area {
+  id: number;
+  wardId: number;
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  /** @nullable */
+  areaType?: string | null;
+}
+
+export interface PollingStation {
+  id: number;
+  boothNo: string;
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  wardId?: number | null;
+  /** @nullable */
+  pincode?: string | null;
+  /** all | men_only | women_only */
+  voterType: string;
+  /** @nullable */
+  latitude?: number | null;
+  /** @nullable */
+  longitude?: number | null;
+}
+
+export interface PincodePublic {
+  id: number;
+  code: string;
+  /** @nullable */
+  label?: string | null;
+  /** @nullable */
+  labelTa?: string | null;
+  wardIds: number[];
 }
 
 export interface Ward {

@@ -627,9 +627,132 @@ export const AssignGrievanceResponse = zod.object({
 export const ListPublicWardsResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
+  nameTa: zod.string().nullish(),
+  slug: zod.string().nullish(),
+  wardType: zod
+    .string()
+    .nullish()
+    .describe(
+      "One of corporation_ward, madurai_corp_zone, town_panchayat, panchayat, revenue_village",
+    ),
+  zoneId: zod.number().nullish(),
   area: zod.string().nullish(),
+  pincode: zod.string().nullish(),
 });
 export const ListPublicWardsResponse = zod.array(ListPublicWardsResponseItem);
+
+/**
+ * @summary List Madurai Corporation zones (public)
+ */
+export const ListPublicZonesResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  nameTa: zod.string().nullish(),
+  slug: zod.string(),
+  type: zod.string().describe("corporation | rural"),
+  description: zod.string().nullish(),
+});
+export const ListPublicZonesResponse = zod.array(ListPublicZonesResponseItem);
+
+/**
+ * @summary List wards inside a zone (public)
+ */
+export const ListPublicWardsByZoneParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListPublicWardsByZoneResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  nameTa: zod.string().nullish(),
+  slug: zod.string().nullish(),
+  wardType: zod
+    .string()
+    .nullish()
+    .describe(
+      "One of corporation_ward, madurai_corp_zone, town_panchayat, panchayat, revenue_village",
+    ),
+  zoneId: zod.number().nullish(),
+  area: zod.string().nullish(),
+  pincode: zod.string().nullish(),
+});
+export const ListPublicWardsByZoneResponse = zod.array(
+  ListPublicWardsByZoneResponseItem,
+);
+
+/**
+ * @summary List sub-areas inside a ward (public)
+ */
+export const ListPublicAreasByWardParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListPublicAreasByWardResponseItem = zod.object({
+  id: zod.number(),
+  wardId: zod.number(),
+  name: zod.string(),
+  nameTa: zod.string().nullish(),
+  areaType: zod.string().nullish(),
+});
+export const ListPublicAreasByWardResponse = zod.array(
+  ListPublicAreasByWardResponseItem,
+);
+
+/**
+ * @summary List polling stations (booths) inside a ward (public)
+ */
+export const ListPublicPollingStationsByWardParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListPublicPollingStationsByWardResponseItem = zod.object({
+  id: zod.number(),
+  boothNo: zod.string(),
+  name: zod.string(),
+  nameTa: zod.string().nullish(),
+  address: zod.string().nullish(),
+  wardId: zod.number().nullish(),
+  pincode: zod.string().nullish(),
+  voterType: zod.string().describe("all | men_only | women_only"),
+  latitude: zod.number().nullish(),
+  longitude: zod.number().nullish(),
+});
+export const ListPublicPollingStationsByWardResponse = zod.array(
+  ListPublicPollingStationsByWardResponseItem,
+);
+
+/**
+ * @summary List all polling stations (booths) in the constituency (public)
+ */
+export const ListPublicPollingStationsResponseItem = zod.object({
+  id: zod.number(),
+  boothNo: zod.string(),
+  name: zod.string(),
+  nameTa: zod.string().nullish(),
+  address: zod.string().nullish(),
+  wardId: zod.number().nullish(),
+  pincode: zod.string().nullish(),
+  voterType: zod.string().describe("all | men_only | women_only"),
+  latitude: zod.number().nullish(),
+  longitude: zod.number().nullish(),
+});
+export const ListPublicPollingStationsResponse = zod.array(
+  ListPublicPollingStationsResponseItem,
+);
+
+/**
+ * @summary List pincodes covering the constituency (public)
+ */
+export const ListPublicPincodesResponseItem = zod.object({
+  id: zod.number(),
+  code: zod.string(),
+  label: zod.string().nullish(),
+  labelTa: zod.string().nullish(),
+  wardIds: zod.array(zod.number()),
+});
+export const ListPublicPincodesResponse = zod.array(
+  ListPublicPincodesResponseItem,
+);
 
 /**
  * @summary List all wards/areas

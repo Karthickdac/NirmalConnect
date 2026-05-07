@@ -722,6 +722,105 @@ paths:
                 items:
                   $ref: "#/components/schemas/WardSummary"
 
+  /zones:
+    get:
+      operationId: listPublicZones
+      tags: [stats]
+      summary: List Madurai Corporation zones (public)
+      responses:
+        "200":
+          description: Zone list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Zone" }
+
+  /zones/{id}/wards:
+    get:
+      operationId: listPublicWardsByZone
+      tags: [stats]
+      summary: List wards inside a zone (public)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Ward list for the given zone
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/WardSummary" }
+
+  /wards/{id}/areas:
+    get:
+      operationId: listPublicAreasByWard
+      tags: [stats]
+      summary: List sub-areas inside a ward (public)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Area list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Area" }
+
+  /wards/{id}/polling-stations:
+    get:
+      operationId: listPublicPollingStationsByWard
+      tags: [stats]
+      summary: List polling stations (booths) inside a ward (public)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Polling-station list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PollingStation" }
+
+  /polling-stations:
+    get:
+      operationId: listPublicPollingStations
+      tags: [stats]
+      summary: List all polling stations (booths) in the constituency (public)
+      responses:
+        "200":
+          description: Polling-station list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PollingStation" }
+
+  /pincodes:
+    get:
+      operationId: listPublicPincodes
+      tags: [stats]
+      summary: List pincodes covering the constituency (public)
+      responses:
+        "200":
+          description: Pincode list with linked ward IDs
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PincodePublic" }
+
   /admin/wards:
     get:
       operationId: adminListWards
@@ -1633,11 +1732,70 @@ components:
           type: integer
         name:
           type: string
+        nameTa:
+          type: ["string", "null"]
+        slug:
+          type: ["string", "null"]
+        wardType:
+          type: ["string", "null"]
+          description: "One of corporation_ward, madurai_corp_zone, town_panchayat, panchayat, revenue_village"
+        zoneId:
+          type: ["integer", "null"]
         area:
+          type: ["string", "null"]
+        pincode:
           type: ["string", "null"]
       required:
         - id
         - name
+
+    Zone:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        nameTa: { type: ["string", "null"] }
+        slug: { type: string }
+        type: { type: string, description: "corporation | rural" }
+        description: { type: ["string", "null"] }
+      required: [id, name, slug, type]
+
+    Area:
+      type: object
+      properties:
+        id: { type: integer }
+        wardId: { type: integer }
+        name: { type: string }
+        nameTa: { type: ["string", "null"] }
+        areaType: { type: ["string", "null"] }
+      required: [id, wardId, name]
+
+    PollingStation:
+      type: object
+      properties:
+        id: { type: integer }
+        boothNo: { type: string }
+        name: { type: string }
+        nameTa: { type: ["string", "null"] }
+        address: { type: ["string", "null"] }
+        wardId: { type: ["integer", "null"] }
+        pincode: { type: ["string", "null"] }
+        voterType: { type: string, description: "all | men_only | women_only" }
+        latitude: { type: ["number", "null"] }
+        longitude: { type: ["number", "null"] }
+      required: [id, boothNo, name, voterType]
+
+    PincodePublic:
+      type: object
+      properties:
+        id: { type: integer }
+        code: { type: string }
+        label: { type: ["string", "null"] }
+        labelTa: { type: ["string", "null"] }
+        wardIds:
+          type: array
+          items: { type: integer }
+      required: [id, code, wardIds]
 
     Ward:
       type: object

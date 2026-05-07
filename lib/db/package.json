@@ -9,12 +9,16 @@
   },
   "scripts": {
     "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
+    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
+    "seed": "tsx src/seed.ts",
+    "parse-pdf": "node scripts/parse-ac195-pdf.mjs"
   },
   "dependencies": {
+    "@types/pdf-parse": "^1.1.5",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "catalog:",
     "drizzle-zod": "^0.8.3",
+    "pdf-parse": "^2.4.5",
     "pg": "^8.20.0",
     "zod": "catalog:"
   },
