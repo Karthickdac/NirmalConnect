@@ -6,7 +6,7 @@ import {
   siteConfigTable, auditLogTable, bannersTable, constituencyStatsTable, wardsTable,
   zonesTable, areasTable, streetsTable, pollingStationsTable,
   pincodesTable, pincodeWardsTable,
-  officerAssignmentsTable, grievanceRoutingLogTable,
+  officerAssignmentsTable, grievanceRoutingLogTable, volunteerAssignmentsTable,
 } from "@workspace/db/schema";
 
 import { requireStaff, requireRole, type AuthRequest } from "../lib/auth.js";
@@ -1604,6 +1604,7 @@ router.patch("/admin/assignments/:id", requireRole(...WARD_ROLES), async (req: A
     const body = z.object({
       isActive: z.boolean().optional(),
       roleLabel: z.string().max(80).optional().nullable(),
+      userId: z.number().int().positive().optional(),
       wardId: z.number().int().positive().optional().nullable(),
       areaId: z.number().int().positive().optional().nullable(),
       pollingStationId: z.number().int().positive().optional().nullable(),
@@ -1655,6 +1656,50 @@ router.patch("/admin/assignments/:id", requireRole(...WARD_ROLES), async (req: A
   }
 });
 
+// POST /admin/assignments/bulk-reassign — move many assignments from one
+// officer to another in a single call. Used by the Assignments admin UI
+// when an officer leaves, goes on leave, etc.
+router.post("/admin/assignments/bulk-reassign", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const body = z.object({
+      assignmentIds: z.array(z.number().int().positive()).min(1).max(200),
+      toUserId: z.number().int().positive(),
+    }).safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+
+    const [u] = await db.select({ id: usersTable.id, name: usersTable.name })
+      .from(usersTable).where(eq(usersTable.id, body.data.toUserId)).limit(1);
+    if (!u) { res.status(400).json({ error: "Target user does not exist" }); return; }
+
+    const updated = await db.update(officerAssignmentsTable)
+      .set({ userId: body.data.toUserId })
+      .where(inArray(officerAssignmentsTable.id, body.data.assignmentIds))
+      .returning({ id: officerAssignmentsTable.id });
+
+    if (updated.length === 0) {
+      res.status(404).json({ error: "No matching assignments found for the provided IDs" });
+      return;
+    }
+    if (updated.length !== body.data.assignmentIds.length) {
+      // Partial match — not fatal, but worth surfacing so the caller can refresh.
+      const missing = body.data.assignmentIds.filter(id => !updated.find(u2 => u2.id === id));
+      await logAudit(req, "UPDATE", `officer_assignments:bulk`, `Reassigned ${updated.length}/${body.data.assignmentIds.length} → ${u.name} (missing: ${missing.join(",")})`);
+      res.status(207).json({ updated: updated.length, requested: body.data.assignmentIds.length, missing, toUserId: body.data.toUserId });
+      return;
+    }
+    await logAudit(req, "UPDATE", `officer_assignments:bulk`, `Reassigned ${updated.length} → ${u.name}`);
+    res.json({ updated: updated.length, toUserId: body.data.toUserId });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/uniq|duplicate/i.test(msg)) {
+      res.status(409).json({ error: "One or more reassignments collide with existing scopes" });
+      return;
+    }
+    console.error("[admin] bulk reassign:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.delete("/admin/assignments/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params["id"] as string);
@@ -1663,6 +1708,129 @@ router.delete("/admin/assignments/:id", requireRole(...WARD_ROLES), async (req: 
     res.json({ success: true });
   } catch (err) {
     console.error("[admin] assignment delete:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Volunteer assignments CRUD (mirrors officer assignments) ──
+router.get("/admin/volunteer-assignments", requireRole(...WARD_ROLES), async (req, res) => {
+  try {
+    const volunteerId = req.query.volunteerId ? parseInt(String(req.query.volunteerId), 10) : null;
+    const wardId = req.query.wardId ? parseInt(String(req.query.wardId), 10) : null;
+    const conditions = [];
+    if (volunteerId) conditions.push(eq(volunteerAssignmentsTable.volunteerId, volunteerId));
+    if (wardId) conditions.push(eq(volunteerAssignmentsTable.wardId, wardId));
+    const where = conditions.length ? and(...conditions) : undefined;
+    const rows = await db.select({
+      id: volunteerAssignmentsTable.id,
+      volunteerId: volunteerAssignmentsTable.volunteerId,
+      volunteerName: volunteersTable.name,
+      volunteerPhone: volunteersTable.phone,
+      wardId: volunteerAssignmentsTable.wardId,
+      wardName: wardsTable.name,
+      areaId: volunteerAssignmentsTable.areaId,
+      areaName: areasTable.name,
+      pollingStationId: volunteerAssignmentsTable.pollingStationId,
+      boothNo: pollingStationsTable.boothNo,
+      boothName: pollingStationsTable.name,
+      isActive: volunteerAssignmentsTable.isActive,
+      createdAt: volunteerAssignmentsTable.createdAt,
+    })
+    .from(volunteerAssignmentsTable)
+    .leftJoin(volunteersTable, eq(volunteersTable.id, volunteerAssignmentsTable.volunteerId))
+    .leftJoin(wardsTable, eq(wardsTable.id, volunteerAssignmentsTable.wardId))
+    .leftJoin(areasTable, eq(areasTable.id, volunteerAssignmentsTable.areaId))
+    .leftJoin(pollingStationsTable, eq(pollingStationsTable.id, volunteerAssignmentsTable.pollingStationId))
+    .where(where)
+    .orderBy(desc(volunteerAssignmentsTable.createdAt));
+    res.json({ items: rows.map(r => ({ ...r, createdAt: r.createdAt.toISOString() })) });
+  } catch (err) {
+    console.error("[admin] volunteer assignments list:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/admin/volunteer-assignments", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const body = z.object({
+      volunteerId: z.number().int().positive(),
+      wardId: z.number().int().positive().optional().nullable(),
+      areaId: z.number().int().positive().optional().nullable(),
+      pollingStationId: z.number().int().positive().optional().nullable(),
+      isActive: z.boolean().optional(),
+    }).refine(v => !!(v.wardId || v.areaId || v.pollingStationId),
+      { message: "At least one of wardId, areaId, pollingStationId is required" })
+      .safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+
+    const [v] = await db.select({ id: volunteersTable.id, name: volunteersTable.name })
+      .from(volunteersTable).where(eq(volunteersTable.id, body.data.volunteerId)).limit(1);
+    if (!v) { res.status(400).json({ error: "Volunteer does not exist" }); return; }
+
+    if (body.data.areaId && body.data.wardId) {
+      const [a] = await db.select({ wardId: areasTable.wardId }).from(areasTable)
+        .where(eq(areasTable.id, body.data.areaId)).limit(1);
+      if (!a || a.wardId !== body.data.wardId) {
+        res.status(400).json({ error: "Area does not belong to selected ward" }); return;
+      }
+    }
+    if (body.data.pollingStationId && body.data.wardId) {
+      const [b] = await db.select({ wardId: pollingStationsTable.wardId })
+        .from(pollingStationsTable).where(eq(pollingStationsTable.id, body.data.pollingStationId)).limit(1);
+      if (b && b.wardId != null && b.wardId !== body.data.wardId) {
+        res.status(400).json({ error: "Polling station does not belong to selected ward" }); return;
+      }
+    }
+
+    try {
+      const [item] = await db.insert(volunteerAssignmentsTable).values({
+        volunteerId: body.data.volunteerId,
+        wardId: body.data.wardId ?? null,
+        areaId: body.data.areaId ?? null,
+        pollingStationId: body.data.pollingStationId ?? null,
+        isActive: body.data.isActive ?? true,
+      }).returning();
+      await logAudit(req, "CREATE", `volunteer_assignment:${item.id}`, `${v.name} → ward=${item.wardId ?? "-"} area=${item.areaId ?? "-"} booth=${item.pollingStationId ?? "-"}`);
+      res.status(201).json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/uniq|duplicate/i.test(msg)) {
+        res.status(409).json({ error: "This volunteer already has an assignment with the same scope" });
+        return;
+      }
+      throw e;
+    }
+  } catch (err) {
+    console.error("[admin] volunteer assignment create:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.patch("/admin/volunteer-assignments/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    const body = z.object({ isActive: z.boolean().optional() }).safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid" }); return; }
+    if (Object.keys(body.data).length === 0) { res.status(400).json({ error: "No fields to update" }); return; }
+    const [item] = await db.update(volunteerAssignmentsTable).set(body.data)
+      .where(eq(volunteerAssignmentsTable.id, id)).returning();
+    if (!item) { res.status(404).json({ error: "Not found" }); return; }
+    await logAudit(req, "UPDATE", `volunteer_assignment:${id}`, `active=${item.isActive}`);
+    res.json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] volunteer assignment patch:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/admin/volunteer-assignments/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    await db.delete(volunteerAssignmentsTable).where(eq(volunteerAssignmentsTable.id, id));
+    await logAudit(req, "DELETE", `volunteer_assignment:${id}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[admin] volunteer assignment delete:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

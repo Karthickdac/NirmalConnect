@@ -724,12 +724,67 @@ export interface OfficerAssignmentPatchBody {
   isActive?: boolean;
   /** @nullable */
   roleLabel?: string | null;
+  userId?: number;
   /** @nullable */
   wardId?: number | null;
   /** @nullable */
   areaId?: number | null;
   /** @nullable */
   pollingStationId?: number | null;
+}
+
+export interface BulkReassignBody {
+  assignmentIds: number[];
+  toUserId: number;
+}
+
+export interface BulkReassignResult {
+  updated: number;
+  requested?: number;
+  missing?: number[];
+  toUserId: number;
+  [key: string]: unknown;
+}
+
+export interface VolunteerAssignmentBody {
+  volunteerId: number;
+  /** @nullable */
+  wardId?: number | null;
+  /** @nullable */
+  areaId?: number | null;
+  /** @nullable */
+  pollingStationId?: number | null;
+  isActive?: boolean;
+}
+
+export interface VolunteerAssignment {
+  id: number;
+  volunteerId: number;
+  /** @nullable */
+  volunteerName?: string | null;
+  /** @nullable */
+  volunteerPhone?: string | null;
+  /** @nullable */
+  wardId?: number | null;
+  /** @nullable */
+  wardName?: string | null;
+  /** @nullable */
+  areaId?: number | null;
+  /** @nullable */
+  areaName?: string | null;
+  /** @nullable */
+  pollingStationId?: number | null;
+  /** @nullable */
+  boothNo?: string | null;
+  /** @nullable */
+  boothName?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  [key: string]: unknown;
+}
+
+export interface VolunteerAssignmentListResponse {
+  items: VolunteerAssignment[];
 }
 
 export interface OfficerAssignment {
@@ -917,6 +972,15 @@ export type AdminListAssignmentsParams = {
   userId?: number;
   wardId?: number;
   activeOnly?: string;
+};
+
+export type AdminListVolunteerAssignmentsParams = {
+  volunteerId?: number;
+  wardId?: number;
+};
+
+export type AdminUpdateVolunteerAssignmentBody = {
+  isActive?: boolean;
 };
 
 export type AdminListRoutingLogParams = {

@@ -1340,6 +1340,75 @@ paths:
       responses:
         "200": { description: Deleted, content: { application/json: { schema: { $ref: "#/components/schemas/DeletedResult" } } } }
 
+  /admin/assignments/bulk-reassign:
+    post:
+      operationId: adminBulkReassignAssignments
+      tags: [admin]
+      summary: Reassign multiple officer assignments to a different user
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BulkReassignBody" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/BulkReassignResult" } } } }
+        "400": { description: Validation, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "409": { description: Conflict, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /admin/volunteer-assignments:
+    get:
+      operationId: adminListVolunteerAssignments
+      tags: [admin]
+      summary: List volunteer→ward/area/booth assignments
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: volunteerId, in: query, schema: { type: integer } }
+        - { name: wardId, in: query, schema: { type: integer } }
+      responses:
+        "200": { description: List, content: { application/json: { schema: { $ref: "#/components/schemas/VolunteerAssignmentListResponse" } } } }
+    post:
+      operationId: adminCreateVolunteerAssignment
+      tags: [admin]
+      summary: Create a volunteer assignment
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VolunteerAssignmentBody" }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/VolunteerAssignment" } } } }
+        "400": { description: Validation, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "409": { description: Duplicate, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /admin/volunteer-assignments/{id}:
+    patch:
+      operationId: adminUpdateVolunteerAssignment
+      tags: [admin]
+      summary: Toggle a volunteer assignment active flag
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isActive: { type: boolean }
+      responses:
+        "200": { description: Updated, content: { application/json: { schema: { $ref: "#/components/schemas/VolunteerAssignment" } } } }
+        "404": { description: Not found, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+    delete:
+      operationId: adminDeleteVolunteerAssignment
+      tags: [admin]
+      summary: Delete a volunteer assignment
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: Deleted, content: { application/json: { schema: { $ref: "#/components/schemas/DeletedResult" } } } }
+
   /admin/assignments/routing-log:
     get:
       operationId: adminListRoutingLog
@@ -2487,9 +2556,68 @@ components:
       properties:
         isActive: { type: boolean }
         roleLabel: { type: ["string", "null"] }
+        userId: { type: integer }
         wardId: { type: ["integer", "null"] }
         areaId: { type: ["integer", "null"] }
         pollingStationId: { type: ["integer", "null"] }
+
+    BulkReassignBody:
+      type: object
+      required: [assignmentIds, toUserId]
+      properties:
+        assignmentIds:
+          type: array
+          items: { type: integer }
+        toUserId: { type: integer }
+
+    BulkReassignResult:
+      type: object
+      additionalProperties: true
+      properties:
+        updated: { type: integer }
+        requested: { type: integer }
+        missing:
+          type: array
+          items: { type: integer }
+        toUserId: { type: integer }
+      required: [updated, toUserId]
+
+    VolunteerAssignmentBody:
+      type: object
+      required: [volunteerId]
+      properties:
+        volunteerId: { type: integer }
+        wardId: { type: ["integer", "null"] }
+        areaId: { type: ["integer", "null"] }
+        pollingStationId: { type: ["integer", "null"] }
+        isActive: { type: boolean }
+
+    VolunteerAssignment:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: integer }
+        volunteerId: { type: integer }
+        volunteerName: { type: ["string", "null"] }
+        volunteerPhone: { type: ["string", "null"] }
+        wardId: { type: ["integer", "null"] }
+        wardName: { type: ["string", "null"] }
+        areaId: { type: ["integer", "null"] }
+        areaName: { type: ["string", "null"] }
+        pollingStationId: { type: ["integer", "null"] }
+        boothNo: { type: ["string", "null"] }
+        boothName: { type: ["string", "null"] }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+      required: [id, volunteerId, isActive, createdAt]
+
+    VolunteerAssignmentListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/VolunteerAssignment" }
 
     OfficerAssignment:
       type: object

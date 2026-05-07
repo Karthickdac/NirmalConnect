@@ -10,7 +10,10 @@ import {
 } from "@workspace/db/schema";
 import { requireStaff, type AuthRequest } from "../lib/auth.js";
 import { eq, desc, and, count, gte, lte, sql } from "drizzle-orm";
-import { resolveOwnerForGrievance, logRouting } from "../lib/grievance-routing.js";
+import {
+  resolveOwnerForGrievance, logRouting, resolveWardId,
+  validateAreaInWard, validateBoothInWard,
+} from "../lib/grievance-routing.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -96,6 +99,29 @@ router.post("/grievances/submit", upload.array("attachments", 3), async (req, re
     const existing = await db.select({ id: grievancesTable.id }).from(grievancesTable)
       .where(eq(grievancesTable.ticketNo, ticketNo)).limit(1);
     if (existing.length > 0) ticketNo = generateTicketNo();
+
+    // Reject tampered or inconsistent ward / area / booth combinations
+    // up-front so a citizen can't trick the auto-router into picking an
+    // officer outside the actual booth's ward.
+    const wardIdForCheck = await resolveWardId({
+      wardName: body.data.ward ?? null,
+      areaId: body.data.areaId ?? null,
+      pollingStationId: body.data.pollingStationId ?? null,
+    });
+    if (wardIdForCheck) {
+      const [areaOk, boothOk] = await Promise.all([
+        validateAreaInWard(body.data.areaId, wardIdForCheck),
+        validateBoothInWard(body.data.pollingStationId, wardIdForCheck),
+      ]);
+      if (!areaOk) {
+        res.status(400).json({ error: "Selected area does not belong to the chosen ward" });
+        return;
+      }
+      if (!boothOk) {
+        res.status(400).json({ error: "Selected polling booth does not belong to the chosen ward" });
+        return;
+      }
+    }
 
     // Resolve auto-routed officer BEFORE insert so we can persist
     // assignedTo + scope in one row. Falls back to null (shared inbox)

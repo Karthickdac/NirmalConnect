@@ -1323,6 +1323,7 @@ export const AdminUpdateAssignmentParams = zod.object({
 export const AdminUpdateAssignmentBody = zod.object({
   isActive: zod.boolean().optional(),
   roleLabel: zod.string().nullish(),
+  userId: zod.number().optional(),
   wardId: zod.number().nullish(),
   areaId: zod.number().nullish(),
   pollingStationId: zod.number().nullish(),
@@ -1354,6 +1355,98 @@ export const AdminDeleteAssignmentParams = zod.object({
 });
 
 export const AdminDeleteAssignmentResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Reassign multiple officer assignments to a different user
+ */
+export const AdminBulkReassignAssignmentsBody = zod.object({
+  assignmentIds: zod.array(zod.number()),
+  toUserId: zod.number(),
+});
+
+export const AdminBulkReassignAssignmentsResponse = zod.object({
+  updated: zod.number(),
+  requested: zod.number().optional(),
+  missing: zod.array(zod.number()).optional(),
+  toUserId: zod.number(),
+});
+
+/**
+ * @summary List volunteer→ward/area/booth assignments
+ */
+export const AdminListVolunteerAssignmentsQueryParams = zod.object({
+  volunteerId: zod.coerce.number().optional(),
+  wardId: zod.coerce.number().optional(),
+});
+
+export const AdminListVolunteerAssignmentsResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      volunteerId: zod.number(),
+      volunteerName: zod.string().nullish(),
+      volunteerPhone: zod.string().nullish(),
+      wardId: zod.number().nullish(),
+      wardName: zod.string().nullish(),
+      areaId: zod.number().nullish(),
+      areaName: zod.string().nullish(),
+      pollingStationId: zod.number().nullish(),
+      boothNo: zod.string().nullish(),
+      boothName: zod.string().nullish(),
+      isActive: zod.boolean(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Create a volunteer assignment
+ */
+export const AdminCreateVolunteerAssignmentBody = zod.object({
+  volunteerId: zod.number(),
+  wardId: zod.number().nullish(),
+  areaId: zod.number().nullish(),
+  pollingStationId: zod.number().nullish(),
+  isActive: zod.boolean().optional(),
+});
+
+/**
+ * @summary Toggle a volunteer assignment active flag
+ */
+export const AdminUpdateVolunteerAssignmentParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminUpdateVolunteerAssignmentBody = zod.object({
+  isActive: zod.boolean().optional(),
+});
+
+export const AdminUpdateVolunteerAssignmentResponse = zod.object({
+  id: zod.number(),
+  volunteerId: zod.number(),
+  volunteerName: zod.string().nullish(),
+  volunteerPhone: zod.string().nullish(),
+  wardId: zod.number().nullish(),
+  wardName: zod.string().nullish(),
+  areaId: zod.number().nullish(),
+  areaName: zod.string().nullish(),
+  pollingStationId: zod.number().nullish(),
+  boothNo: zod.string().nullish(),
+  boothName: zod.string().nullish(),
+  isActive: zod.boolean(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Delete a volunteer assignment
+ */
+export const AdminDeleteVolunteerAssignmentParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminDeleteVolunteerAssignmentResponse = zod.object({
   success: zod.boolean(),
 });
 

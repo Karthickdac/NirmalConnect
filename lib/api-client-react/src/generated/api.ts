@@ -22,9 +22,13 @@ import type {
   AdminDeleteWard200,
   AdminListAssignmentsParams,
   AdminListRoutingLogParams,
+  AdminListVolunteerAssignmentsParams,
+  AdminUpdateVolunteerAssignmentBody,
   Area,
   AuthResponse,
   BulkGrievanceAssignBody,
+  BulkReassignBody,
+  BulkReassignResult,
   BulkUpdateResult,
   ConstituencyStats,
   DeletedResult,
@@ -81,6 +85,9 @@ import type {
   SiteSummary,
   User,
   Volunteer,
+  VolunteerAssignment,
+  VolunteerAssignmentBody,
+  VolunteerAssignmentListResponse,
   VolunteerRegistrationBody,
   Ward,
   WardBody,
@@ -5436,6 +5443,470 @@ export const useAdminDeleteAssignment = <
   TContext
 > => {
   return useMutation(getAdminDeleteAssignmentMutationOptions(options));
+};
+
+/**
+ * @summary Reassign multiple officer assignments to a different user
+ */
+export const getAdminBulkReassignAssignmentsUrl = () => {
+  return `/api/admin/assignments/bulk-reassign`;
+};
+
+export const adminBulkReassignAssignments = async (
+  bulkReassignBody: BulkReassignBody,
+  options?: RequestInit,
+): Promise<BulkReassignResult> => {
+  return customFetch<BulkReassignResult>(getAdminBulkReassignAssignmentsUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(bulkReassignBody),
+  });
+};
+
+export const getAdminBulkReassignAssignmentsMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminBulkReassignAssignments>>,
+    TError,
+    { data: BodyType<BulkReassignBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminBulkReassignAssignments>>,
+  TError,
+  { data: BodyType<BulkReassignBody> },
+  TContext
+> => {
+  const mutationKey = ["adminBulkReassignAssignments"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminBulkReassignAssignments>>,
+    { data: BodyType<BulkReassignBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminBulkReassignAssignments(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminBulkReassignAssignmentsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminBulkReassignAssignments>>
+>;
+export type AdminBulkReassignAssignmentsMutationBody =
+  BodyType<BulkReassignBody>;
+export type AdminBulkReassignAssignmentsMutationError =
+  ErrorType<ErrorResponse>;
+
+/**
+ * @summary Reassign multiple officer assignments to a different user
+ */
+export const useAdminBulkReassignAssignments = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminBulkReassignAssignments>>,
+    TError,
+    { data: BodyType<BulkReassignBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminBulkReassignAssignments>>,
+  TError,
+  { data: BodyType<BulkReassignBody> },
+  TContext
+> => {
+  return useMutation(getAdminBulkReassignAssignmentsMutationOptions(options));
+};
+
+/**
+ * @summary List volunteer→ward/area/booth assignments
+ */
+export const getAdminListVolunteerAssignmentsUrl = (
+  params?: AdminListVolunteerAssignmentsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/volunteer-assignments?${stringifiedParams}`
+    : `/api/admin/volunteer-assignments`;
+};
+
+export const adminListVolunteerAssignments = async (
+  params?: AdminListVolunteerAssignmentsParams,
+  options?: RequestInit,
+): Promise<VolunteerAssignmentListResponse> => {
+  return customFetch<VolunteerAssignmentListResponse>(
+    getAdminListVolunteerAssignmentsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getAdminListVolunteerAssignmentsQueryKey = (
+  params?: AdminListVolunteerAssignmentsParams,
+) => {
+  return [
+    `/api/admin/volunteer-assignments`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getAdminListVolunteerAssignmentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminListVolunteerAssignments>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: AdminListVolunteerAssignmentsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminListVolunteerAssignments>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAdminListVolunteerAssignmentsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminListVolunteerAssignments>>
+  > = ({ signal }) =>
+    adminListVolunteerAssignments(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminListVolunteerAssignments>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminListVolunteerAssignmentsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminListVolunteerAssignments>>
+>;
+export type AdminListVolunteerAssignmentsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List volunteer→ward/area/booth assignments
+ */
+
+export function useAdminListVolunteerAssignments<
+  TData = Awaited<ReturnType<typeof adminListVolunteerAssignments>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: AdminListVolunteerAssignmentsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminListVolunteerAssignments>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminListVolunteerAssignmentsQueryOptions(
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a volunteer assignment
+ */
+export const getAdminCreateVolunteerAssignmentUrl = () => {
+  return `/api/admin/volunteer-assignments`;
+};
+
+export const adminCreateVolunteerAssignment = async (
+  volunteerAssignmentBody: VolunteerAssignmentBody,
+  options?: RequestInit,
+): Promise<VolunteerAssignment> => {
+  return customFetch<VolunteerAssignment>(
+    getAdminCreateVolunteerAssignmentUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(volunteerAssignmentBody),
+    },
+  );
+};
+
+export const getAdminCreateVolunteerAssignmentMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateVolunteerAssignment>>,
+    TError,
+    { data: BodyType<VolunteerAssignmentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminCreateVolunteerAssignment>>,
+  TError,
+  { data: BodyType<VolunteerAssignmentBody> },
+  TContext
+> => {
+  const mutationKey = ["adminCreateVolunteerAssignment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminCreateVolunteerAssignment>>,
+    { data: BodyType<VolunteerAssignmentBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminCreateVolunteerAssignment(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminCreateVolunteerAssignmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminCreateVolunteerAssignment>>
+>;
+export type AdminCreateVolunteerAssignmentMutationBody =
+  BodyType<VolunteerAssignmentBody>;
+export type AdminCreateVolunteerAssignmentMutationError =
+  ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a volunteer assignment
+ */
+export const useAdminCreateVolunteerAssignment = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateVolunteerAssignment>>,
+    TError,
+    { data: BodyType<VolunteerAssignmentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminCreateVolunteerAssignment>>,
+  TError,
+  { data: BodyType<VolunteerAssignmentBody> },
+  TContext
+> => {
+  return useMutation(getAdminCreateVolunteerAssignmentMutationOptions(options));
+};
+
+/**
+ * @summary Toggle a volunteer assignment active flag
+ */
+export const getAdminUpdateVolunteerAssignmentUrl = (id: number) => {
+  return `/api/admin/volunteer-assignments/${id}`;
+};
+
+export const adminUpdateVolunteerAssignment = async (
+  id: number,
+  adminUpdateVolunteerAssignmentBody: AdminUpdateVolunteerAssignmentBody,
+  options?: RequestInit,
+): Promise<VolunteerAssignment> => {
+  return customFetch<VolunteerAssignment>(
+    getAdminUpdateVolunteerAssignmentUrl(id),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(adminUpdateVolunteerAssignmentBody),
+    },
+  );
+};
+
+export const getAdminUpdateVolunteerAssignmentMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateVolunteerAssignment>>,
+    TError,
+    { id: number; data: BodyType<AdminUpdateVolunteerAssignmentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminUpdateVolunteerAssignment>>,
+  TError,
+  { id: number; data: BodyType<AdminUpdateVolunteerAssignmentBody> },
+  TContext
+> => {
+  const mutationKey = ["adminUpdateVolunteerAssignment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminUpdateVolunteerAssignment>>,
+    { id: number; data: BodyType<AdminUpdateVolunteerAssignmentBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminUpdateVolunteerAssignment(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminUpdateVolunteerAssignmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminUpdateVolunteerAssignment>>
+>;
+export type AdminUpdateVolunteerAssignmentMutationBody =
+  BodyType<AdminUpdateVolunteerAssignmentBody>;
+export type AdminUpdateVolunteerAssignmentMutationError =
+  ErrorType<ErrorResponse>;
+
+/**
+ * @summary Toggle a volunteer assignment active flag
+ */
+export const useAdminUpdateVolunteerAssignment = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateVolunteerAssignment>>,
+    TError,
+    { id: number; data: BodyType<AdminUpdateVolunteerAssignmentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminUpdateVolunteerAssignment>>,
+  TError,
+  { id: number; data: BodyType<AdminUpdateVolunteerAssignmentBody> },
+  TContext
+> => {
+  return useMutation(getAdminUpdateVolunteerAssignmentMutationOptions(options));
+};
+
+/**
+ * @summary Delete a volunteer assignment
+ */
+export const getAdminDeleteVolunteerAssignmentUrl = (id: number) => {
+  return `/api/admin/volunteer-assignments/${id}`;
+};
+
+export const adminDeleteVolunteerAssignment = async (
+  id: number,
+  options?: RequestInit,
+): Promise<DeletedResult> => {
+  return customFetch<DeletedResult>(getAdminDeleteVolunteerAssignmentUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getAdminDeleteVolunteerAssignmentMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteVolunteerAssignment>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminDeleteVolunteerAssignment>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["adminDeleteVolunteerAssignment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminDeleteVolunteerAssignment>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return adminDeleteVolunteerAssignment(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminDeleteVolunteerAssignmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminDeleteVolunteerAssignment>>
+>;
+
+export type AdminDeleteVolunteerAssignmentMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a volunteer assignment
+ */
+export const useAdminDeleteVolunteerAssignment = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteVolunteerAssignment>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminDeleteVolunteerAssignment>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAdminDeleteVolunteerAssignmentMutationOptions(options));
 };
 
 /**
