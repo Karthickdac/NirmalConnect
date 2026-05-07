@@ -90,6 +90,9 @@ export const analyticsTranslations = {
     heatmapTitle: "Grievance heatmap",
     analytics: "Analytics",
     categoryByWard: "Category breakdown per ward (top 10)",
+    downloadCsv: "Download CSV",
+    downloadPdf: "Download PDF",
+    exporting: "Preparing export…",
   },
   ta: {
     title: "புகார் பகுப்பாய்வு",
@@ -117,6 +120,9 @@ export const analyticsTranslations = {
     heatmapTitle: "புகார் வெப்பப்படம்",
     analytics: "பகுப்பாய்வு",
     categoryByWard: "வார்டு வாரியாக வகை விவரம் (முதல் 10)",
+    downloadCsv: "CSV பதிவிறக்கம்",
+    downloadPdf: "PDF பதிவிறக்கம்",
+    exporting: "ஏற்றுமதி தயாராகிறது…",
   },
 } as const;
 

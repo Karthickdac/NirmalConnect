@@ -1,13 +1,15 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { BarChart3, MapPin, Filter as FilterIcon, AlertTriangle } from "lucide-react";
+import { BarChart3, MapPin, Filter as FilterIcon, AlertTriangle, Download, FileText } from "lucide-react";
 import { getToken } from "@/lib/auth";
 import type { Language } from "@/lib/i18n";
 import { tAnalytics } from "@/lib/mapI18n";
+import { exportAnalyticsCsv, exportAnalyticsPdf } from "@/lib/analyticsExport";
 
 const ConstituencyMap = lazy(() => import("@/components/maps/ConstituencyMap"));
 
@@ -55,6 +57,29 @@ export default function Analytics({ lang, officerWardIds, officerAreaIds, office
   const [officers, setOfficers] = useState<OfficersResponse["items"]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
+
+  const chartsRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+
+  async function handleCsv() {
+    if (!data || exporting) return;
+    setExporting("csv");
+    try { exportAnalyticsCsv(data); } finally { setExporting(null); }
+  }
+
+  async function handlePdf() {
+    if (!data || exporting) return;
+    setExporting("pdf");
+    try {
+      await exportAnalyticsPdf(data, { chartsEl: chartsRef.current, mapEl: mapRef.current });
+    } catch (e) {
+      console.error("[analytics] pdf export failed", e);
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setExporting(null);
+    }
+  }
 
   const queryString = useMemo(() => {
     const p = new URLSearchParams();
@@ -107,11 +132,35 @@ export default function Analytics({ lang, officerWardIds, officerAreaIds, office
           </h2>
           <p className="text-sm text-muted-foreground mt-1">{t("subtitle")}</p>
         </div>
-        {data && (
-          <div className="text-xs text-muted-foreground">
-            {t("cachedFor")} {data.cacheTtlSeconds}s
-          </div>
-        )}
+        <div className="flex items-center gap-3 flex-wrap">
+          {data && (
+            <div className="text-xs text-muted-foreground">
+              {t("cachedFor")} {data.cacheTtlSeconds}s
+            </div>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!data || loading || exporting !== null}
+            onClick={handleCsv}
+            data-testid="analytics-download-csv"
+            className="gap-2"
+          >
+            <Download className="w-4 h-4" />
+            {exporting === "csv" ? t("exporting") : t("downloadCsv")}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!data || loading || exporting !== null}
+            onClick={handlePdf}
+            data-testid="analytics-download-pdf"
+            className="gap-2"
+          >
+            <FileText className="w-4 h-4" />
+            {exporting === "pdf" ? t("exporting") : t("downloadPdf")}
+          </Button>
+        </div>
       </div>
 
       {/* Filter bar */}
@@ -240,7 +289,7 @@ export default function Analytics({ lang, officerWardIds, officerAreaIds, office
           </div>
 
           {/* Charts grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div ref={chartsRef} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Top wards bar chart */}
             <Card>
               <CardHeader className="pb-2">
@@ -374,6 +423,7 @@ export default function Analytics({ lang, officerWardIds, officerAreaIds, office
               )}
             </CardHeader>
             <CardContent className="p-0">
+              <div ref={mapRef}>
               <Suspense fallback={<div className="text-sm text-muted-foreground p-4">{t("loading")}</div>}>
                 <ConstituencyMap
                   lang={lang}
@@ -385,6 +435,7 @@ export default function Analytics({ lang, officerWardIds, officerAreaIds, office
                   heatPoints={data.heatPoints}
                 />
               </Suspense>
+              </div>
             </CardContent>
           </Card>
         </>
