@@ -779,6 +779,8 @@ router.get("/admin/voters/:id", requireStaff, async (req: AuthRequest, res) => {
         pollingStationId: votersTable.pollingStationId,
         boothName: pollingStationsTable.name,
         boothNo: pollingStationsTable.boothNo,
+        wardId: pollingStationsTable.wardId,
+        sourceImportId: votersTable.sourceImportId,
         sourcePdf: votersTable.sourcePdf,
         sourcePage: votersTable.sourcePage,
         createdAt: votersTable.createdAt,

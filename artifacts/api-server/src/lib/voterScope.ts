@@ -24,7 +24,12 @@ export interface VoterScope {
   pollingStationIds: number[];
 }
 
-const UNRESTRICTED_ROLES = new Set(["super_admin", "admin", "minister"]);
+// Per task #43 access policy: ONLY super_admin and admin see the
+// constituency-wide voter list. Every other staff role (including
+// minister, coordinators, officers, pa_staff) is filtered through
+// their officer assignments — keeping voter PII exposure to the
+// minimum each role actually needs.
+const UNRESTRICTED_ROLES = new Set(["super_admin", "admin"]);
 
 export interface ScopeUser {
   id: number;

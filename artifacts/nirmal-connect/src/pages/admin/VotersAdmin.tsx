@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/sheet";
 import { useWards } from "@/lib/useWards";
 import { getToken } from "@/lib/auth";
-import { Loader2, Search, ChevronLeft, ChevronRight, X as XIcon } from "lucide-react";
+import { Loader2, Search, ChevronLeft, ChevronRight, FileText } from "lucide-react";
+import type { Language } from "@/lib/i18n";
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 
@@ -36,6 +37,8 @@ interface VoterDetail extends VoterRow {
   relationNameTa: string | null;
   houseNumber: string | null;
   addressLine: string | null;
+  wardId: number | null;
+  sourceImportId: number | null;
   sourcePdf: string | null;
   sourcePage: number | null;
   createdAt: string;
@@ -50,6 +53,8 @@ interface SearchResponse {
   hasMore: boolean;
 }
 
+interface BoothOption { id: number; boothNo: string; name: string }
+
 async function authJson<T>(path: string): Promise<T> {
   const tok = getToken();
   const r = await fetch(`${BASE}/api${path}`, {
@@ -60,30 +65,61 @@ async function authJson<T>(path: string): Promise<T> {
   return r.json() as Promise<T>;
 }
 
-export default function VotersAdmin() {
+async function fetchBooths(wardId: number): Promise<BoothOption[]> {
+  const r = await fetch(`${BASE}/api/wards/${wardId}/polling-stations`);
+  return r.ok ? (r.json() as Promise<BoothOption[]>) : [];
+}
+
+interface VotersAdminProps { lang?: Language }
+
+export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
   const { data: wards = [] } = useWards();
+
+  // Bilingual display toggle (defaults to incoming admin lang).
+  const [displayLang, setDisplayLang] = useState<Language>(lang);
+  useEffect(() => { setDisplayLang(lang); }, [lang]);
 
   // Filter inputs (uncommitted)
   const [qInput, setQInput] = useState("");
   const [wardInput, setWardInput] = useState("all");
+  const [boothInput, setBoothInput] = useState("all");
   const [genderInput, setGenderInput] = useState("all");
   const [minAgeInput, setMinAgeInput] = useState("");
   const [maxAgeInput, setMaxAgeInput] = useState("");
 
+  // Reset booth when ward changes (booth list is ward-scoped).
+  useEffect(() => { setBoothInput("all"); }, [wardInput]);
+
+  const wardForBooths = wardInput !== "all" ? parseInt(wardInput, 10) : null;
+  const { data: boothOpts = [] } = useQuery({
+    queryKey: ["voter-booth-opts", wardForBooths],
+    queryFn: () => (wardForBooths ? fetchBooths(wardForBooths) : Promise.resolve([])),
+    enabled: !!wardForBooths,
+    staleTime: 5 * 60_000,
+  });
+
   // Committed filter values that drive the query.
   const [filters, setFilters] = useState({
-    q: "", wardId: "all", gender: "all", minAge: "", maxAge: "",
+    q: "", wardId: "all", boothId: "all", gender: "all", minAge: "", maxAge: "",
   });
   const [page, setPage] = useState(1);
   const limit = 25;
 
   function applyFilters() {
     setPage(1);
-    setFilters({ q: qInput.trim(), wardId: wardInput, gender: genderInput, minAge: minAgeInput, maxAge: maxAgeInput });
+    setFilters({
+      q: qInput.trim(),
+      wardId: wardInput,
+      boothId: boothInput,
+      gender: genderInput,
+      minAge: minAgeInput,
+      maxAge: maxAgeInput,
+    });
   }
   function clearFilters() {
-    setQInput(""); setWardInput("all"); setGenderInput("all"); setMinAgeInput(""); setMaxAgeInput("");
-    setFilters({ q: "", wardId: "all", gender: "all", minAge: "", maxAge: "" });
+    setQInput(""); setWardInput("all"); setBoothInput("all");
+    setGenderInput("all"); setMinAgeInput(""); setMaxAgeInput("");
+    setFilters({ q: "", wardId: "all", boothId: "all", gender: "all", minAge: "", maxAge: "" });
     setPage(1);
   }
 
@@ -91,6 +127,7 @@ export default function VotersAdmin() {
     const p = new URLSearchParams();
     if (filters.q) p.set("q", filters.q);
     if (filters.wardId !== "all") p.set("wardId", filters.wardId);
+    if (filters.boothId !== "all") p.set("boothId", filters.boothId);
     if (filters.gender !== "all") p.set("gender", filters.gender);
     if (filters.minAge) p.set("minAge", filters.minAge);
     if (filters.maxAge) p.set("maxAge", filters.maxAge);
@@ -115,20 +152,57 @@ export default function VotersAdmin() {
     retry: false,
   });
 
+  const wardNameById = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const w of wards) m.set(w.id, w.name);
+    return m;
+  }, [wards]);
+
   useEffect(() => { setPage(1); }, [filters]);
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
+  function pickName(en: string, ta: string | null): string {
+    if (displayLang === "ta" && ta) return ta;
+    return en;
+  }
+  function pickSubName(en: string, ta: string | null): string | null {
+    if (displayLang === "ta" && ta) return en; // show EN as subtitle when TA primary
+    if (displayLang === "en" && ta) return ta;
+    return null;
+  }
+
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-2xl font-bold">Voters</h2>
-        <p className="text-sm text-muted-foreground">
-          Search the electoral roll within your assigned wards. Officers see only voters in their
-          area; admins see all. Every search and detail view is audited.
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-2xl font-bold">Voters</h2>
+          <p className="text-sm text-muted-foreground">
+            Search the electoral roll within your assigned wards. Officers see only voters in their
+            area; admins see all. Every search and detail view is audited.
+          </p>
+        </div>
+        {/* EN/TA presentation toggle (mirrors AboutAdmin pattern) */}
+        <div className="flex gap-1 rounded-md border bg-background p-0.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setDisplayLang("en")}
+            data-testid="voters-lang-en"
+            className={`px-2.5 py-1 text-xs rounded ${displayLang === "en" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            EN
+          </button>
+          <button
+            type="button"
+            onClick={() => setDisplayLang("ta")}
+            data-testid="voters-lang-ta"
+            className={`px-2.5 py-1 text-xs rounded ${displayLang === "ta" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            தமிழ்
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -150,10 +224,24 @@ export default function VotersAdmin() {
             <div className="w-44">
               <label className="text-xs font-medium block mb-1">Ward</label>
               <Select value={wardInput} onValueChange={setWardInput}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 text-sm" data-testid="select-voter-ward"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All wards</SelectItem>
                   {wards.map(w => <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-52">
+              <label className="text-xs font-medium block mb-1">
+                Booth {wardForBooths == null && <span className="text-muted-foreground/70">(pick a ward first)</span>}
+              </label>
+              <Select value={boothInput} onValueChange={setBoothInput} disabled={!wardForBooths}>
+                <SelectTrigger className="h-9 text-sm" data-testid="select-voter-booth"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All booths</SelectItem>
+                  {boothOpts.map(b => (
+                    <SelectItem key={b.id} value={String(b.id)}>#{b.boothNo} — {b.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -205,9 +293,7 @@ export default function VotersAdmin() {
                 : `${total.toLocaleString()} voter${total === 1 ? "" : "s"} matched`
               )}
             </span>
-            {total > 0 && (
-              <span>Page {page} of {totalPages}</span>
-            )}
+            {total > 0 && <span>Page {page} of {totalPages}</span>}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -222,8 +308,10 @@ export default function VotersAdmin() {
                 {items.map(v => (
                   <tr key={v.id} className="hover:bg-muted/20">
                     <td className="px-4 py-2">
-                      <div className="font-medium">{v.fullName}</div>
-                      {v.fullNameTa && <div className="text-xs text-muted-foreground">{v.fullNameTa}</div>}
+                      <div className="font-medium">{pickName(v.fullName, v.fullNameTa)}</div>
+                      {pickSubName(v.fullName, v.fullNameTa) && (
+                        <div className="text-xs text-muted-foreground">{pickSubName(v.fullName, v.fullNameTa)}</div>
+                      )}
                       {v.relationName && <div className="text-xs text-muted-foreground">c/o {v.relationName}</div>}
                     </td>
                     <td className="px-4 py-2 font-mono text-xs">{v.epicNumber}</td>
@@ -259,7 +347,6 @@ export default function VotersAdmin() {
               </tbody>
             </table>
           </div>
-          {/* Pagination */}
           {total > 0 && (
             <div className="px-4 py-2 border-t flex items-center justify-end gap-2">
               <Button size="sm" variant="outline" className="h-8" disabled={page <= 1 || isFetching} onClick={() => setPage(p => Math.max(1, p - 1))}>
@@ -275,10 +362,12 @@ export default function VotersAdmin() {
 
       {/* Detail slide-over */}
       <Sheet open={detailId != null} onOpenChange={(o) => { if (!o) setDetailId(null); }}>
-        <SheetContent className="w-[420px] sm:w-[480px] overflow-y-auto">
+        <SheetContent className="w-[420px] sm:w-[480px] overflow-y-auto" data-testid="voter-detail-sheet">
           <SheetHeader>
-            <SheetTitle>{detail?.fullName ?? (detailLoading ? "Loading…" : "Voter")}</SheetTitle>
-            {detail?.fullNameTa && <SheetDescription>{detail.fullNameTa}</SheetDescription>}
+            <SheetTitle>{detail ? pickName(detail.fullName, detail.fullNameTa) : (detailLoading ? "Loading…" : "Voter")}</SheetTitle>
+            {detail && pickSubName(detail.fullName, detail.fullNameTa) && (
+              <SheetDescription>{pickSubName(detail.fullName, detail.fullNameTa)}</SheetDescription>
+            )}
           </SheetHeader>
           {detailError && (
             <div className="mt-4 text-sm text-destructive">
@@ -296,8 +385,10 @@ export default function VotersAdmin() {
               </div>
               {(detail.relationName || detail.relationType) && (
                 <Field label={detail.relationType ? `${capitalize(detail.relationType)} name` : "Relation"}>
-                  {detail.relationName ?? "—"}
-                  {detail.relationNameTa && <span className="block text-xs text-muted-foreground">{detail.relationNameTa}</span>}
+                  {pickName(detail.relationName ?? "—", detail.relationNameTa)}
+                  {pickSubName(detail.relationName ?? "", detail.relationNameTa) && (
+                    <span className="block text-xs text-muted-foreground">{pickSubName(detail.relationName ?? "", detail.relationNameTa)}</span>
+                  )}
                 </Field>
               )}
               {(detail.houseNumber || detail.addressLine) && (
@@ -306,6 +397,11 @@ export default function VotersAdmin() {
                   {detail.addressLine && <div className="text-muted-foreground">{detail.addressLine}</div>}
                 </Field>
               )}
+              <Field label="Ward">
+                {detail.wardId != null
+                  ? (wardNameById.get(detail.wardId) ?? `Ward #${detail.wardId}`)
+                  : "—"}
+              </Field>
               <Field label="Booth">
                 {detail.boothNo
                   ? <>#{detail.boothNo} {detail.boothName ?? ""}</>
@@ -317,8 +413,20 @@ export default function VotersAdmin() {
                 )}
               </Field>
               {detail.sourcePdf && (
-                <Field label="Source">
-                  <span className="text-xs">{detail.sourcePdf}{detail.sourcePage ? ` (p.${detail.sourcePage})` : ""}</span>
+                <Field label="Source PDF">
+                  <a
+                    href={detail.sourceImportId != null
+                      ? `${BASE}/api/admin/voters/imports/${detail.sourceImportId}`
+                      : "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-primary hover:underline text-xs"
+                    data-testid="voter-source-pdf-link"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    {detail.sourcePdf}
+                    {detail.sourcePage ? <span className="text-muted-foreground">(p.{detail.sourcePage})</span> : null}
+                  </a>
                 </Field>
               )}
               <div className="text-xs text-muted-foreground border-t pt-3">

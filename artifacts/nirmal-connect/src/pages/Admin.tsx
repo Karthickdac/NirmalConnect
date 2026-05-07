@@ -59,7 +59,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "banners",      label: "Banners",            icon: Megaphone,    roles: ["super_admin", "admin", "pa_staff"] },
   { id: "volunteers",   label: "Volunteers",         icon: Users,        roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator"] },
   { id: "constituency", label: "Constituency & Wards", icon: MapPin,      roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator"] },
-  { id: "voters-search", label: "Voters",               icon: Users,        roles: ["super_admin", "admin", "minister", "constituency_coordinator", "grievance_officer", "pa_staff"] },
+  { id: "voters-search", label: "Voters",               icon: Users,        roles: ["super_admin", "admin", "constituency_coordinator", "grievance_officer", "pa_staff"] },
   { id: "voters",       label: "Voter Roll",            icon: ShieldAlert, roles: ["super_admin"] },
   { id: "faqs",         label: "FAQs",               icon: HelpCircle,   roles: ["super_admin", "admin", "pa_staff"] },
   { id: "home",         label: "Home CMS",           icon: HomeIcon,     roles: ["super_admin", "admin"] },
@@ -333,7 +333,7 @@ function AdminInner({ lang = "ta" }: AdminProps) {
           {active === "settings"     && <SiteSettingsAdmin />}
           {active === "audit"        && <AuditLogAdmin />}
           {active === "voters"       && <VoterRollAdmin />}
-          {active === "voters-search" && <VotersAdmin />}
+          {active === "voters-search" && <VotersAdmin lang={lang} />}
         </main>
       </div>
     </div>
