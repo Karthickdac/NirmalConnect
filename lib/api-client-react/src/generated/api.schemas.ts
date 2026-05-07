@@ -453,6 +453,250 @@ export interface WardBody {
   notes?: string | null;
 }
 
+export interface DeletedResult {
+  success: boolean;
+}
+
+export type HierarchyZoneBodyType =
+  (typeof HierarchyZoneBodyType)[keyof typeof HierarchyZoneBodyType];
+
+export const HierarchyZoneBodyType = {
+  corporation: "corporation",
+  rural: "rural",
+} as const;
+
+export interface HierarchyZoneBody {
+  /** @minLength 1 */
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  slug: string;
+  type: HierarchyZoneBodyType;
+  /** @nullable */
+  description?: string | null;
+}
+
+export interface HierarchyZone {
+  id: number;
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  slug: string;
+  type: string;
+  /** @nullable */
+  description?: string | null;
+  [key: string]: unknown;
+}
+
+export interface HierarchyWardBody {
+  /** @minLength 1 */
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  /** @nullable */
+  slug?: string | null;
+  /** @nullable */
+  wardType?: string | null;
+  /** @nullable */
+  zoneId?: number | null;
+  /** @nullable */
+  pincode?: string | null;
+  /** @nullable */
+  coordinatorName?: string | null;
+  /** @nullable */
+  coordinatorPhone?: string | null;
+  /** @nullable */
+  coordinatorEmail?: string | null;
+  /** @nullable */
+  population?: number | null;
+  /** @nullable */
+  households?: number | null;
+  /** @nullable */
+  latitude?: number | null;
+  /** @nullable */
+  longitude?: number | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface HierarchyWard {
+  id: number;
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  /** @nullable */
+  zoneId?: number | null;
+  boothCount?: number;
+  [key: string]: unknown;
+}
+
+export interface HierarchyAreaBody {
+  wardId: number;
+  /** @minLength 1 */
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  /** @nullable */
+  areaType?: string | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface HierarchyArea {
+  id: number;
+  wardId: number;
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  [key: string]: unknown;
+}
+
+export interface HierarchyStreetBody {
+  areaId: number;
+  /** @minLength 1 */
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  /** @nullable */
+  pincode?: string | null;
+}
+
+export interface HierarchyStreet {
+  id: number;
+  areaId: number;
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  /** @nullable */
+  pincode?: string | null;
+  [key: string]: unknown;
+}
+
+export type HierarchyBoothBodyVoterType =
+  (typeof HierarchyBoothBodyVoterType)[keyof typeof HierarchyBoothBodyVoterType];
+
+export const HierarchyBoothBodyVoterType = {
+  all: "all",
+  men_only: "men_only",
+  women_only: "women_only",
+} as const;
+
+export interface HierarchyBoothBody {
+  /** @minLength 1 */
+  boothNo: string;
+  /** @nullable */
+  slNo?: number | null;
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  addressTa?: string | null;
+  /** @nullable */
+  wardId?: number | null;
+  /** @nullable */
+  areaId?: number | null;
+  /** @nullable */
+  pincode?: string | null;
+  voterType?: HierarchyBoothBodyVoterType;
+  /** @nullable */
+  latitude?: number | null;
+  /** @nullable */
+  longitude?: number | null;
+}
+
+export interface HierarchyBooth {
+  id: number;
+  boothNo: string;
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  /** @nullable */
+  wardId?: number | null;
+  /** @nullable */
+  areaId?: number | null;
+  /** @nullable */
+  latitude?: number | null;
+  /** @nullable */
+  longitude?: number | null;
+  [key: string]: unknown;
+}
+
+export interface HierarchyPincodeBody {
+  /** @pattern ^[0-9]{6}$ */
+  code: string;
+  /** @nullable */
+  label?: string | null;
+  /** @nullable */
+  labelTa?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  wardIds?: number[];
+}
+
+export interface HierarchyPincode {
+  id: number;
+  code: string;
+  /** @nullable */
+  label?: string | null;
+  /** @nullable */
+  labelTa?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  wardIds: number[];
+  [key: string]: unknown;
+}
+
+export interface HierarchyTreeStreet {
+  id: number;
+  areaId: number;
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  /** @nullable */
+  pincode?: string | null;
+  [key: string]: unknown;
+}
+
+export interface HierarchyTreeArea {
+  id: number;
+  wardId: number;
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  streets: HierarchyTreeStreet[];
+  [key: string]: unknown;
+}
+
+export interface HierarchyTreeWard {
+  id: number;
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  /** @nullable */
+  zoneId?: number | null;
+  boothCount: number;
+  areas: HierarchyTreeArea[];
+  [key: string]: unknown;
+}
+
+export interface HierarchyTreeZone {
+  id: number;
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  slug: string;
+  type: string;
+  wards: HierarchyTreeWard[];
+  [key: string]: unknown;
+}
+
+export interface HierarchyTree {
+  zones: HierarchyTreeZone[];
+  orphanWards: HierarchyTreeWard[];
+}
+
 export interface BulkGrievanceAssignBody {
   /**
    * @minItems 1

@@ -25,6 +25,7 @@ import type {
   BulkGrievanceAssignBody,
   BulkUpdateResult,
   ConstituencyStats,
+  DeletedResult,
   ErrorResponse,
   Event,
   EventListResponse,
@@ -47,6 +48,19 @@ import type {
   GrievanceSubmitBody,
   GrievanceTrackResponse,
   HealthStatus,
+  HierarchyArea,
+  HierarchyAreaBody,
+  HierarchyBooth,
+  HierarchyBoothBody,
+  HierarchyPincode,
+  HierarchyPincodeBody,
+  HierarchyStreet,
+  HierarchyStreetBody,
+  HierarchyTree,
+  HierarchyWard,
+  HierarchyWardBody,
+  HierarchyZone,
+  HierarchyZoneBody,
   ListActivitiesParams,
   ListEventsParams,
   ListGalleryParams,
@@ -3274,6 +3288,1786 @@ export const useAdminDeleteWard = <
   TContext
 > => {
   return useMutation(getAdminDeleteWardMutationOptions(options));
+};
+
+/**
+ * @summary Get the full Zone→Ward→Area→Street tree (with booth counts)
+ */
+export const getAdminGetHierarchyTreeUrl = () => {
+  return `/api/admin/hierarchy/tree`;
+};
+
+export const adminGetHierarchyTree = async (
+  options?: RequestInit,
+): Promise<HierarchyTree> => {
+  return customFetch<HierarchyTree>(getAdminGetHierarchyTreeUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAdminGetHierarchyTreeQueryKey = () => {
+  return [`/api/admin/hierarchy/tree`] as const;
+};
+
+export const getAdminGetHierarchyTreeQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminGetHierarchyTree>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminGetHierarchyTree>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAdminGetHierarchyTreeQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminGetHierarchyTree>>
+  > = ({ signal }) => adminGetHierarchyTree({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminGetHierarchyTree>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminGetHierarchyTreeQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminGetHierarchyTree>>
+>;
+export type AdminGetHierarchyTreeQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get the full Zone→Ward→Area→Street tree (with booth counts)
+ */
+
+export function useAdminGetHierarchyTree<
+  TData = Awaited<ReturnType<typeof adminGetHierarchyTree>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminGetHierarchyTree>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminGetHierarchyTreeQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List polling stations (booths) for a ward
+ */
+export const getAdminGetWardBoothsUrl = (id: number) => {
+  return `/api/admin/hierarchy/wards/${id}/polling-stations`;
+};
+
+export const adminGetWardBooths = async (
+  id: number,
+  options?: RequestInit,
+): Promise<HierarchyBooth[]> => {
+  return customFetch<HierarchyBooth[]>(getAdminGetWardBoothsUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAdminGetWardBoothsQueryKey = (id: number) => {
+  return [`/api/admin/hierarchy/wards/${id}/polling-stations`] as const;
+};
+
+export const getAdminGetWardBoothsQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminGetWardBooths>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminGetWardBooths>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAdminGetWardBoothsQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminGetWardBooths>>
+  > = ({ signal }) => adminGetWardBooths(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminGetWardBooths>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminGetWardBoothsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminGetWardBooths>>
+>;
+export type AdminGetWardBoothsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List polling stations (booths) for a ward
+ */
+
+export function useAdminGetWardBooths<
+  TData = Awaited<ReturnType<typeof adminGetWardBooths>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminGetWardBooths>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminGetWardBoothsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a zone
+ */
+export const getAdminCreateZoneUrl = () => {
+  return `/api/admin/hierarchy/zones`;
+};
+
+export const adminCreateZone = async (
+  hierarchyZoneBody: HierarchyZoneBody,
+  options?: RequestInit,
+): Promise<HierarchyZone> => {
+  return customFetch<HierarchyZone>(getAdminCreateZoneUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(hierarchyZoneBody),
+  });
+};
+
+export const getAdminCreateZoneMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateZone>>,
+    TError,
+    { data: BodyType<HierarchyZoneBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminCreateZone>>,
+  TError,
+  { data: BodyType<HierarchyZoneBody> },
+  TContext
+> => {
+  const mutationKey = ["adminCreateZone"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminCreateZone>>,
+    { data: BodyType<HierarchyZoneBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminCreateZone(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminCreateZoneMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminCreateZone>>
+>;
+export type AdminCreateZoneMutationBody = BodyType<HierarchyZoneBody>;
+export type AdminCreateZoneMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a zone
+ */
+export const useAdminCreateZone = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateZone>>,
+    TError,
+    { data: BodyType<HierarchyZoneBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminCreateZone>>,
+  TError,
+  { data: BodyType<HierarchyZoneBody> },
+  TContext
+> => {
+  return useMutation(getAdminCreateZoneMutationOptions(options));
+};
+
+/**
+ * @summary Update a zone
+ */
+export const getAdminUpdateZoneUrl = (id: number) => {
+  return `/api/admin/hierarchy/zones/${id}`;
+};
+
+export const adminUpdateZone = async (
+  id: number,
+  hierarchyZoneBody: HierarchyZoneBody,
+  options?: RequestInit,
+): Promise<HierarchyZone> => {
+  return customFetch<HierarchyZone>(getAdminUpdateZoneUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(hierarchyZoneBody),
+  });
+};
+
+export const getAdminUpdateZoneMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateZone>>,
+    TError,
+    { id: number; data: BodyType<HierarchyZoneBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminUpdateZone>>,
+  TError,
+  { id: number; data: BodyType<HierarchyZoneBody> },
+  TContext
+> => {
+  const mutationKey = ["adminUpdateZone"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminUpdateZone>>,
+    { id: number; data: BodyType<HierarchyZoneBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminUpdateZone(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminUpdateZoneMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminUpdateZone>>
+>;
+export type AdminUpdateZoneMutationBody = BodyType<HierarchyZoneBody>;
+export type AdminUpdateZoneMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update a zone
+ */
+export const useAdminUpdateZone = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateZone>>,
+    TError,
+    { id: number; data: BodyType<HierarchyZoneBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminUpdateZone>>,
+  TError,
+  { id: number; data: BodyType<HierarchyZoneBody> },
+  TContext
+> => {
+  return useMutation(getAdminUpdateZoneMutationOptions(options));
+};
+
+/**
+ * @summary Delete a zone
+ */
+export const getAdminDeleteZoneUrl = (id: number) => {
+  return `/api/admin/hierarchy/zones/${id}`;
+};
+
+export const adminDeleteZone = async (
+  id: number,
+  options?: RequestInit,
+): Promise<DeletedResult> => {
+  return customFetch<DeletedResult>(getAdminDeleteZoneUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getAdminDeleteZoneMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteZone>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminDeleteZone>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["adminDeleteZone"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminDeleteZone>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return adminDeleteZone(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminDeleteZoneMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminDeleteZone>>
+>;
+
+export type AdminDeleteZoneMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete a zone
+ */
+export const useAdminDeleteZone = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteZone>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminDeleteZone>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAdminDeleteZoneMutationOptions(options));
+};
+
+/**
+ * @summary Create a ward in the hierarchy
+ */
+export const getAdminCreateHierarchyWardUrl = () => {
+  return `/api/admin/hierarchy/wards`;
+};
+
+export const adminCreateHierarchyWard = async (
+  hierarchyWardBody: HierarchyWardBody,
+  options?: RequestInit,
+): Promise<HierarchyWard> => {
+  return customFetch<HierarchyWard>(getAdminCreateHierarchyWardUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(hierarchyWardBody),
+  });
+};
+
+export const getAdminCreateHierarchyWardMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateHierarchyWard>>,
+    TError,
+    { data: BodyType<HierarchyWardBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminCreateHierarchyWard>>,
+  TError,
+  { data: BodyType<HierarchyWardBody> },
+  TContext
+> => {
+  const mutationKey = ["adminCreateHierarchyWard"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminCreateHierarchyWard>>,
+    { data: BodyType<HierarchyWardBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminCreateHierarchyWard(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminCreateHierarchyWardMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminCreateHierarchyWard>>
+>;
+export type AdminCreateHierarchyWardMutationBody = BodyType<HierarchyWardBody>;
+export type AdminCreateHierarchyWardMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a ward in the hierarchy
+ */
+export const useAdminCreateHierarchyWard = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateHierarchyWard>>,
+    TError,
+    { data: BodyType<HierarchyWardBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminCreateHierarchyWard>>,
+  TError,
+  { data: BodyType<HierarchyWardBody> },
+  TContext
+> => {
+  return useMutation(getAdminCreateHierarchyWardMutationOptions(options));
+};
+
+/**
+ * @summary Update a ward
+ */
+export const getAdminUpdateHierarchyWardUrl = (id: number) => {
+  return `/api/admin/hierarchy/wards/${id}`;
+};
+
+export const adminUpdateHierarchyWard = async (
+  id: number,
+  hierarchyWardBody: HierarchyWardBody,
+  options?: RequestInit,
+): Promise<HierarchyWard> => {
+  return customFetch<HierarchyWard>(getAdminUpdateHierarchyWardUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(hierarchyWardBody),
+  });
+};
+
+export const getAdminUpdateHierarchyWardMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateHierarchyWard>>,
+    TError,
+    { id: number; data: BodyType<HierarchyWardBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminUpdateHierarchyWard>>,
+  TError,
+  { id: number; data: BodyType<HierarchyWardBody> },
+  TContext
+> => {
+  const mutationKey = ["adminUpdateHierarchyWard"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminUpdateHierarchyWard>>,
+    { id: number; data: BodyType<HierarchyWardBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminUpdateHierarchyWard(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminUpdateHierarchyWardMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminUpdateHierarchyWard>>
+>;
+export type AdminUpdateHierarchyWardMutationBody = BodyType<HierarchyWardBody>;
+export type AdminUpdateHierarchyWardMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update a ward
+ */
+export const useAdminUpdateHierarchyWard = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateHierarchyWard>>,
+    TError,
+    { id: number; data: BodyType<HierarchyWardBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminUpdateHierarchyWard>>,
+  TError,
+  { id: number; data: BodyType<HierarchyWardBody> },
+  TContext
+> => {
+  return useMutation(getAdminUpdateHierarchyWardMutationOptions(options));
+};
+
+/**
+ * @summary Delete a ward
+ */
+export const getAdminDeleteHierarchyWardUrl = (id: number) => {
+  return `/api/admin/hierarchy/wards/${id}`;
+};
+
+export const adminDeleteHierarchyWard = async (
+  id: number,
+  options?: RequestInit,
+): Promise<DeletedResult> => {
+  return customFetch<DeletedResult>(getAdminDeleteHierarchyWardUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getAdminDeleteHierarchyWardMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteHierarchyWard>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminDeleteHierarchyWard>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["adminDeleteHierarchyWard"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminDeleteHierarchyWard>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return adminDeleteHierarchyWard(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminDeleteHierarchyWardMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminDeleteHierarchyWard>>
+>;
+
+export type AdminDeleteHierarchyWardMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete a ward
+ */
+export const useAdminDeleteHierarchyWard = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteHierarchyWard>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminDeleteHierarchyWard>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAdminDeleteHierarchyWardMutationOptions(options));
+};
+
+/**
+ * @summary Create an area
+ */
+export const getAdminCreateAreaUrl = () => {
+  return `/api/admin/hierarchy/areas`;
+};
+
+export const adminCreateArea = async (
+  hierarchyAreaBody: HierarchyAreaBody,
+  options?: RequestInit,
+): Promise<HierarchyArea> => {
+  return customFetch<HierarchyArea>(getAdminCreateAreaUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(hierarchyAreaBody),
+  });
+};
+
+export const getAdminCreateAreaMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateArea>>,
+    TError,
+    { data: BodyType<HierarchyAreaBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminCreateArea>>,
+  TError,
+  { data: BodyType<HierarchyAreaBody> },
+  TContext
+> => {
+  const mutationKey = ["adminCreateArea"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminCreateArea>>,
+    { data: BodyType<HierarchyAreaBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminCreateArea(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminCreateAreaMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminCreateArea>>
+>;
+export type AdminCreateAreaMutationBody = BodyType<HierarchyAreaBody>;
+export type AdminCreateAreaMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create an area
+ */
+export const useAdminCreateArea = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateArea>>,
+    TError,
+    { data: BodyType<HierarchyAreaBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminCreateArea>>,
+  TError,
+  { data: BodyType<HierarchyAreaBody> },
+  TContext
+> => {
+  return useMutation(getAdminCreateAreaMutationOptions(options));
+};
+
+/**
+ * @summary Update an area
+ */
+export const getAdminUpdateAreaUrl = (id: number) => {
+  return `/api/admin/hierarchy/areas/${id}`;
+};
+
+export const adminUpdateArea = async (
+  id: number,
+  hierarchyAreaBody: HierarchyAreaBody,
+  options?: RequestInit,
+): Promise<HierarchyArea> => {
+  return customFetch<HierarchyArea>(getAdminUpdateAreaUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(hierarchyAreaBody),
+  });
+};
+
+export const getAdminUpdateAreaMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateArea>>,
+    TError,
+    { id: number; data: BodyType<HierarchyAreaBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminUpdateArea>>,
+  TError,
+  { id: number; data: BodyType<HierarchyAreaBody> },
+  TContext
+> => {
+  const mutationKey = ["adminUpdateArea"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminUpdateArea>>,
+    { id: number; data: BodyType<HierarchyAreaBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminUpdateArea(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminUpdateAreaMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminUpdateArea>>
+>;
+export type AdminUpdateAreaMutationBody = BodyType<HierarchyAreaBody>;
+export type AdminUpdateAreaMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update an area
+ */
+export const useAdminUpdateArea = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateArea>>,
+    TError,
+    { id: number; data: BodyType<HierarchyAreaBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminUpdateArea>>,
+  TError,
+  { id: number; data: BodyType<HierarchyAreaBody> },
+  TContext
+> => {
+  return useMutation(getAdminUpdateAreaMutationOptions(options));
+};
+
+/**
+ * @summary Delete an area
+ */
+export const getAdminDeleteAreaUrl = (id: number) => {
+  return `/api/admin/hierarchy/areas/${id}`;
+};
+
+export const adminDeleteArea = async (
+  id: number,
+  options?: RequestInit,
+): Promise<DeletedResult> => {
+  return customFetch<DeletedResult>(getAdminDeleteAreaUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getAdminDeleteAreaMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteArea>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminDeleteArea>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["adminDeleteArea"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminDeleteArea>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return adminDeleteArea(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminDeleteAreaMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminDeleteArea>>
+>;
+
+export type AdminDeleteAreaMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete an area
+ */
+export const useAdminDeleteArea = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteArea>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminDeleteArea>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAdminDeleteAreaMutationOptions(options));
+};
+
+/**
+ * @summary Create a street
+ */
+export const getAdminCreateStreetUrl = () => {
+  return `/api/admin/hierarchy/streets`;
+};
+
+export const adminCreateStreet = async (
+  hierarchyStreetBody: HierarchyStreetBody,
+  options?: RequestInit,
+): Promise<HierarchyStreet> => {
+  return customFetch<HierarchyStreet>(getAdminCreateStreetUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(hierarchyStreetBody),
+  });
+};
+
+export const getAdminCreateStreetMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateStreet>>,
+    TError,
+    { data: BodyType<HierarchyStreetBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminCreateStreet>>,
+  TError,
+  { data: BodyType<HierarchyStreetBody> },
+  TContext
+> => {
+  const mutationKey = ["adminCreateStreet"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminCreateStreet>>,
+    { data: BodyType<HierarchyStreetBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminCreateStreet(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminCreateStreetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminCreateStreet>>
+>;
+export type AdminCreateStreetMutationBody = BodyType<HierarchyStreetBody>;
+export type AdminCreateStreetMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a street
+ */
+export const useAdminCreateStreet = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateStreet>>,
+    TError,
+    { data: BodyType<HierarchyStreetBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminCreateStreet>>,
+  TError,
+  { data: BodyType<HierarchyStreetBody> },
+  TContext
+> => {
+  return useMutation(getAdminCreateStreetMutationOptions(options));
+};
+
+/**
+ * @summary Update a street
+ */
+export const getAdminUpdateStreetUrl = (id: number) => {
+  return `/api/admin/hierarchy/streets/${id}`;
+};
+
+export const adminUpdateStreet = async (
+  id: number,
+  hierarchyStreetBody: HierarchyStreetBody,
+  options?: RequestInit,
+): Promise<HierarchyStreet> => {
+  return customFetch<HierarchyStreet>(getAdminUpdateStreetUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(hierarchyStreetBody),
+  });
+};
+
+export const getAdminUpdateStreetMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateStreet>>,
+    TError,
+    { id: number; data: BodyType<HierarchyStreetBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminUpdateStreet>>,
+  TError,
+  { id: number; data: BodyType<HierarchyStreetBody> },
+  TContext
+> => {
+  const mutationKey = ["adminUpdateStreet"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminUpdateStreet>>,
+    { id: number; data: BodyType<HierarchyStreetBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminUpdateStreet(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminUpdateStreetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminUpdateStreet>>
+>;
+export type AdminUpdateStreetMutationBody = BodyType<HierarchyStreetBody>;
+export type AdminUpdateStreetMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update a street
+ */
+export const useAdminUpdateStreet = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateStreet>>,
+    TError,
+    { id: number; data: BodyType<HierarchyStreetBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminUpdateStreet>>,
+  TError,
+  { id: number; data: BodyType<HierarchyStreetBody> },
+  TContext
+> => {
+  return useMutation(getAdminUpdateStreetMutationOptions(options));
+};
+
+/**
+ * @summary Delete a street
+ */
+export const getAdminDeleteStreetUrl = (id: number) => {
+  return `/api/admin/hierarchy/streets/${id}`;
+};
+
+export const adminDeleteStreet = async (
+  id: number,
+  options?: RequestInit,
+): Promise<DeletedResult> => {
+  return customFetch<DeletedResult>(getAdminDeleteStreetUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getAdminDeleteStreetMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteStreet>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminDeleteStreet>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["adminDeleteStreet"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminDeleteStreet>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return adminDeleteStreet(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminDeleteStreetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminDeleteStreet>>
+>;
+
+export type AdminDeleteStreetMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete a street
+ */
+export const useAdminDeleteStreet = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteStreet>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminDeleteStreet>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAdminDeleteStreetMutationOptions(options));
+};
+
+/**
+ * @summary Create a polling station (booth)
+ */
+export const getAdminCreateBoothUrl = () => {
+  return `/api/admin/hierarchy/polling-stations`;
+};
+
+export const adminCreateBooth = async (
+  hierarchyBoothBody: HierarchyBoothBody,
+  options?: RequestInit,
+): Promise<HierarchyBooth> => {
+  return customFetch<HierarchyBooth>(getAdminCreateBoothUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(hierarchyBoothBody),
+  });
+};
+
+export const getAdminCreateBoothMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateBooth>>,
+    TError,
+    { data: BodyType<HierarchyBoothBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminCreateBooth>>,
+  TError,
+  { data: BodyType<HierarchyBoothBody> },
+  TContext
+> => {
+  const mutationKey = ["adminCreateBooth"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminCreateBooth>>,
+    { data: BodyType<HierarchyBoothBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminCreateBooth(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminCreateBoothMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminCreateBooth>>
+>;
+export type AdminCreateBoothMutationBody = BodyType<HierarchyBoothBody>;
+export type AdminCreateBoothMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a polling station (booth)
+ */
+export const useAdminCreateBooth = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateBooth>>,
+    TError,
+    { data: BodyType<HierarchyBoothBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminCreateBooth>>,
+  TError,
+  { data: BodyType<HierarchyBoothBody> },
+  TContext
+> => {
+  return useMutation(getAdminCreateBoothMutationOptions(options));
+};
+
+/**
+ * @summary Update a polling station
+ */
+export const getAdminUpdateBoothUrl = (id: number) => {
+  return `/api/admin/hierarchy/polling-stations/${id}`;
+};
+
+export const adminUpdateBooth = async (
+  id: number,
+  hierarchyBoothBody: HierarchyBoothBody,
+  options?: RequestInit,
+): Promise<HierarchyBooth> => {
+  return customFetch<HierarchyBooth>(getAdminUpdateBoothUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(hierarchyBoothBody),
+  });
+};
+
+export const getAdminUpdateBoothMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateBooth>>,
+    TError,
+    { id: number; data: BodyType<HierarchyBoothBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminUpdateBooth>>,
+  TError,
+  { id: number; data: BodyType<HierarchyBoothBody> },
+  TContext
+> => {
+  const mutationKey = ["adminUpdateBooth"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminUpdateBooth>>,
+    { id: number; data: BodyType<HierarchyBoothBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminUpdateBooth(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminUpdateBoothMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminUpdateBooth>>
+>;
+export type AdminUpdateBoothMutationBody = BodyType<HierarchyBoothBody>;
+export type AdminUpdateBoothMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update a polling station
+ */
+export const useAdminUpdateBooth = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateBooth>>,
+    TError,
+    { id: number; data: BodyType<HierarchyBoothBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminUpdateBooth>>,
+  TError,
+  { id: number; data: BodyType<HierarchyBoothBody> },
+  TContext
+> => {
+  return useMutation(getAdminUpdateBoothMutationOptions(options));
+};
+
+/**
+ * @summary Delete a polling station
+ */
+export const getAdminDeleteBoothUrl = (id: number) => {
+  return `/api/admin/hierarchy/polling-stations/${id}`;
+};
+
+export const adminDeleteBooth = async (
+  id: number,
+  options?: RequestInit,
+): Promise<DeletedResult> => {
+  return customFetch<DeletedResult>(getAdminDeleteBoothUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getAdminDeleteBoothMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteBooth>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminDeleteBooth>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["adminDeleteBooth"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminDeleteBooth>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return adminDeleteBooth(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminDeleteBoothMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminDeleteBooth>>
+>;
+
+export type AdminDeleteBoothMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete a polling station
+ */
+export const useAdminDeleteBooth = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteBooth>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminDeleteBooth>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAdminDeleteBoothMutationOptions(options));
+};
+
+/**
+ * @summary List pincodes with their associated wards
+ */
+export const getAdminListHierarchyPincodesUrl = () => {
+  return `/api/admin/hierarchy/pincodes`;
+};
+
+export const adminListHierarchyPincodes = async (
+  options?: RequestInit,
+): Promise<HierarchyPincode[]> => {
+  return customFetch<HierarchyPincode[]>(getAdminListHierarchyPincodesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAdminListHierarchyPincodesQueryKey = () => {
+  return [`/api/admin/hierarchy/pincodes`] as const;
+};
+
+export const getAdminListHierarchyPincodesQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminListHierarchyPincodes>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListHierarchyPincodes>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAdminListHierarchyPincodesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminListHierarchyPincodes>>
+  > = ({ signal }) => adminListHierarchyPincodes({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminListHierarchyPincodes>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminListHierarchyPincodesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminListHierarchyPincodes>>
+>;
+export type AdminListHierarchyPincodesQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List pincodes with their associated wards
+ */
+
+export function useAdminListHierarchyPincodes<
+  TData = Awaited<ReturnType<typeof adminListHierarchyPincodes>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListHierarchyPincodes>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminListHierarchyPincodesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a pincode and link wards
+ */
+export const getAdminCreatePincodeUrl = () => {
+  return `/api/admin/hierarchy/pincodes`;
+};
+
+export const adminCreatePincode = async (
+  hierarchyPincodeBody: HierarchyPincodeBody,
+  options?: RequestInit,
+): Promise<HierarchyPincode> => {
+  return customFetch<HierarchyPincode>(getAdminCreatePincodeUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(hierarchyPincodeBody),
+  });
+};
+
+export const getAdminCreatePincodeMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreatePincode>>,
+    TError,
+    { data: BodyType<HierarchyPincodeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminCreatePincode>>,
+  TError,
+  { data: BodyType<HierarchyPincodeBody> },
+  TContext
+> => {
+  const mutationKey = ["adminCreatePincode"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminCreatePincode>>,
+    { data: BodyType<HierarchyPincodeBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminCreatePincode(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminCreatePincodeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminCreatePincode>>
+>;
+export type AdminCreatePincodeMutationBody = BodyType<HierarchyPincodeBody>;
+export type AdminCreatePincodeMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a pincode and link wards
+ */
+export const useAdminCreatePincode = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreatePincode>>,
+    TError,
+    { data: BodyType<HierarchyPincodeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminCreatePincode>>,
+  TError,
+  { data: BodyType<HierarchyPincodeBody> },
+  TContext
+> => {
+  return useMutation(getAdminCreatePincodeMutationOptions(options));
+};
+
+/**
+ * @summary Update a pincode and re-link wards
+ */
+export const getAdminUpdatePincodeUrl = (id: number) => {
+  return `/api/admin/hierarchy/pincodes/${id}`;
+};
+
+export const adminUpdatePincode = async (
+  id: number,
+  hierarchyPincodeBody: HierarchyPincodeBody,
+  options?: RequestInit,
+): Promise<HierarchyPincode> => {
+  return customFetch<HierarchyPincode>(getAdminUpdatePincodeUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(hierarchyPincodeBody),
+  });
+};
+
+export const getAdminUpdatePincodeMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdatePincode>>,
+    TError,
+    { id: number; data: BodyType<HierarchyPincodeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminUpdatePincode>>,
+  TError,
+  { id: number; data: BodyType<HierarchyPincodeBody> },
+  TContext
+> => {
+  const mutationKey = ["adminUpdatePincode"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminUpdatePincode>>,
+    { id: number; data: BodyType<HierarchyPincodeBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminUpdatePincode(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminUpdatePincodeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminUpdatePincode>>
+>;
+export type AdminUpdatePincodeMutationBody = BodyType<HierarchyPincodeBody>;
+export type AdminUpdatePincodeMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update a pincode and re-link wards
+ */
+export const useAdminUpdatePincode = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdatePincode>>,
+    TError,
+    { id: number; data: BodyType<HierarchyPincodeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminUpdatePincode>>,
+  TError,
+  { id: number; data: BodyType<HierarchyPincodeBody> },
+  TContext
+> => {
+  return useMutation(getAdminUpdatePincodeMutationOptions(options));
+};
+
+/**
+ * @summary Delete a pincode (and its ward links)
+ */
+export const getAdminDeletePincodeUrl = (id: number) => {
+  return `/api/admin/hierarchy/pincodes/${id}`;
+};
+
+export const adminDeletePincode = async (
+  id: number,
+  options?: RequestInit,
+): Promise<DeletedResult> => {
+  return customFetch<DeletedResult>(getAdminDeletePincodeUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getAdminDeletePincodeMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeletePincode>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminDeletePincode>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["adminDeletePincode"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminDeletePincode>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return adminDeletePincode(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminDeletePincodeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminDeletePincode>>
+>;
+
+export type AdminDeletePincodeMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete a pincode (and its ward links)
+ */
+export const useAdminDeletePincode = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeletePincode>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminDeletePincode>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAdminDeletePincodeMutationOptions(options));
 };
 
 /**

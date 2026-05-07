@@ -962,6 +962,321 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /admin/hierarchy/tree:
+    get:
+      operationId: adminGetHierarchyTree
+      tags: [admin]
+      summary: Get the full Zone→Ward→Area→Street tree (with booth counts)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Hierarchy tree
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HierarchyTree"
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /admin/hierarchy/wards/{id}/polling-stations:
+    get:
+      operationId: adminGetWardBooths
+      tags: [admin]
+      summary: List polling stations (booths) for a ward
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Booth list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/HierarchyBooth" }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /admin/hierarchy/zones:
+    post:
+      operationId: adminCreateZone
+      tags: [admin]
+      summary: Create a zone
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyZoneBody" } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyZone" } } } }
+        "400": { description: Validation error, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /admin/hierarchy/zones/{id}:
+    put:
+      operationId: adminUpdateZone
+      tags: [admin]
+      summary: Update a zone
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyZoneBody" } } }
+      responses:
+        "200": { description: Updated, content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyZone" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "404": { description: Not found, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+    delete:
+      operationId: adminDeleteZone
+      tags: [admin]
+      summary: Delete a zone
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200": { description: Deleted, content: { application/json: { schema: { $ref: "#/components/schemas/DeletedResult" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "404": { description: Not found, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "409": { description: Cannot delete (has children), content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /admin/hierarchy/wards:
+    post:
+      operationId: adminCreateHierarchyWard
+      tags: [admin]
+      summary: Create a ward in the hierarchy
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyWardBody" } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyWard" } } } }
+        "400": { description: Validation error, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /admin/hierarchy/wards/{id}:
+    put:
+      operationId: adminUpdateHierarchyWard
+      tags: [admin]
+      summary: Update a ward
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyWardBody" } } }
+      responses:
+        "200": { description: Updated, content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyWard" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "404": { description: Not found, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+    delete:
+      operationId: adminDeleteHierarchyWard
+      tags: [admin]
+      summary: Delete a ward
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: Deleted, content: { application/json: { schema: { $ref: "#/components/schemas/DeletedResult" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "404": { description: Not found, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "409": { description: Cannot delete (has children), content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /admin/hierarchy/areas:
+    post:
+      operationId: adminCreateArea
+      tags: [admin]
+      summary: Create an area
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyAreaBody" } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyArea" } } } }
+        "400": { description: Validation error, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /admin/hierarchy/areas/{id}:
+    put:
+      operationId: adminUpdateArea
+      tags: [admin]
+      summary: Update an area
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyAreaBody" } } }
+      responses:
+        "200": { description: Updated, content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyArea" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "404": { description: Not found, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+    delete:
+      operationId: adminDeleteArea
+      tags: [admin]
+      summary: Delete an area
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: Deleted, content: { application/json: { schema: { $ref: "#/components/schemas/DeletedResult" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "404": { description: Not found, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "409": { description: Cannot delete (has children), content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /admin/hierarchy/streets:
+    post:
+      operationId: adminCreateStreet
+      tags: [admin]
+      summary: Create a street
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyStreetBody" } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyStreet" } } } }
+        "400": { description: Validation error, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /admin/hierarchy/streets/{id}:
+    put:
+      operationId: adminUpdateStreet
+      tags: [admin]
+      summary: Update a street
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyStreetBody" } } }
+      responses:
+        "200": { description: Updated, content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyStreet" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "404": { description: Not found, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+    delete:
+      operationId: adminDeleteStreet
+      tags: [admin]
+      summary: Delete a street
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: Deleted, content: { application/json: { schema: { $ref: "#/components/schemas/DeletedResult" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "404": { description: Not found, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /admin/hierarchy/polling-stations:
+    post:
+      operationId: adminCreateBooth
+      tags: [admin]
+      summary: Create a polling station (booth)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyBoothBody" } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyBooth" } } } }
+        "400": { description: Validation error (e.g. area.wardId mismatch), content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /admin/hierarchy/polling-stations/{id}:
+    put:
+      operationId: adminUpdateBooth
+      tags: [admin]
+      summary: Update a polling station
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyBoothBody" } } }
+      responses:
+        "200": { description: Updated, content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyBooth" } } } }
+        "400": { description: Validation error, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "404": { description: Not found, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+    delete:
+      operationId: adminDeleteBooth
+      tags: [admin]
+      summary: Delete a polling station
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: Deleted, content: { application/json: { schema: { $ref: "#/components/schemas/DeletedResult" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "404": { description: Not found, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /admin/hierarchy/pincodes:
+    get:
+      operationId: adminListHierarchyPincodes
+      tags: [admin]
+      summary: List pincodes with their associated wards
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Pincode list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/HierarchyPincode" }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+    post:
+      operationId: adminCreatePincode
+      tags: [admin]
+      summary: Create a pincode and link wards
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyPincodeBody" } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyPincode" } } } }
+        "400": { description: Validation error (e.g. invalid wardIds), content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "409": { description: Duplicate pincode, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /admin/hierarchy/pincodes/{id}:
+    put:
+      operationId: adminUpdatePincode
+      tags: [admin]
+      summary: Update a pincode and re-link wards
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyPincodeBody" } } }
+      responses:
+        "200": { description: Updated, content: { application/json: { schema: { $ref: "#/components/schemas/HierarchyPincode" } } } }
+        "400": { description: Validation error, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "404": { description: Not found, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+    delete:
+      operationId: adminDeletePincode
+      tags: [admin]
+      summary: Delete a pincode (and its ward links)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: Deleted, content: { application/json: { schema: { $ref: "#/components/schemas/DeletedResult" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "404": { description: Not found, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
   /admin/grievances/bulk-assign:
     post:
       operationId: adminBulkAssignGrievances
@@ -1852,6 +2167,228 @@ components:
           type: ["string", "null"]
       required:
         - name
+
+    DeletedResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required: [success]
+
+    HierarchyZoneBody:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        nameTa: { type: ["string", "null"] }
+        slug: { type: string }
+        type: { type: string, enum: [corporation, rural] }
+        description: { type: ["string", "null"] }
+      required: [name, slug, type]
+
+    HierarchyZone:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        nameTa: { type: ["string", "null"] }
+        slug: { type: string }
+        type: { type: string }
+        description: { type: ["string", "null"] }
+      required: [id, name, slug, type]
+
+    HierarchyWardBody:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        nameTa: { type: ["string", "null"] }
+        slug: { type: ["string", "null"] }
+        wardType: { type: ["string", "null"] }
+        zoneId: { type: ["integer", "null"] }
+        pincode: { type: ["string", "null"] }
+        coordinatorName: { type: ["string", "null"] }
+        coordinatorPhone: { type: ["string", "null"] }
+        coordinatorEmail: { type: ["string", "null"] }
+        population: { type: ["integer", "null"] }
+        households: { type: ["integer", "null"] }
+        latitude: { type: ["number", "null"] }
+        longitude: { type: ["number", "null"] }
+        notes: { type: ["string", "null"] }
+      required: [name]
+
+    HierarchyWard:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        nameTa: { type: ["string", "null"] }
+        zoneId: { type: ["integer", "null"] }
+        boothCount: { type: integer }
+      required: [id, name]
+
+    HierarchyAreaBody:
+      type: object
+      properties:
+        wardId: { type: integer }
+        name: { type: string, minLength: 1 }
+        nameTa: { type: ["string", "null"] }
+        areaType: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+      required: [wardId, name]
+
+    HierarchyArea:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: integer }
+        wardId: { type: integer }
+        name: { type: string }
+        nameTa: { type: ["string", "null"] }
+      required: [id, wardId, name]
+
+    HierarchyStreetBody:
+      type: object
+      properties:
+        areaId: { type: integer }
+        name: { type: string, minLength: 1 }
+        nameTa: { type: ["string", "null"] }
+        pincode: { type: ["string", "null"] }
+      required: [areaId, name]
+
+    HierarchyStreet:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: integer }
+        areaId: { type: integer }
+        name: { type: string }
+        nameTa: { type: ["string", "null"] }
+        pincode: { type: ["string", "null"] }
+      required: [id, areaId, name]
+
+    HierarchyBoothBody:
+      type: object
+      properties:
+        boothNo: { type: string, minLength: 1 }
+        slNo: { type: ["integer", "null"] }
+        name: { type: string }
+        nameTa: { type: ["string", "null"] }
+        address: { type: ["string", "null"] }
+        addressTa: { type: ["string", "null"] }
+        wardId: { type: ["integer", "null"] }
+        areaId: { type: ["integer", "null"] }
+        pincode: { type: ["string", "null"] }
+        voterType: { type: string, enum: [all, men_only, women_only] }
+        latitude: { type: ["number", "null"] }
+        longitude: { type: ["number", "null"] }
+      required: [boothNo, name]
+
+    HierarchyBooth:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: integer }
+        boothNo: { type: string }
+        name: { type: string }
+        nameTa: { type: ["string", "null"] }
+        wardId: { type: ["integer", "null"] }
+        areaId: { type: ["integer", "null"] }
+        latitude: { type: ["number", "null"] }
+        longitude: { type: ["number", "null"] }
+      required: [id, boothNo, name]
+
+    HierarchyPincodeBody:
+      type: object
+      properties:
+        code:
+          type: string
+          pattern: "^[0-9]{6}$"
+        label: { type: ["string", "null"] }
+        labelTa: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        wardIds:
+          type: array
+          items: { type: integer }
+          default: []
+      required: [code]
+
+    HierarchyPincode:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: integer }
+        code: { type: string }
+        label: { type: ["string", "null"] }
+        labelTa: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        wardIds:
+          type: array
+          items: { type: integer }
+      required: [id, code, wardIds]
+
+    HierarchyTreeStreet:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: integer }
+        areaId: { type: integer }
+        name: { type: string }
+        nameTa: { type: ["string", "null"] }
+        pincode: { type: ["string", "null"] }
+      required: [id, areaId, name]
+
+    HierarchyTreeArea:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: integer }
+        wardId: { type: integer }
+        name: { type: string }
+        nameTa: { type: ["string", "null"] }
+        streets:
+          type: array
+          items: { $ref: "#/components/schemas/HierarchyTreeStreet" }
+      required: [id, wardId, name, streets]
+
+    HierarchyTreeWard:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        nameTa: { type: ["string", "null"] }
+        zoneId: { type: ["integer", "null"] }
+        boothCount: { type: integer }
+        areas:
+          type: array
+          items: { $ref: "#/components/schemas/HierarchyTreeArea" }
+      required: [id, name, boothCount, areas]
+
+    HierarchyTreeZone:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        nameTa: { type: ["string", "null"] }
+        slug: { type: string }
+        type: { type: string }
+        wards:
+          type: array
+          items: { $ref: "#/components/schemas/HierarchyTreeWard" }
+      required: [id, name, slug, type, wards]
+
+    HierarchyTree:
+      type: object
+      properties:
+        zones:
+          type: array
+          items: { $ref: "#/components/schemas/HierarchyTreeZone" }
+        orphanWards:
+          type: array
+          items: { $ref: "#/components/schemas/HierarchyTreeWard" }
+      required: [zones, orphanWards]
 
     BulkGrievanceAssignBody:
       type: object

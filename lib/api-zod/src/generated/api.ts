@@ -831,6 +831,428 @@ export const AdminDeleteWardResponse = zod.object({
 });
 
 /**
+ * @summary Get the full Zone→Ward→Area→Street tree (with booth counts)
+ */
+export const AdminGetHierarchyTreeResponse = zod.object({
+  zones: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      nameTa: zod.string().nullish(),
+      slug: zod.string(),
+      type: zod.string(),
+      wards: zod.array(
+        zod.object({
+          id: zod.number(),
+          name: zod.string(),
+          nameTa: zod.string().nullish(),
+          zoneId: zod.number().nullish(),
+          boothCount: zod.number(),
+          areas: zod.array(
+            zod.object({
+              id: zod.number(),
+              wardId: zod.number(),
+              name: zod.string(),
+              nameTa: zod.string().nullish(),
+              streets: zod.array(
+                zod.object({
+                  id: zod.number(),
+                  areaId: zod.number(),
+                  name: zod.string(),
+                  nameTa: zod.string().nullish(),
+                  pincode: zod.string().nullish(),
+                }),
+              ),
+            }),
+          ),
+        }),
+      ),
+    }),
+  ),
+  orphanWards: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      nameTa: zod.string().nullish(),
+      zoneId: zod.number().nullish(),
+      boothCount: zod.number(),
+      areas: zod.array(
+        zod.object({
+          id: zod.number(),
+          wardId: zod.number(),
+          name: zod.string(),
+          nameTa: zod.string().nullish(),
+          streets: zod.array(
+            zod.object({
+              id: zod.number(),
+              areaId: zod.number(),
+              name: zod.string(),
+              nameTa: zod.string().nullish(),
+              pincode: zod.string().nullish(),
+            }),
+          ),
+        }),
+      ),
+    }),
+  ),
+});
+
+/**
+ * @summary List polling stations (booths) for a ward
+ */
+export const AdminGetWardBoothsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminGetWardBoothsResponseItem = zod.object({
+  id: zod.number(),
+  boothNo: zod.string(),
+  name: zod.string(),
+  nameTa: zod.string().nullish(),
+  wardId: zod.number().nullish(),
+  areaId: zod.number().nullish(),
+  latitude: zod.number().nullish(),
+  longitude: zod.number().nullish(),
+});
+export const AdminGetWardBoothsResponse = zod.array(
+  AdminGetWardBoothsResponseItem,
+);
+
+/**
+ * @summary Create a zone
+ */
+
+export const AdminCreateZoneBody = zod.object({
+  name: zod.string().min(1),
+  nameTa: zod.string().nullish(),
+  slug: zod.string(),
+  type: zod.enum(["corporation", "rural"]),
+  description: zod.string().nullish(),
+});
+
+/**
+ * @summary Update a zone
+ */
+export const AdminUpdateZoneParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminUpdateZoneBody = zod.object({
+  name: zod.string().min(1),
+  nameTa: zod.string().nullish(),
+  slug: zod.string(),
+  type: zod.enum(["corporation", "rural"]),
+  description: zod.string().nullish(),
+});
+
+export const AdminUpdateZoneResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  nameTa: zod.string().nullish(),
+  slug: zod.string(),
+  type: zod.string(),
+  description: zod.string().nullish(),
+});
+
+/**
+ * @summary Delete a zone
+ */
+export const AdminDeleteZoneParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminDeleteZoneResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Create a ward in the hierarchy
+ */
+
+export const AdminCreateHierarchyWardBody = zod.object({
+  name: zod.string().min(1),
+  nameTa: zod.string().nullish(),
+  slug: zod.string().nullish(),
+  wardType: zod.string().nullish(),
+  zoneId: zod.number().nullish(),
+  pincode: zod.string().nullish(),
+  coordinatorName: zod.string().nullish(),
+  coordinatorPhone: zod.string().nullish(),
+  coordinatorEmail: zod.string().nullish(),
+  population: zod.number().nullish(),
+  households: zod.number().nullish(),
+  latitude: zod.number().nullish(),
+  longitude: zod.number().nullish(),
+  notes: zod.string().nullish(),
+});
+
+/**
+ * @summary Update a ward
+ */
+export const AdminUpdateHierarchyWardParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminUpdateHierarchyWardBody = zod.object({
+  name: zod.string().min(1),
+  nameTa: zod.string().nullish(),
+  slug: zod.string().nullish(),
+  wardType: zod.string().nullish(),
+  zoneId: zod.number().nullish(),
+  pincode: zod.string().nullish(),
+  coordinatorName: zod.string().nullish(),
+  coordinatorPhone: zod.string().nullish(),
+  coordinatorEmail: zod.string().nullish(),
+  population: zod.number().nullish(),
+  households: zod.number().nullish(),
+  latitude: zod.number().nullish(),
+  longitude: zod.number().nullish(),
+  notes: zod.string().nullish(),
+});
+
+export const AdminUpdateHierarchyWardResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  nameTa: zod.string().nullish(),
+  zoneId: zod.number().nullish(),
+  boothCount: zod.number().optional(),
+});
+
+/**
+ * @summary Delete a ward
+ */
+export const AdminDeleteHierarchyWardParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminDeleteHierarchyWardResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Create an area
+ */
+
+export const AdminCreateAreaBody = zod.object({
+  wardId: zod.number(),
+  name: zod.string().min(1),
+  nameTa: zod.string().nullish(),
+  areaType: zod.string().nullish(),
+  notes: zod.string().nullish(),
+});
+
+/**
+ * @summary Update an area
+ */
+export const AdminUpdateAreaParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminUpdateAreaBody = zod.object({
+  wardId: zod.number(),
+  name: zod.string().min(1),
+  nameTa: zod.string().nullish(),
+  areaType: zod.string().nullish(),
+  notes: zod.string().nullish(),
+});
+
+export const AdminUpdateAreaResponse = zod.object({
+  id: zod.number(),
+  wardId: zod.number(),
+  name: zod.string(),
+  nameTa: zod.string().nullish(),
+});
+
+/**
+ * @summary Delete an area
+ */
+export const AdminDeleteAreaParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminDeleteAreaResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Create a street
+ */
+
+export const AdminCreateStreetBody = zod.object({
+  areaId: zod.number(),
+  name: zod.string().min(1),
+  nameTa: zod.string().nullish(),
+  pincode: zod.string().nullish(),
+});
+
+/**
+ * @summary Update a street
+ */
+export const AdminUpdateStreetParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminUpdateStreetBody = zod.object({
+  areaId: zod.number(),
+  name: zod.string().min(1),
+  nameTa: zod.string().nullish(),
+  pincode: zod.string().nullish(),
+});
+
+export const AdminUpdateStreetResponse = zod.object({
+  id: zod.number(),
+  areaId: zod.number(),
+  name: zod.string(),
+  nameTa: zod.string().nullish(),
+  pincode: zod.string().nullish(),
+});
+
+/**
+ * @summary Delete a street
+ */
+export const AdminDeleteStreetParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminDeleteStreetResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Create a polling station (booth)
+ */
+
+export const AdminCreateBoothBody = zod.object({
+  boothNo: zod.string().min(1),
+  slNo: zod.number().nullish(),
+  name: zod.string(),
+  nameTa: zod.string().nullish(),
+  address: zod.string().nullish(),
+  addressTa: zod.string().nullish(),
+  wardId: zod.number().nullish(),
+  areaId: zod.number().nullish(),
+  pincode: zod.string().nullish(),
+  voterType: zod.enum(["all", "men_only", "women_only"]).optional(),
+  latitude: zod.number().nullish(),
+  longitude: zod.number().nullish(),
+});
+
+/**
+ * @summary Update a polling station
+ */
+export const AdminUpdateBoothParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminUpdateBoothBody = zod.object({
+  boothNo: zod.string().min(1),
+  slNo: zod.number().nullish(),
+  name: zod.string(),
+  nameTa: zod.string().nullish(),
+  address: zod.string().nullish(),
+  addressTa: zod.string().nullish(),
+  wardId: zod.number().nullish(),
+  areaId: zod.number().nullish(),
+  pincode: zod.string().nullish(),
+  voterType: zod.enum(["all", "men_only", "women_only"]).optional(),
+  latitude: zod.number().nullish(),
+  longitude: zod.number().nullish(),
+});
+
+export const AdminUpdateBoothResponse = zod.object({
+  id: zod.number(),
+  boothNo: zod.string(),
+  name: zod.string(),
+  nameTa: zod.string().nullish(),
+  wardId: zod.number().nullish(),
+  areaId: zod.number().nullish(),
+  latitude: zod.number().nullish(),
+  longitude: zod.number().nullish(),
+});
+
+/**
+ * @summary Delete a polling station
+ */
+export const AdminDeleteBoothParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminDeleteBoothResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary List pincodes with their associated wards
+ */
+export const AdminListHierarchyPincodesResponseItem = zod.object({
+  id: zod.number(),
+  code: zod.string(),
+  label: zod.string().nullish(),
+  labelTa: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  wardIds: zod.array(zod.number()),
+});
+export const AdminListHierarchyPincodesResponse = zod.array(
+  AdminListHierarchyPincodesResponseItem,
+);
+
+/**
+ * @summary Create a pincode and link wards
+ */
+export const adminCreatePincodeBodyCodeRegExp = new RegExp("^[0-9]{6}$");
+export const adminCreatePincodeBodyWardIdsDefault = [];
+
+export const AdminCreatePincodeBody = zod.object({
+  code: zod.string().regex(adminCreatePincodeBodyCodeRegExp),
+  label: zod.string().nullish(),
+  labelTa: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  wardIds: zod
+    .array(zod.number())
+    .default(adminCreatePincodeBodyWardIdsDefault),
+});
+
+/**
+ * @summary Update a pincode and re-link wards
+ */
+export const AdminUpdatePincodeParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const adminUpdatePincodeBodyCodeRegExp = new RegExp("^[0-9]{6}$");
+export const adminUpdatePincodeBodyWardIdsDefault = [];
+
+export const AdminUpdatePincodeBody = zod.object({
+  code: zod.string().regex(adminUpdatePincodeBodyCodeRegExp),
+  label: zod.string().nullish(),
+  labelTa: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  wardIds: zod
+    .array(zod.number())
+    .default(adminUpdatePincodeBodyWardIdsDefault),
+});
+
+export const AdminUpdatePincodeResponse = zod.object({
+  id: zod.number(),
+  code: zod.string(),
+  label: zod.string().nullish(),
+  labelTa: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  wardIds: zod.array(zod.number()),
+});
+
+/**
+ * @summary Delete a pincode (and its ward links)
+ */
+export const AdminDeletePincodeParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminDeletePincodeResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
  * @summary Bulk-assign grievances to an officer
  */
 export const adminBulkAssignGrievancesBodyIdsMax = 200;

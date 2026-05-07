@@ -16,6 +16,10 @@ import {
   Building2, Layers, Route, Vote, Loader2,
 } from "lucide-react";
 import { adminApi } from "./api";
+import { tHi, type Language, type HierarchyKey } from "@/lib/i18n";
+
+type HierarchyAddKey = Extract<HierarchyKey, `add${string}`>;
+type HierarchyEditKey = Extract<HierarchyKey, `edit${string}`>;
 
 const BoothMapPicker = lazy(() => import("./BoothMapPicker"));
 
@@ -60,19 +64,21 @@ interface EditorState {
 // Generic helper: bilingual name input
 // ─────────────────────────────────────────────────────────
 function BilingualName({
-  en, ta, onEn, onTa, requiredEn = true, label = "Name",
+  en, ta, onEn, onTa, requiredEn = true, lang = "en", kind = "name",
 }: {
   en: string; ta: string; onEn: (v: string) => void; onTa: (v: string) => void;
-  requiredEn?: boolean; label?: string;
+  requiredEn?: boolean; lang?: Language; kind?: "name" | "label";
 }) {
+  const enKey = kind === "name" ? "nameEn" : "labelEn";
+  const taKey = kind === "name" ? "nameTa" : "labelTa";
   return (
     <div className="grid grid-cols-2 gap-3">
       <div>
-        <Label className="text-xs">{label} (English) {requiredEn && "*"}</Label>
+        <Label className="text-xs">{tHi(lang, enKey)} {requiredEn && "*"}</Label>
         <Input value={en} onChange={(e) => onEn(e.target.value)} className="mt-1 text-sm" />
       </div>
       <div>
-        <Label className="text-xs">{label} (தமிழ்)</Label>
+        <Label className="text-xs">{tHi(lang, taKey)}</Label>
         <Input value={ta} onChange={(e) => onTa(e.target.value)} className="mt-1 text-sm" lang="ta" />
       </div>
     </div>
@@ -83,13 +89,14 @@ function BilingualName({
 // Modal editor for any node type
 // ─────────────────────────────────────────────────────────
 function NodeEditor({
-  state, zones, wards, onClose, onSaved,
+  state, zones, wards, onClose, onSaved, lang,
 }: {
   state: EditorState | null;
   zones: ZoneNode[];
   wards: WardNode[];
   onClose: () => void;
   onSaved: () => void;
+  lang: Language;
 }) {
   const [form, setForm] = useState<Record<string, string | number | null>>({});
   const [saving, setSaving] = useState(false);
@@ -156,12 +163,16 @@ function NodeEditor({
   if (!state) return null;
   const isEdit = !!state.item;
   const setField = (k: string, v: string | number | null) => setForm(prev => ({ ...prev, [k]: v }));
-  const titles: Record<EditorKind, string> = {
-    zone: "Zone / மண்டலம்",
-    ward: "Ward / வார்டு",
-    area: "Area / பகுதி",
-    street: "Street / தெரு",
-    booth: "Polling Station / வாக்குச்சாவடி",
+  const titleKey = (k: EditorKind, edit: boolean) => {
+    const map: Record<EditorKind, [HierarchyAddKey, HierarchyEditKey]> = {
+      zone: ["addZone", "editZone"],
+      ward: ["addWard", "editWard"],
+      area: ["addArea", "editArea"],
+      street: ["addStreet", "editStreet"],
+      booth: ["addBooth", "editBooth"],
+    };
+    const [addK, editK] = map[k];
+    return tHi(lang, edit ? editK : addK);
   };
 
   // Build options for ward/area pickers when relevant
@@ -174,10 +185,10 @@ function NodeEditor({
 
   async function save() {
     if (!String(form.name ?? "").trim() && state!.kind !== "booth") {
-      setError("English name is required"); return;
+      setError(tHi(lang, "nameRequired")); return;
     }
     if (state!.kind === "booth" && !String(form.boothNo ?? "").trim()) {
-      setError("Booth number is required"); return;
+      setError(tHi(lang, "boothNumberRequired")); return;
     }
     setSaving(true);
     setError(null);
@@ -226,7 +237,7 @@ function NodeEditor({
         };
         if (isEdit && id) await adminApi.updateHWard(id, payload); else await adminApi.createHWard(payload);
       } else if (k === "area") {
-        if (form.wardId == null) { setError("Pick a parent ward first"); setSaving(false); return; }
+        if (form.wardId == null) { setError(tHi(lang, "pickParentWard")); setSaving(false); return; }
         const payload = {
           wardId: Number(form.wardId),
           name: String(form.name).trim(),
@@ -236,7 +247,7 @@ function NodeEditor({
         };
         if (isEdit && id) await adminApi.updateArea(id, payload); else await adminApi.createArea(payload);
       } else if (k === "street") {
-        if (form.areaId == null) { setError("Pick a parent area first"); setSaving(false); return; }
+        if (form.areaId == null) { setError(tHi(lang, "pickParentArea")); setSaving(false); return; }
         const payload = {
           areaId: Number(form.areaId),
           name: String(form.name).trim(),
@@ -272,41 +283,37 @@ function NodeEditor({
 
   return (
     <Dialog open={!!state} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-xl" lang={lang}>
         <DialogHeader>
-          <DialogTitle>
-            {isEdit ? "Edit " : "Add "} {titles[state.kind]}
-          </DialogTitle>
-          <DialogDescription className="text-xs">
-            English name is required. Tamil (தமிழ்) is optional — leave blank if you don't have an authoritative translation. தமிழ் பெயர் கட்டாயமில்லை.
-          </DialogDescription>
+          <DialogTitle>{titleKey(state.kind, isEdit)}</DialogTitle>
+          <DialogDescription className="text-xs">{tHi(lang, "dialogDescription")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 py-2 max-h-[70vh] overflow-y-auto pr-1">
           {state.kind === "zone" && (
             <>
-              <BilingualName
+              <BilingualName lang={lang}
                 en={String(form.name ?? "")} ta={String(form.nameTa ?? "")}
                 onEn={(v) => setField("name", v)} onTa={(v) => setField("nameTa", v)}
               />
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs">Slug</Label>
-                  <Input value={String(form.slug ?? "")} onChange={(e) => setField("slug", e.target.value)} placeholder="auto from name" className="mt-1 text-sm" />
+                  <Label className="text-xs">{tHi(lang, "slug")}</Label>
+                  <Input value={String(form.slug ?? "")} onChange={(e) => setField("slug", e.target.value)} placeholder={tHi(lang, "autoFromName")} className="mt-1 text-sm" />
                 </div>
                 <div>
-                  <Label className="text-xs">Type</Label>
+                  <Label className="text-xs">{tHi(lang, "type")}</Label>
                   <Select value={String(form.type ?? "corporation")} onValueChange={(v) => setField("type", v)}>
                     <SelectTrigger className="mt-1 text-sm h-9"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="corporation">Corporation / நகராட்சி</SelectItem>
-                      <SelectItem value="rural">Rural / கிராமப்புற</SelectItem>
+                      <SelectItem value="corporation">{tHi(lang, "typeCorporation")}</SelectItem>
+                      <SelectItem value="rural">{tHi(lang, "typeRural")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div>
-                <Label className="text-xs">Description</Label>
+                <Label className="text-xs">{tHi(lang, "description")}</Label>
                 <Textarea rows={2} value={String(form.description ?? "")} onChange={(e) => setField("description", e.target.value)} className="mt-1 text-sm" />
               </div>
             </>
@@ -314,24 +321,24 @@ function NodeEditor({
 
           {state.kind === "ward" && (
             <>
-              <BilingualName
+              <BilingualName lang={lang}
                 en={String(form.name ?? "")} ta={String(form.nameTa ?? "")}
                 onEn={(v) => setField("name", v)} onTa={(v) => setField("nameTa", v)}
               />
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs">Parent Zone *</Label>
+                  <Label className="text-xs">{tHi(lang, "parentZone")} *</Label>
                   <Select value={form.zoneId == null ? "" : String(form.zoneId)} onValueChange={(v) => setField("zoneId", v ? Number(v) : null)}>
-                    <SelectTrigger className="mt-1 text-sm h-9"><SelectValue placeholder="— None —" /></SelectTrigger>
+                    <SelectTrigger className="mt-1 text-sm h-9"><SelectValue placeholder={tHi(lang, "none")} /></SelectTrigger>
                     <SelectContent>
                       {zones.map(z => <SelectItem key={z.id} value={String(z.id)}>{z.name}{z.nameTa ? ` / ${z.nameTa}` : ""}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs">Ward Type</Label>
+                  <Label className="text-xs">{tHi(lang, "wardType")}</Label>
                   <Select value={String(form.wardType ?? "")} onValueChange={(v) => setField("wardType", v)}>
-                    <SelectTrigger className="mt-1 text-sm h-9"><SelectValue placeholder="—" /></SelectTrigger>
+                    <SelectTrigger className="mt-1 text-sm h-9"><SelectValue placeholder={tHi(lang, "placeholderDash")} /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="corporation_ward">Corporation Ward</SelectItem>
                       <SelectItem value="madurai_corp_zone">Corporation Zone</SelectItem>
@@ -344,28 +351,28 @@ function NodeEditor({
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <Label className="text-xs">Slug</Label>
+                  <Label className="text-xs">{tHi(lang, "slug")}</Label>
                   <Input value={String(form.slug ?? "")} onChange={(e) => setField("slug", e.target.value)} className="mt-1 text-sm" />
                 </div>
                 <div>
-                  <Label className="text-xs">Pincode</Label>
+                  <Label className="text-xs">{tHi(lang, "pincodeField")}</Label>
                   <Input value={String(form.pincode ?? "")} onChange={(e) => setField("pincode", e.target.value)} className="mt-1 text-sm" maxLength={6} />
                 </div>
                 <div>
-                  <Label className="text-xs">Population</Label>
+                  <Label className="text-xs">{tHi(lang, "population")}</Label>
                   <Input type="number" value={String(form.population ?? "")} onChange={(e) => setField("population", e.target.value)} className="mt-1 text-sm" />
                 </div>
               </div>
               <div className="border rounded-md p-3 space-y-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Coordinator</p>
-                <Input placeholder="Name" value={String(form.coordinatorName ?? "")} onChange={(e) => setField("coordinatorName", e.target.value)} className="text-sm" />
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{tHi(lang, "coordinator")}</p>
+                <Input placeholder={tHi(lang, "coordinatorName")} value={String(form.coordinatorName ?? "")} onChange={(e) => setField("coordinatorName", e.target.value)} className="text-sm" />
                 <div className="grid grid-cols-2 gap-3">
-                  <Input placeholder="Phone" value={String(form.coordinatorPhone ?? "")} onChange={(e) => setField("coordinatorPhone", e.target.value)} className="text-sm" />
-                  <Input placeholder="Email" type="email" value={String(form.coordinatorEmail ?? "")} onChange={(e) => setField("coordinatorEmail", e.target.value)} className="text-sm" />
+                  <Input placeholder={tHi(lang, "coordinatorPhone")} value={String(form.coordinatorPhone ?? "")} onChange={(e) => setField("coordinatorPhone", e.target.value)} className="text-sm" />
+                  <Input placeholder={tHi(lang, "coordinatorEmail")} type="email" value={String(form.coordinatorEmail ?? "")} onChange={(e) => setField("coordinatorEmail", e.target.value)} className="text-sm" />
                 </div>
               </div>
               <div>
-                <Label className="text-xs">Notes</Label>
+                <Label className="text-xs">{tHi(lang, "notes")}</Label>
                 <Textarea rows={2} value={String(form.notes ?? "")} onChange={(e) => setField("notes", e.target.value)} className="mt-1 text-sm" />
               </div>
             </>
@@ -373,27 +380,27 @@ function NodeEditor({
 
           {state.kind === "area" && (
             <>
-              <BilingualName
+              <BilingualName lang={lang}
                 en={String(form.name ?? "")} ta={String(form.nameTa ?? "")}
                 onEn={(v) => setField("name", v)} onTa={(v) => setField("nameTa", v)}
               />
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs">Parent Ward *</Label>
+                  <Label className="text-xs">{tHi(lang, "parentWard")} *</Label>
                   <Select value={form.wardId == null ? "" : String(form.wardId)} onValueChange={(v) => setField("wardId", v ? Number(v) : null)}>
-                    <SelectTrigger className="mt-1 text-sm h-9"><SelectValue placeholder="— Select ward —" /></SelectTrigger>
+                    <SelectTrigger className="mt-1 text-sm h-9"><SelectValue placeholder={tHi(lang, "selectWard")} /></SelectTrigger>
                     <SelectContent>
                       {wardOptions.map(w => <SelectItem key={w.id} value={String(w.id)}>{w.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs">Area Type</Label>
+                  <Label className="text-xs">{tHi(lang, "areaType")}</Label>
                   <Input value={String(form.areaType ?? "")} onChange={(e) => setField("areaType", e.target.value)} placeholder="colony / nagar / etc." className="mt-1 text-sm" />
                 </div>
               </div>
               <div>
-                <Label className="text-xs">Notes</Label>
+                <Label className="text-xs">{tHi(lang, "notes")}</Label>
                 <Textarea rows={2} value={String(form.notes ?? "")} onChange={(e) => setField("notes", e.target.value)} className="mt-1 text-sm" />
               </div>
             </>
@@ -401,15 +408,15 @@ function NodeEditor({
 
           {state.kind === "street" && (
             <>
-              <BilingualName
+              <BilingualName lang={lang}
                 en={String(form.name ?? "")} ta={String(form.nameTa ?? "")}
                 onEn={(v) => setField("name", v)} onTa={(v) => setField("nameTa", v)}
               />
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs">Parent Area *</Label>
+                  <Label className="text-xs">{tHi(lang, "parentArea")} *</Label>
                   <Select value={form.areaId == null ? "" : String(form.areaId)} onValueChange={(v) => setField("areaId", v ? Number(v) : null)}>
-                    <SelectTrigger className="mt-1 text-sm h-9"><SelectValue placeholder="— Select area —" /></SelectTrigger>
+                    <SelectTrigger className="mt-1 text-sm h-9"><SelectValue placeholder={tHi(lang, "selectArea")} /></SelectTrigger>
                     <SelectContent>
                       {wards.flatMap(w => w.areas.map(a => (
                         <SelectItem key={a.id} value={String(a.id)}>{w.name} → {a.name}</SelectItem>
@@ -418,7 +425,7 @@ function NodeEditor({
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs">Pincode</Label>
+                  <Label className="text-xs">{tHi(lang, "pincodeField")}</Label>
                   <Input value={String(form.pincode ?? "")} onChange={(e) => setField("pincode", e.target.value)} maxLength={6} className="mt-1 text-sm" />
                 </div>
               </div>
@@ -429,55 +436,54 @@ function NodeEditor({
             <>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <Label className="text-xs">Booth No *</Label>
+                  <Label className="text-xs">{tHi(lang, "boothNoRequired")} *</Label>
                   <Input value={String(form.boothNo ?? "")} onChange={(e) => setField("boothNo", e.target.value)} className="mt-1 text-sm" />
                 </div>
                 <div>
-                  <Label className="text-xs">Sl No</Label>
+                  <Label className="text-xs">{tHi(lang, "slNo")}</Label>
                   <Input type="number" value={String(form.slNo ?? "")} onChange={(e) => setField("slNo", e.target.value)} className="mt-1 text-sm" />
                 </div>
                 <div>
-                  <Label className="text-xs">Voter Type</Label>
+                  <Label className="text-xs">{tHi(lang, "voterType")}</Label>
                   <Select value={String(form.voterType ?? "all")} onValueChange={(v) => setField("voterType", v)}>
                     <SelectTrigger className="mt-1 text-sm h-9"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="men_only">Men only</SelectItem>
-                      <SelectItem value="women_only">Women only</SelectItem>
+                      <SelectItem value="all">{tHi(lang, "voterAll")}</SelectItem>
+                      <SelectItem value="men_only">{tHi(lang, "voterMen")}</SelectItem>
+                      <SelectItem value="women_only">{tHi(lang, "voterWomen")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
-              <BilingualName
-                label="Booth Name"
+              <BilingualName lang={lang}
                 en={String(form.name ?? "")} ta={String(form.nameTa ?? "")}
                 onEn={(v) => setField("name", v)} onTa={(v) => setField("nameTa", v)}
                 requiredEn={false}
               />
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs">Address (English)</Label>
+                  <Label className="text-xs">{tHi(lang, "addressEn")}</Label>
                   <Textarea rows={2} value={String(form.address ?? "")} onChange={(e) => setField("address", e.target.value)} className="mt-1 text-sm" />
                 </div>
                 <div>
-                  <Label className="text-xs">Address (தமிழ்)</Label>
+                  <Label className="text-xs">{tHi(lang, "addressTa")}</Label>
                   <Textarea rows={2} value={String(form.addressTa ?? "")} onChange={(e) => setField("addressTa", e.target.value)} className="mt-1 text-sm" lang="ta" />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <Label className="text-xs">Ward</Label>
+                  <Label className="text-xs">{tHi(lang, "ward")}</Label>
                   <Select value={form.wardId == null ? "" : String(form.wardId)} onValueChange={(v) => { setField("wardId", v ? Number(v) : null); setField("areaId", null); }}>
-                    <SelectTrigger className="mt-1 text-sm h-9"><SelectValue placeholder="—" /></SelectTrigger>
+                    <SelectTrigger className="mt-1 text-sm h-9"><SelectValue placeholder={tHi(lang, "placeholderDash")} /></SelectTrigger>
                     <SelectContent>
                       {wardOptions.map(w => <SelectItem key={w.id} value={String(w.id)}>{w.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs">Area</Label>
+                  <Label className="text-xs">{tHi(lang, "area")}</Label>
                   <Select value={form.areaId == null ? "" : String(form.areaId)} onValueChange={(v) => setField("areaId", v ? Number(v) : null)}>
-                    <SelectTrigger className="mt-1 text-sm h-9"><SelectValue placeholder="—" /></SelectTrigger>
+                    <SelectTrigger className="mt-1 text-sm h-9"><SelectValue placeholder={tHi(lang, "placeholderDash")} /></SelectTrigger>
                     <SelectContent>
                       {areaOptionsForWard(form.wardId == null ? null : Number(form.wardId)).map(a => (
                         <SelectItem key={a.id} value={String(a.id)}>{a.label}</SelectItem>
@@ -486,7 +492,7 @@ function NodeEditor({
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs">Pincode</Label>
+                  <Label className="text-xs">{tHi(lang, "pincodeField")}</Label>
                   <Input value={String(form.pincode ?? "")} onChange={(e) => setField("pincode", e.target.value)} maxLength={6} className="mt-1 text-sm" />
                 </div>
               </div>
@@ -533,8 +539,8 @@ function NodeEditor({
 // Booths panel (loaded on demand when a ward is expanded)
 // ─────────────────────────────────────────────────────────
 function BoothsPanel({
-  wardId, openEdit, onChanged,
-}: { wardId: number; openEdit: (s: EditorState) => void; onChanged: () => void }) {
+  wardId, openEdit, onChanged, lang,
+}: { wardId: number; openEdit: (s: EditorState) => void; onChanged: () => void; lang: Language }) {
   const [booths, setBooths] = useState<Booth[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -553,17 +559,17 @@ function BoothsPanel({
     <div className="ml-6 mt-2 space-y-2 border-l-2 border-blue-100 pl-3">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-blue-700 flex items-center gap-1">
-          <Vote className="w-3.5 h-3.5" /> Polling Stations / வாக்குச்சாவடிகள்
+          <Vote className="w-3.5 h-3.5" /> {tHi(lang, "pollingStations")}
         </p>
         <Button size="sm" variant="ghost" className="h-6 text-xs gap-1" onClick={() => openEdit({ kind: "booth", parentId: wardId })}>
-          <Plus className="w-3 h-3" /> Add booth
+          <Plus className="w-3 h-3" /> {tHi(lang, "addBooth")}
         </Button>
       </div>
       {error && <p className="text-red-500 text-xs">{error}</p>}
       {!booths ? (
-        <p className="text-xs text-muted-foreground">Loading booths…</p>
+        <p className="text-xs text-muted-foreground">{tHi(lang, "loading")}</p>
       ) : booths.length === 0 ? (
-        <p className="text-xs text-muted-foreground italic">No booths yet.</p>
+        <p className="text-xs text-muted-foreground italic">{tHi(lang, "noBoothsYet")}</p>
       ) : (
         <div className="grid sm:grid-cols-2 gap-1.5">
           {booths.map(b => (
@@ -601,12 +607,13 @@ function BoothsPanel({
 // Tree
 // ─────────────────────────────────────────────────────────
 function Tree({
-  zones, orphanWards, openEdit, onChanged,
+  zones, orphanWards, openEdit, onChanged, lang,
 }: {
   zones: ZoneNode[];
   orphanWards: WardNode[];
   openEdit: (s: EditorState) => void;
   onChanged: () => void;
+  lang: Language;
 }) {
   const [expandedZones, setExpZ] = useState<Set<number>>(new Set());
   const [expandedWards, setExpW] = useState<Set<number>>(new Set());
@@ -618,20 +625,21 @@ function Tree({
     setter(n);
   };
 
+  const confirmDel = (name: string) => confirm(`${tHi(lang, "deleteConfirm")} (${name})`);
   async function delZone(z: ZoneNode) {
-    if (!confirm(`Delete zone "${z.name}"?`)) return;
+    if (!confirmDel(z.name)) return;
     try { await adminApi.deleteZone(z.id); onChanged(); } catch (e) { alert((e as Error).message); }
   }
   async function delWard(w: WardNode) {
-    if (!confirm(`Delete ward "${w.name}"?`)) return;
+    if (!confirmDel(w.name)) return;
     try { await adminApi.deleteHWard(w.id); onChanged(); } catch (e) { alert((e as Error).message); }
   }
   async function delArea(a: AreaNode) {
-    if (!confirm(`Delete area "${a.name}"?`)) return;
+    if (!confirmDel(a.name)) return;
     try { await adminApi.deleteArea(a.id); onChanged(); } catch (e) { alert((e as Error).message); }
   }
   async function delStreet(s: StreetNode) {
-    if (!confirm(`Delete street "${s.name}"?`)) return;
+    if (!confirmDel(s.name)) return;
     try { await adminApi.deleteStreet(s.id); onChanged(); } catch (e) { alert((e as Error).message); }
   }
 
@@ -693,7 +701,7 @@ function Tree({
                 </div>
               );
             })}
-            <BoothsPanel wardId={w.id} openEdit={openEdit} onChanged={onChanged} />
+            <BoothsPanel wardId={w.id} openEdit={openEdit} onChanged={onChanged} lang={lang} />
           </>
         )}
       </div>
@@ -722,7 +730,7 @@ function Tree({
             </div>
             {open && (
               <div className="pb-2">
-                {z.wards.length === 0 && <p className="ml-8 text-xs text-muted-foreground italic py-1">No wards in this zone.</p>}
+                {z.wards.length === 0 && <p className="ml-8 text-xs text-muted-foreground italic py-1">{tHi(lang, "noWardsInZone")}</p>}
                 {z.wards.map(renderWard)}
               </div>
             )}
@@ -732,7 +740,7 @@ function Tree({
       {orphanWards.length > 0 && (
         <div className="rounded-md border bg-yellow-50/40 border-yellow-200">
           <div className="p-2 text-xs font-semibold text-yellow-800 flex items-center gap-1">
-            <Building2 className="w-3.5 h-3.5" /> Wards without a zone ({orphanWards.length})
+            <Building2 className="w-3.5 h-3.5" /> {tHi(lang, "wardsWithoutZone")} ({orphanWards.length})
           </div>
           <div className="pb-2">{orphanWards.map(renderWard)}</div>
         </div>
@@ -744,7 +752,7 @@ function Tree({
 // ─────────────────────────────────────────────────────────
 // Pincodes tab
 // ─────────────────────────────────────────────────────────
-function PincodesPanel({ wards }: { wards: WardNode[] }) {
+function PincodesPanel({ wards, lang }: { wards: WardNode[]; lang: Language }) {
   const [items, setItems] = useState<Pincode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -758,7 +766,7 @@ function PincodesPanel({ wards }: { wards: WardNode[] }) {
     setLoading(true);
     adminApi.getPincodes()
       .then((d: Pincode[]) => setItems(d))
-      .catch(() => setError("Failed to load pincodes"))
+      .catch(() => setError(tHi(lang, "failedToLoadPincodes")))
       .finally(() => setLoading(false));
   };
   useEffect(load, []);
@@ -782,7 +790,7 @@ function PincodesPanel({ wards }: { wards: WardNode[] }) {
 
   async function save() {
     if (!/^\d{6}$/.test(form.code.trim())) {
-      setFormErr("Pincode must be 6 digits"); return;
+      setFormErr(tHi(lang, "pincodeMustBe6Digits")); return;
     }
     setSaving(true); setFormErr(null);
     try {
@@ -800,7 +808,7 @@ function PincodesPanel({ wards }: { wards: WardNode[] }) {
     finally { setSaving(false); }
   }
   async function del(p: Pincode) {
-    if (!confirm(`Delete pincode ${p.code}?`)) return;
+    if (!confirm(tHi(lang, "deletePincodeConfirm")(p.code))) return;
     try { await adminApi.deletePincode(p.id); load(); } catch (e) { alert((e as Error).message); }
   }
 
@@ -812,12 +820,12 @@ function PincodesPanel({ wards }: { wards: WardNode[] }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{items.length} pincodes mapped</p>
-        <Button size="sm" onClick={openCreate} className="gap-2"><Plus className="w-4 h-4" /> Add Pincode</Button>
+        <p className="text-sm text-muted-foreground">{tHi(lang, "pincodesMapped")(items.length)}</p>
+        <Button size="sm" onClick={openCreate} className="gap-2"><Plus className="w-4 h-4" /> {tHi(lang, "addPincode")}</Button>
       </div>
       {error && <p className="text-red-500 text-sm">{error}</p>}
       {loading ? (
-        <p className="text-sm text-muted-foreground py-4 text-center">Loading…</p>
+        <p className="text-sm text-muted-foreground py-4 text-center">{tHi(lang, "loading")}</p>
       ) : (
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {items.map(p => (
@@ -835,9 +843,9 @@ function PincodesPanel({ wards }: { wards: WardNode[] }) {
                   </div>
                 </div>
                 <div className="text-[11px] text-muted-foreground">
-                  <span className="font-medium">Wards:</span>{" "}
+                  <span className="font-medium">{tHi(lang, "wardsLabel")}</span>{" "}
                   {p.wardIds.length === 0 ? (
-                    <span className="italic">None mapped</span>
+                    <span className="italic">{tHi(lang, "noneMapped")}</span>
                   ) : (
                     p.wardIds.map(wardLabel).join(", ")
                   )}
@@ -846,39 +854,39 @@ function PincodesPanel({ wards }: { wards: WardNode[] }) {
             </Card>
           ))}
           {items.length === 0 && (
-            <p className="text-sm text-muted-foreground col-span-full text-center py-6">No pincodes yet.</p>
+            <p className="text-sm text-muted-foreground col-span-full text-center py-6">{tHi(lang, "noPincodesYet")}</p>
           )}
         </div>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg" lang={lang}>
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit Pincode" : "Add Pincode"}</DialogTitle>
+            <DialogTitle>{editing ? tHi(lang, "editPincode") : tHi(lang, "addPincode")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2 max-h-[70vh] overflow-y-auto">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Pincode *</Label>
+                <Label className="text-xs">{tHi(lang, "tabPincodes")} *</Label>
                 <Input value={form.code} maxLength={6} onChange={(e) => setForm(p => ({ ...p, code: e.target.value.replace(/\D/g, "") }))} className="mt-1 text-sm font-mono" />
               </div>
               <div>
-                <Label className="text-xs">Label (English)</Label>
+                <Label className="text-xs">{tHi(lang, "labelEn")}</Label>
                 <Input value={form.label} onChange={(e) => setForm(p => ({ ...p, label: e.target.value }))} className="mt-1 text-sm" />
               </div>
               <div className="col-span-2">
-                <Label className="text-xs">Label (தமிழ்)</Label>
+                <Label className="text-xs">{tHi(lang, "labelTa")}</Label>
                 <Input value={form.labelTa} onChange={(e) => setForm(p => ({ ...p, labelTa: e.target.value }))} className="mt-1 text-sm" lang="ta" />
               </div>
               <div className="col-span-2">
-                <Label className="text-xs">Notes</Label>
+                <Label className="text-xs">{tHi(lang, "notes")}</Label>
                 <Textarea rows={2} value={form.notes} onChange={(e) => setForm(p => ({ ...p, notes: e.target.value }))} className="mt-1 text-sm" />
               </div>
             </div>
             <div>
-              <Label className="text-xs mb-1 block">Associated Wards (select any number)</Label>
+              <Label className="text-xs mb-1 block">{tHi(lang, "associatedWards")}</Label>
               <div className="border rounded-md p-2 max-h-48 overflow-y-auto space-y-1 bg-gray-50">
-                {wards.length === 0 && <p className="text-xs text-muted-foreground">No wards available.</p>}
+                {wards.length === 0 && <p className="text-xs text-muted-foreground">{tHi(lang, "noWardsAvailable")}</p>}
                 {wards.map(w => (
                   <label key={w.id} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-white px-1 py-0.5 rounded">
                     <input
@@ -894,9 +902,9 @@ function PincodesPanel({ wards }: { wards: WardNode[] }) {
             {formErr && <p className="text-red-500 text-sm">{formErr}</p>}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>{tHi(lang, "cancel")}</Button>
             <Button onClick={save} disabled={saving} className="bg-primary hover:bg-primary/90">
-              {saving ? "Saving…" : editing ? "Save Changes" : "Add Pincode"}
+              {saving ? tHi(lang, "saving") : editing ? tHi(lang, "save") : tHi(lang, "addPincode")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -914,6 +922,10 @@ export default function HierarchyAdmin() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editor, setEditor] = useState<EditorState | null>(null);
+  // Per task spec: every label has a TA version via i18n keys; staff can flip
+  // the UI between English and Tamil with this toggle. Defaults to English
+  // because the rest of /admin is English-only by convention.
+  const [lang, setLang] = useState<Language>("en");
 
   const flatWards = useMemo<WardNode[]>(() => [
     ...zones.flatMap(z => z.wards),
@@ -948,36 +960,48 @@ export default function HierarchyAdmin() {
   }, [flatWards]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" lang={lang}>
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h3 className="text-lg font-semibold">Constituency Hierarchy / தொகுதி கட்டமைப்பு</h3>
+          <h3 className="text-lg font-semibold">{tHi(lang, "title")}</h3>
           <p className="text-xs text-muted-foreground">
-            {zones.length} zones · {totals.wardCount} wards · {totals.areaCount} areas · {totals.streetCount} streets · {totals.boothCount} booths
+            {tHi(lang, "summary")(
+              zones.length, totals.wardCount, totals.areaCount, totals.streetCount, totals.boothCount,
+            )}
           </p>
         </div>
-        <Button size="sm" onClick={() => setEditor({ kind: "zone" })} className="gap-1">
-          <Plus className="w-4 h-4" /> Add Zone
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm" variant="outline"
+            onClick={() => setLang(lang === "en" ? "ta" : "en")}
+            title={lang === "en" ? "Switch to Tamil" : "Switch to English"}
+            data-testid="hierarchy-lang-toggle"
+          >
+            {tHi(lang, "languageToggle")}
+          </Button>
+          <Button size="sm" onClick={() => setEditor({ kind: "zone" })} className="gap-1">
+            <Plus className="w-4 h-4" /> {tHi(lang, "addZone")}
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="tree">
         <TabsList>
-          <TabsTrigger value="tree">Tree</TabsTrigger>
-          <TabsTrigger value="pincodes">Pincodes</TabsTrigger>
+          <TabsTrigger value="tree">{tHi(lang, "tabTree")}</TabsTrigger>
+          <TabsTrigger value="pincodes">{tHi(lang, "tabPincodes")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tree" className="mt-3">
           {error && <p className="text-red-500 text-sm" data-testid="hierarchy-load-error">{error}</p>}
           {loading ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">Loading hierarchy…</p>
+            <p className="text-sm text-muted-foreground py-8 text-center">{tHi(lang, "loading")}</p>
           ) : (
-            <Tree zones={zones} orphanWards={orphanWards} openEdit={setEditor} onChanged={load} />
+            <Tree zones={zones} orphanWards={orphanWards} openEdit={setEditor} onChanged={load} lang={lang} />
           )}
         </TabsContent>
 
         <TabsContent value="pincodes" className="mt-3">
-          <PincodesPanel wards={flatWards} />
+          <PincodesPanel wards={flatWards} lang={lang} />
         </TabsContent>
       </Tabs>
 
@@ -987,6 +1011,7 @@ export default function HierarchyAdmin() {
         wards={flatWards}
         onClose={() => setEditor(null)}
         onSaved={load}
+        lang={lang}
       />
     </div>
   );
