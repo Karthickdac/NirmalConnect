@@ -340,11 +340,11 @@ function NodeEditor({
                   <Select value={String(form.wardType ?? "")} onValueChange={(v) => setField("wardType", v)}>
                     <SelectTrigger className="mt-1 text-sm h-9"><SelectValue placeholder={tHi(lang, "placeholderDash")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="corporation_ward">Corporation Ward</SelectItem>
-                      <SelectItem value="madurai_corp_zone">Corporation Zone</SelectItem>
-                      <SelectItem value="town_panchayat">Town Panchayat</SelectItem>
-                      <SelectItem value="panchayat">Village Panchayat</SelectItem>
-                      <SelectItem value="revenue_village">Revenue Village</SelectItem>
+                      <SelectItem value="corporation_ward">{tHi(lang, "wardTypeCorporationWard")}</SelectItem>
+                      <SelectItem value="madurai_corp_zone">{tHi(lang, "wardTypeCorporationZone")}</SelectItem>
+                      <SelectItem value="town_panchayat">{tHi(lang, "wardTypeTownPanchayat")}</SelectItem>
+                      <SelectItem value="panchayat">{tHi(lang, "wardTypeVillagePanchayat")}</SelectItem>
+                      <SelectItem value="revenue_village">{tHi(lang, "wardTypeRevenueVillage")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -396,7 +396,7 @@ function NodeEditor({
                 </div>
                 <div>
                   <Label className="text-xs">{tHi(lang, "areaType")}</Label>
-                  <Input value={String(form.areaType ?? "")} onChange={(e) => setField("areaType", e.target.value)} placeholder="colony / nagar / etc." className="mt-1 text-sm" />
+                  <Input value={String(form.areaType ?? "")} onChange={(e) => setField("areaType", e.target.value)} placeholder={tHi(lang, "areaTypePlaceholder")} className="mt-1 text-sm" />
                 </div>
               </div>
               <div>
@@ -498,15 +498,15 @@ function NodeEditor({
               </div>
               <div className="border rounded-md p-3 space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                  <MapIcon className="w-3.5 h-3.5" /> GPS Coordinates
+                  <MapIcon className="w-3.5 h-3.5" /> {tHi(lang, "gpsCoordinates")}
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs">Latitude</Label>
+                    <Label className="text-xs">{tHi(lang, "latitude")}</Label>
                     <Input type="number" step="any" value={String(form.latitude ?? "")} onChange={(e) => setField("latitude", e.target.value)} className="mt-1 text-sm" />
                   </div>
                   <div>
-                    <Label className="text-xs">Longitude</Label>
+                    <Label className="text-xs">{tHi(lang, "longitude")}</Label>
                     <Input type="number" step="any" value={String(form.longitude ?? "")} onChange={(e) => setField("longitude", e.target.value)} className="mt-1 text-sm" />
                   </div>
                 </div>
@@ -515,6 +515,7 @@ function NodeEditor({
                     lat={form.latitude === "" || form.latitude == null ? null : Number(form.latitude)}
                     lng={form.longitude === "" || form.longitude == null ? null : Number(form.longitude)}
                     onChange={(la, ln) => { setField("latitude", la); setField("longitude", ln); }}
+                    lang={lang}
                   />
                 </Suspense>
               </div>
@@ -525,9 +526,9 @@ function NodeEditor({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" onClick={onClose}>{tHi(lang, "cancel")}</Button>
           <Button onClick={save} disabled={saving} className="bg-primary hover:bg-primary/90">
-            {saving ? "Saving…" : isEdit ? "Save Changes" : "Add"}
+            {saving ? tHi(lang, "savingDots") : isEdit ? tHi(lang, "saveChanges") : tHi(lang, "add")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -551,7 +552,7 @@ function BoothsPanel({
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, [wardId]);
 
   async function del(b: Booth) {
-    if (!confirm(`Delete booth ${b.boothNo} – ${b.name}?`)) return;
+    if (!confirm(tHi(lang, "deleteBoothConfirm")(b.boothNo, b.name))) return;
     try { await adminApi.deleteBooth(b.id); reload(); onChanged(); } catch (e) { alert((e as Error).message); }
   }
 
@@ -584,7 +585,7 @@ function BoothsPanel({
                   <MapPin className="w-3 h-3" />
                   {b.latitude != null && b.longitude != null
                     ? `${b.latitude.toFixed(4)}, ${b.longitude.toFixed(4)}`
-                    : "GPS not set"}
+                    : tHi(lang, "gpsNotSet")}
                 </p>
               </div>
               <div className="flex gap-0.5 shrink-0">
@@ -648,17 +649,17 @@ function Tree({
     return (
       <div key={w.id} className="border-l-2 border-amber-200 pl-3 ml-4">
         <div className="flex items-center gap-1 py-1 group">
-          <button className="text-amber-700 hover:bg-amber-50 rounded p-0.5" onClick={() => toggle(expandedWards, setExpW, w.id)} aria-label="Toggle ward">
+          <button className="text-amber-700 hover:bg-amber-50 rounded p-0.5" onClick={() => toggle(expandedWards, setExpW, w.id)} aria-label={tHi(lang, "toggleWard")}>
             {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
           </button>
           <Building2 className="w-3.5 h-3.5 text-amber-600 shrink-0" />
           <span className="text-sm font-medium">{w.name}</span>
           {w.nameTa && <span className="text-xs text-muted-foreground" lang="ta">/ {w.nameTa}</span>}
           <span className="text-[11px] text-muted-foreground ml-1">
-            ({w.areas.length} areas · {w.boothCount} booths)
+            {tHi(lang, "inlineAreasBooths")(w.areas.length, w.boothCount)}
           </span>
           <div className="ml-auto opacity-0 group-hover:opacity-100 flex gap-0.5">
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit({ kind: "area", parentId: w.id })} title="Add area"><Plus className="w-3 h-3" /></Button>
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit({ kind: "area", parentId: w.id })} title={tHi(lang, "addAreaTip")}><Plus className="w-3 h-3" /></Button>
             <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit({ kind: "ward", item: w as unknown as Record<string, unknown> })}><Pencil className="w-3 h-3" /></Button>
             <Button size="icon" variant="ghost" className="h-6 w-6 text-red-500" onClick={() => delWard(w)}><Trash2 className="w-3 h-3" /></Button>
           </div>
@@ -676,9 +677,9 @@ function Tree({
                     <Layers className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                     <span className="text-sm">{a.name}</span>
                     {a.nameTa && <span className="text-xs text-muted-foreground" lang="ta">/ {a.nameTa}</span>}
-                    <span className="text-[11px] text-muted-foreground ml-1">({a.streets.length} streets)</span>
+                    <span className="text-[11px] text-muted-foreground ml-1">{tHi(lang, "inlineStreets")(a.streets.length)}</span>
                     <div className="ml-auto opacity-0 group-hover:opacity-100 flex gap-0.5">
-                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit({ kind: "street", parentId: a.id })} title="Add street"><Plus className="w-3 h-3" /></Button>
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit({ kind: "street", parentId: a.id })} title={tHi(lang, "addStreetTip")}><Plus className="w-3 h-3" /></Button>
                       <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit({ kind: "area", item: a as unknown as Record<string, unknown> })}><Pencil className="w-3 h-3" /></Button>
                       <Button size="icon" variant="ghost" className="h-6 w-6 text-red-500" onClick={() => delArea(a)}><Trash2 className="w-3 h-3" /></Button>
                     </div>
@@ -696,7 +697,7 @@ function Tree({
                     </div>
                   ))}
                   {aOpen && a.streets.length === 0 && (
-                    <p className="ml-8 text-[11px] text-muted-foreground italic">No streets yet.</p>
+                    <p className="ml-8 text-[11px] text-muted-foreground italic">{tHi(lang, "noStreetsYet")}</p>
                   )}
                 </div>
               );
@@ -715,15 +716,15 @@ function Tree({
         return (
           <div key={z.id} className="rounded-md border bg-white">
             <div className="flex items-center gap-1 p-2 group">
-              <button className="text-blue-700 hover:bg-blue-50 rounded p-0.5" onClick={() => toggle(expandedZones, setExpZ, z.id)} aria-label="Toggle zone">
+              <button className="text-blue-700 hover:bg-blue-50 rounded p-0.5" onClick={() => toggle(expandedZones, setExpZ, z.id)} aria-label={tHi(lang, "toggleZone")}>
                 {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </button>
               <MapPin className="w-4 h-4 text-blue-600 shrink-0" />
               <span className="font-semibold text-sm">{z.name}</span>
               {z.nameTa && <span className="text-xs text-muted-foreground" lang="ta">/ {z.nameTa}</span>}
-              <span className="text-[11px] text-muted-foreground ml-1">({z.wards.length} wards)</span>
+              <span className="text-[11px] text-muted-foreground ml-1">{tHi(lang, "inlineWards")(z.wards.length)}</span>
               <div className="ml-auto opacity-0 group-hover:opacity-100 flex gap-0.5">
-                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit({ kind: "ward", parentId: z.id })} title="Add ward"><Plus className="w-3 h-3" /></Button>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit({ kind: "ward", parentId: z.id })} title={tHi(lang, "addWardTip")}><Plus className="w-3 h-3" /></Button>
                 <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit({ kind: "zone", item: z as unknown as Record<string, unknown> })}><Pencil className="w-3 h-3" /></Button>
                 <Button size="icon" variant="ghost" className="h-6 w-6 text-red-500" onClick={() => delZone(z)}><Trash2 className="w-3 h-3" /></Button>
               </div>
@@ -974,7 +975,7 @@ export default function HierarchyAdmin() {
           <Button
             size="sm" variant="outline"
             onClick={() => setLang(lang === "en" ? "ta" : "en")}
-            title={lang === "en" ? "Switch to Tamil" : "Switch to English"}
+            title={lang === "en" ? tHi(lang, "switchToTamil") : tHi(lang, "switchToEnglish")}
             data-testid="hierarchy-lang-toggle"
           >
             {tHi(lang, "languageToggle")}

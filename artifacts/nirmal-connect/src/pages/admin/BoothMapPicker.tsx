@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { type Language, tHi } from "@/lib/i18n";
 
 // Fix the default marker icon paths (Leaflet expects sprite assets next to the
 // CSS, but Vite hashes filenames). Use the public CDN copies.
@@ -15,16 +16,19 @@ const DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// Tirupparankundram (AC 195), Madurai
-const DEFAULT_CENTRE: [number, number] = [9.9252, 78.1198];
+// Fallback centroid: Tirupparankundram (AC 195), Madurai. Callers may override
+// with a constituency-derived centroid via the `defaultCenter` prop.
+const FALLBACK_CENTRE: [number, number] = [9.9252, 78.1198];
 
 interface Props {
   lat: number | null;
   lng: number | null;
   onChange: (lat: number, lng: number) => void;
+  lang?: Language;
+  defaultCenter?: [number, number];
 }
 
-export default function BoothMapPicker({ lat, lng, onChange }: Props) {
+export default function BoothMapPicker({ lat, lng, onChange, lang = "en", defaultCenter }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -36,7 +40,8 @@ export default function BoothMapPicker({ lat, lng, onChange }: Props) {
   // Mount map once
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const initial: [number, number] = lat != null && lng != null ? [lat, lng] : DEFAULT_CENTRE;
+    const centre = defaultCenter ?? FALLBACK_CENTRE;
+    const initial: [number, number] = lat != null && lng != null ? [lat, lng] : centre;
     const map = L.map(containerRef.current, { zoomControl: true }).setView(initial, lat != null && lng != null ? 16 : 13);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "© OpenStreetMap contributors",
@@ -77,11 +82,9 @@ export default function BoothMapPicker({ lat, lng, onChange }: Props) {
   }, [lat, lng]);
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1" lang={lang}>
       <div ref={containerRef} className="h-64 w-full rounded-md border bg-gray-100" />
-      <p className="text-[11px] text-muted-foreground">
-        Click on the map to drop / move the marker. Default centre: Tirupparankundram, Madurai.
-      </p>
+      <p className="text-[11px] text-muted-foreground">{tHi(lang, "mapHelp")}</p>
     </div>
   );
 }
