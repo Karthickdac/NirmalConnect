@@ -133,6 +133,23 @@ router.get("/pincodes", async (_req, res) => {
   }
 });
 
+// Mirrors GET /api/admin/settings (key=home_hero) so the public Home
+// page can render the editable hero copy without auth.
+router.get("/home-hero", async (_req, res) => {
+  try {
+    const [row] = await db
+      .select()
+      .from(siteConfigTable)
+      .where(eq(siteConfigTable.key, "home_hero"))
+      .limit(1);
+    if (!row) { res.json(null); return; }
+    res.json(JSON.parse(row.value));
+  } catch (err) {
+    console.error("[site] home-hero get:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Mirrors GET /api/admin/about (which is staff-only) so the public
 // About page can render live CMS content without exposing admin routes.
 router.get("/about", async (_req, res) => {

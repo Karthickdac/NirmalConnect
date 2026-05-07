@@ -55,6 +55,9 @@ export const adminApi = {
   // About CMS
   getAbout: () => authFetch("/admin/about"),
   updateAbout: (data: unknown) => authFetch("/admin/about", { method: "PUT", body: JSON.stringify(data) }),
+  // Home Hero CMS (stored under settings key "home_hero")
+  getHomeHero: () => authFetch("/admin/settings").then((s: Record<string, unknown>) => (s?.home_hero ?? null)),
+  updateHomeHero: (data: unknown) => authFetch(`/admin/settings/home_hero`, { method: "PUT", body: JSON.stringify(data) }),
   // Site Settings
   getSettings: () => authFetch("/admin/settings"),
   updateSetting: (key: string, value: unknown) => authFetch(`/admin/settings/${key}`, { method: "PUT", body: JSON.stringify(value) }),

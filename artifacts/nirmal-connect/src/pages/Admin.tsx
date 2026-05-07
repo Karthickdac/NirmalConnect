@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Newspaper, Calendar, Activity, Image,
   Users, MessageSquare, HelpCircle, UserCircle, LogOut, Menu, X,
-  ChevronRight, Settings, Megaphone, FileText, MapPin, ClipboardList, Network, Map as MapIcon, BarChart3,
+  ChevronRight, Settings, Megaphone, FileText, MapPin, ClipboardList, Network, Map as MapIcon, BarChart3, Home as HomeIcon,
 } from "lucide-react";
 import { isAuthenticated, removeToken, getToken } from "@/lib/auth";
 import { useGetMe } from "@workspace/api-client-react";
@@ -21,6 +21,7 @@ import GalleryAdmin from "./admin/GalleryAdmin";
 import VolunteersAdmin from "./admin/VolunteersAdmin";
 import FaqsAdmin from "./admin/FaqsAdmin";
 import AboutAdmin from "./admin/AboutAdmin";
+import HomeAdmin from "./admin/HomeAdmin";
 import SiteSettingsAdmin from "./admin/SiteSettingsAdmin";
 import AuditLogAdmin from "./admin/AuditLogAdmin";
 import BannersAdmin from "./admin/BannersAdmin";
@@ -56,6 +57,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "volunteers",   label: "Volunteers",         icon: Users,        roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator"] },
   { id: "constituency", label: "Constituency & Wards", icon: MapPin,      roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator"] },
   { id: "faqs",         label: "FAQs",               icon: HelpCircle,   roles: ["super_admin", "admin", "pa_staff"] },
+  { id: "home",         label: "Home CMS",           icon: HomeIcon,     roles: ["super_admin", "admin"] },
   { id: "about",        label: "About CMS",          icon: UserCircle,   roles: ["super_admin", "admin"] },
   { id: "settings",     label: "Site Settings",      icon: Settings,     roles: ["super_admin", "admin"] },
   { id: "audit",        label: "Audit Log",          icon: ClipboardList, roles: ["super_admin", "admin"] },
@@ -306,6 +308,7 @@ export default function Admin({ lang = "ta" }: AdminProps) {
             </div>
           )}
           {active === "faqs"         && <FaqsAdmin />}
+          {active === "home"         && <HomeAdmin />}
           {active === "about"        && <AboutAdmin />}
           {active === "settings"     && <SiteSettingsAdmin />}
           {active === "audit"        && <AuditLogAdmin />}

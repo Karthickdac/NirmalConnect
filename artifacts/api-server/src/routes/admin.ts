@@ -786,7 +786,7 @@ router.put("/admin/about", requireRole("super_admin", "admin", "pa_staff"), asyn
 router.get("/admin/settings", async (_req, res) => {
   try {
     const rows = await db.select().from(siteConfigTable)
-      .where(sql`key IN ('social_links','contact_info','emergency_contacts')`);
+      .where(sql`key IN ('social_links','contact_info','emergency_contacts','home_hero')`);
     const result: Record<string, unknown> = {};
     for (const row of rows) {
       try { result[row.key] = JSON.parse(row.value); } catch { result[row.key] = row.value; }
@@ -798,12 +798,56 @@ router.get("/admin/settings", async (_req, res) => {
   }
 });
 
+// Internal-only path: must start with "/" and contain no scheme or host.
+// Prevents stored hostile hrefs (javascript:, http://evil) from reaching the
+// public Home page CTAs via the home_hero settings blob.
+const InternalPath = z.string().trim().regex(/^\/[^\s]*$/, "Must be a relative path starting with /");
+
+const HomeHeroBody = z.object({
+  badge: z.string().default(""),
+  badgeTa: z.string().default(""),
+  headline: z.string().trim().min(1, "Headline is required"),
+  headlineTa: z.string().default(""),
+  subheadline: z.string().trim().min(1, "Subheadline is required"),
+  subheadlineTa: z.string().default(""),
+  description: z.string().trim().min(1, "Description is required"),
+  descriptionTa: z.string().default(""),
+  primaryCtaLabel: z.string().trim().min(1, "Primary CTA label required"),
+  primaryCtaLabelTa: z.string().default(""),
+  primaryCtaHref: InternalPath,
+  secondaryCtaLabel: z.string().trim().min(1, "Secondary CTA label required"),
+  secondaryCtaLabelTa: z.string().default(""),
+  secondaryCtaHref: InternalPath,
+  photoUrl: ImageRef.default(""),
+  statsHeadline: z.string().default(""),
+  statsHeadlineTa: z.string().default(""),
+  statsSubheadline: z.string().default(""),
+  statsSubheadlineTa: z.string().default(""),
+  grievanceCtaTitle: z.string().default(""),
+  grievanceCtaTitleTa: z.string().default(""),
+  grievanceCtaBody: z.string().default(""),
+  grievanceCtaBodyTa: z.string().default(""),
+  volunteerCtaTitle: z.string().default(""),
+  volunteerCtaTitleTa: z.string().default(""),
+  volunteerCtaBody: z.string().default(""),
+  volunteerCtaBodyTa: z.string().default(""),
+}).strict();
+
 router.put("/admin/settings/:key", requireRole("super_admin", "admin"), async (req: AuthRequest, res) => {
   try {
     const key = req.params["key"] as string;
-    const allowed = ["social_links", "contact_info", "emergency_contacts"];
+    const allowed = ["social_links", "contact_info", "emergency_contacts", "home_hero"];
     if (!allowed.includes(key)) { res.status(400).json({ error: "Invalid settings key" }); return; }
-    const value = JSON.stringify(req.body);
+    let body: unknown = req.body;
+    if (key === "home_hero") {
+      const parsed = HomeHeroBody.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid", details: parsed.error.issues });
+        return;
+      }
+      body = parsed.data;
+    }
+    const value = JSON.stringify(body);
     const existing = await db.select({ id: siteConfigTable.id }).from(siteConfigTable)
       .where(eq(siteConfigTable.key, key)).limit(1);
     if (existing.length > 0) {
