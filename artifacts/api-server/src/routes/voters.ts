@@ -18,7 +18,7 @@ import { requireStaff, requireRole, type AuthRequest } from "../lib/auth.js";
 import {
   parseVoterRollPdf, type ParsedVoter, type ParseResult,
 } from "../lib/voterRollParser.js";
-import { getVoterScopeForUser, resolveScopeBoothIds } from "../lib/voterScope.js";
+import { getVoterScopeForUser, resolveScopeBoothIds, voterListOrderBy } from "../lib/voterScope.js";
 import { regroupHouseholds } from "../lib/households.js";
 
 const router = Router();
@@ -734,11 +734,10 @@ router.get("/admin/voters", requireStaff, async (req: AuthRequest, res) => {
     const whereClause = conds.length > 0 ? and(...conds) : undefined;
     const offset = (page - 1) * limit;
 
-    const orderBy = usedEpicShortCircuit
-      ? [desc(votersTable.id)]
-      : (q && q.length >= 2
-          ? [desc(sql`similarity(lower(${votersTable.fullName}), ${q.toLowerCase()})`)]
-          : [desc(votersTable.id)]);
+    // Use shared ordering helper so /admin/voters and the export route
+    // produce identical ordering for any given `q` (task #47 parity).
+    void usedEpicShortCircuit;
+    const orderBy = voterListOrderBy(q);
 
     const [rows, totalRow] = await Promise.all([
       db

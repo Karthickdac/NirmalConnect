@@ -114,3 +114,22 @@ export async function resolveScopeBoothIds(scope: VoterScope): Promise<number[] 
 
   return Array.from(ids);
 }
+
+// ── Shared ordering for the Voters list ─────────────────────────────
+// IMPORTANT: any route that returns voters in the same order as the
+// admin Voters table MUST use this helper. Keeping the logic in one
+// place is what makes the export's "matches on-screen exactly"
+// guarantee enforceable — search and export call the same function
+// with the same `q`, so tied rows fall in the same order in both.
+import { sql, desc, type SQL } from "drizzle-orm";
+import { votersTable } from "@workspace/db/schema";
+
+export const VOTER_EPIC_RE = /^[A-Z]{3}\d{7}$/i;
+
+export function voterListOrderBy(q?: string | null): SQL[] {
+  if (q && VOTER_EPIC_RE.test(q)) return [desc(votersTable.id)];
+  if (q && q.length >= 2) {
+    return [desc(sql`similarity(lower(${votersTable.fullName}), ${q.toLowerCase()})`)];
+  }
+  return [desc(votersTable.id)];
+}

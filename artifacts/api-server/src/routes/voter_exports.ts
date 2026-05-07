@@ -30,14 +30,14 @@ import { createHash } from "node:crypto";
 import { Transform, type TransformCallback } from "node:stream";
 import ExcelJS from "exceljs";
 import { requireStaff, type AuthRequest, verifyPassword } from "../lib/auth.js";
-import { getVoterScopeForUser, resolveScopeBoothIds } from "../lib/voterScope.js";
+import { getVoterScopeForUser, resolveScopeBoothIds, voterListOrderBy, VOTER_EPIC_RE } from "../lib/voterScope.js";
 
 const router = Router();
 
 const EXPORT_PASSWORD_THRESHOLD = 5000;
 const STREAM_BATCH_SIZE = 1000;
 
-const EPIC_RE = /^[A-Z]{3}\d{7}$/i;
+const EPIC_RE = VOTER_EPIC_RE;
 
 const filterSchema = z.object({
   q: z.string().trim().max(120).optional(),
@@ -295,15 +295,10 @@ router.post("/admin/voters/export", requireStaff, async (req: AuthRequest, res) 
     if (!res.writableEnded) aborted = true;
   });
 
-  // Mirror the search route's ordering so the export rows arrive in
-  // the same order staff see on-screen: EPIC short-circuit > trigram
-  // similarity for fuzzy text > id DESC fallback.
-  const usedEpicShortCircuit = !!(filters.q && EPIC_RE.test(filters.q));
-  const orderBy = usedEpicShortCircuit
-    ? [desc(votersTable.id)]
-    : (filters.q && filters.q.length >= 2
-        ? [desc(sql`similarity(lower(${votersTable.fullName}), ${filters.q.toLowerCase()})`), desc(votersTable.id)]
-        : [desc(votersTable.id)]);
+  // Mirror the search route's ordering EXACTLY (see voterListOrderBy
+  // in lib/voterScope.ts) so the exported rows are in the same order
+  // staff see on-screen — including tied-similarity rows.
+  const orderBy = voterListOrderBy(filters.q);
 
   async function* batches() {
     if (!built) return;
