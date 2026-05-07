@@ -145,7 +145,8 @@ async function runParseJobs(jobs: Array<{ rowId: number; file: Express.Multer.Fi
       .set({ status: "parsing" })
       .where(eq(voterImportsTable.id, rowId));
     try {
-      const result = await parseVoterRollPdf(file.buffer);
+      const sha = createHash("sha256").update(file.buffer).digest("hex");
+      const result = await parseVoterRollPdf(file.buffer, sha);
       await db
         .update(voterImportsTable)
         .set({
