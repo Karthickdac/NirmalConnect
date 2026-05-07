@@ -26,6 +26,7 @@ import Login from "@/pages/Login";
 import Admin from "@/pages/Admin";
 import Faq from "@/pages/Faq";
 import Achievements from "@/pages/Achievements";
+import MapPage from "@/pages/MapPage";
 import { Journey, Development, Welfare, PressReleases, Donate, Emergency } from "@/pages/SimplePages";
 import NotFound from "@/pages/not-found";
 
@@ -65,6 +66,7 @@ function PublicRoutes({ lang, setLang, darkMode, setDarkMode }: {
         <Route path="/gallery" component={() => <Gallery lang={lang} />} />
         <Route path="/achievements" component={() => <Achievements lang={lang} />} />
         <Route path="/welfare" component={() => <Welfare lang={lang} />} />
+        <Route path="/map" component={() => <MapPage lang={lang} />} />
         <Route path="/grievance" component={() => <Grievance lang={lang} />} />
         <Route path="/contact" component={() => <Contact lang={lang} />} />
         <Route path="/volunteer" component={() => <Volunteer lang={lang} />} />

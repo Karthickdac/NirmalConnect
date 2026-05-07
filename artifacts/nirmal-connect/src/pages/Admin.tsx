@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Newspaper, Calendar, Activity, Image,
   Users, MessageSquare, HelpCircle, UserCircle, LogOut, Menu, X,
-  ChevronRight, Settings, Megaphone, FileText, MapPin, ClipboardList, Network,
+  ChevronRight, Settings, Megaphone, FileText, MapPin, ClipboardList, Network, Map as MapIcon,
 } from "lucide-react";
 import { isAuthenticated, removeToken, getToken } from "@/lib/auth";
-import { useGetMe } from "@workspace/api-client-react";
+import { useGetMe, adminListAssignments } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
+import { lazy, Suspense } from "react";
+const ConstituencyMap = lazy(() => import("@/components/maps/ConstituencyMap"));
 import GrievanceOfficer from "./GrievanceOfficer";
 import Dashboard from "./admin/Dashboard";
 import NewsAdmin from "./admin/NewsAdmin";
@@ -41,6 +44,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "dashboard",    label: "Dashboard",         icon: LayoutDashboard },
   { id: "grievances",   label: "Grievances",        icon: MessageSquare },
   { id: "assignments",  label: "Officer Assignments", icon: Network,    roles: ["super_admin", "admin", "constituency_coordinator"] },
+  { id: "map",          label: "Constituency Map",   icon: MapIcon },
   { id: "news",         label: "News",               icon: Newspaper,    roles: ["super_admin", "admin", "pa_staff", "media_team"] },
   { id: "press",        label: "Press Releases",    icon: FileText,     roles: ["super_admin", "admin", "pa_staff", "media_team"] },
   { id: "events",       label: "Events",             icon: Calendar,     roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator", "media_team"] },
@@ -68,6 +72,23 @@ export default function Admin({ lang = "ta" }: AdminProps) {
 
   const token = getToken() ?? "";
   const role = me?.role ?? "";
+
+  // Fetch the logged-in officer's assignments so the embedded map can offer
+  // a "show only my ward" toggle. Skipped for super_admin/admin who already
+  // see everything.
+  const isOfficer = role === "grievance_officer" || role === "constituency_coordinator";
+  const { data: myAssignments } = useQuery({
+    queryKey: ["my-officer-assignments", me?.id],
+    queryFn: () => adminListAssignments({ userId: me!.id }),
+    enabled: Boolean(me?.id && isOfficer),
+    staleTime: 60_000,
+  });
+  const officerWardIds = useMemo(() => {
+    const items = myAssignments?.items ?? [];
+    const ids = new Set<number>();
+    for (const r of items) if (r.wardId != null) ids.add(r.wardId);
+    return Array.from(ids);
+  }, [myAssignments]);
 
   const STAFF_ROLES = ["super_admin", "admin", "pa_staff", "media_team", "constituency_coordinator", "grievance_officer", "minister", "staff"];
 
@@ -205,6 +226,16 @@ export default function Admin({ lang = "ta" }: AdminProps) {
           {active === "dashboard"    && <Dashboard />}
           {active === "grievances"   && <GrievanceOfficer lang={lang} token={token} userRole={role} />}
           {active === "assignments"  && <AssignmentsAdmin token={token} />}
+          {active === "map"          && (
+            <Suspense fallback={<div className="text-sm text-muted-foreground">Loading map…</div>}>
+              <ConstituencyMap
+                lang={lang}
+                adminMode
+                officerWardIds={isOfficer ? officerWardIds : undefined}
+                height="calc(100vh - 130px)"
+              />
+            </Suspense>
+          )}
           {active === "news"         && <NewsAdmin />}
           {active === "press"        && <PressReleasesAdmin />}
           {active === "events"       && <EventsAdmin />}

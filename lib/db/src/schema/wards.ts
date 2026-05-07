@@ -46,6 +46,11 @@ export const wardsTable = pgTable("wards", {
   population: integer("population"),
   households: integer("households"),
   notes: text("notes"),
+  // Optional polygon boundary as a GeoJSON Feature (geometry only required).
+  // Populated from the openly-licensed sources documented in
+  // lib/db/data/data-sources.md. Wards without boundary data fall back to a
+  // labelled centroid pin on the public map.
+  boundaryGeojson: text("boundary_geojson"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => ({

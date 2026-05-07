@@ -11,6 +11,7 @@ import statsRouter from "./stats.js";
 import grievancesRouter from "./grievances.js";
 import adminRouter from "./admin.js";
 import siteRouter from "./site.js";
+import mapRouter from "./map.js";
 
 const router: IRouter = Router();
 
@@ -25,6 +26,7 @@ router.use(faqsRouter);
 router.use(statsRouter);
 router.use(grievancesRouter);
 router.use(siteRouter);
+router.use(mapRouter);
 router.use(adminRouter);
 
 export default router;

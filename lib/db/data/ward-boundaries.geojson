@@ -1,0 +1,7 @@
+{
+  "type": "FeatureCollection",
+  "name": "ac195_thiruparankundram_ward_boundaries",
+  "license": "ODbL-1.0 (OpenStreetMap) / CC-BY-4.0 (data.opencity.in)",
+  "notes": "See lib/db/data/data-sources.md for source URLs. Each feature's properties.wardId must match a row in the wards table. Wards without a matching feature render as a labelled centroid pin on the public map.",
+  "features": []
+}

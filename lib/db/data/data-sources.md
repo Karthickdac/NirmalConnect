@@ -1,5 +1,34 @@
 # Constituency Master Data — Sources
 
+> See top of file for the polling-station hierarchy sources. The
+> section below covers the Leaflet map's ward-boundary overlay.
+
+## Ward boundary GeoJSON
+
+- **File:** `ward-boundaries.geojson`
+- **Format:** GeoJSON `FeatureCollection`. Each feature must carry
+  `properties.wardId` matching a row in the `wards` table.
+- **Suggested open sources** (pick the freshest match per ward, do **not**
+  invent boundaries):
+  - **OpenStreetMap** boundary relations for Madurai Corporation wards —
+    https://www.openstreetmap.org/search?query=madurai%20ward (export
+    via Overpass API, license: ODbL-1.0)
+  - **data.opencity.in — Madurai wards** —
+    https://data.opencity.in/dataset/madurai-ward-boundaries (license:
+    CC-BY-4.0)
+  - **Madurai District NIC GIS** — https://madurai.nic.in/maps/
+- **How to update:** download the source GeoJSON, filter to the wards
+  inside AC 195 Thiruparankundram, set `properties.wardId` on each
+  feature, and commit the merged file. Wards without a matching
+  feature fall back to a labelled centroid pin on the public map (the
+  popup shows "boundary not yet mapped"), so partial coverage is fine.
+- **Per-row override:** `wards.boundary_geojson` (TEXT) accepts a
+  GeoJSON `Feature` for an individual ward and wins over the file when
+  both are present — useful when staff hand-correct a single boundary
+  without touching the shipped dataset.
+
+---
+
 This file documents the **real, public** sources used to seed the
 Tirupparankundram (Assembly Constituency 195, Madurai District) master
 hierarchy. Every record in `zones`, `wards`, `pincodes`, and

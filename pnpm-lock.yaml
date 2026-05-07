@@ -428,9 +428,6 @@ importers:
       '@tiptap/starter-kit':
         specifier: ^3.22.5
         version: 3.22.5
-      '@types/leaflet':
-        specifier: ^1.9.21
-        version: 1.9.21
       jspdf:
         specifier: ^4.2.1
         version: 4.2.1
@@ -546,6 +543,9 @@ importers:
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.90.21(react@19.1.0)
+      '@types/leaflet':
+        specifier: ^1.9.21
+        version: 1.9.21
       '@types/node':
         specifier: 'catalog:'
         version: 25.3.5
