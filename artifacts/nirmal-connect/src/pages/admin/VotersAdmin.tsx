@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/sheet";
 import { useWards } from "@/lib/useWards";
 import { getToken } from "@/lib/auth";
+import { useGetMe } from "@workspace/api-client-react";
 import { Loader2, Search, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import type { Language } from "@/lib/i18n";
 
@@ -74,6 +75,10 @@ interface VotersAdminProps { lang?: Language }
 
 export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
   const { data: wards = [] } = useWards();
+  const { data: me } = useGetMe();
+  // Source PDF endpoint (/admin/voters/imports/:id) is super_admin-only;
+  // hide the link for everyone else to avoid a confusing 403.
+  const canViewSourcePdf = me?.role === "super_admin";
 
   // Bilingual display toggle (defaults to incoming admin lang).
   const [displayLang, setDisplayLang] = useState<Language>(lang);
@@ -414,19 +419,25 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
               </Field>
               {detail.sourcePdf && (
                 <Field label="Source PDF">
-                  <a
-                    href={detail.sourceImportId != null
-                      ? `${BASE}/api/admin/voters/imports/${detail.sourceImportId}`
-                      : "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-primary hover:underline text-xs"
-                    data-testid="voter-source-pdf-link"
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    {detail.sourcePdf}
-                    {detail.sourcePage ? <span className="text-muted-foreground">(p.{detail.sourcePage})</span> : null}
-                  </a>
+                  {canViewSourcePdf && detail.sourceImportId != null ? (
+                    <a
+                      href={`${BASE}/api/admin/voters/imports/${detail.sourceImportId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-primary hover:underline text-xs"
+                      data-testid="voter-source-pdf-link"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      {detail.sourcePdf}
+                      {detail.sourcePage ? <span className="text-muted-foreground">(p.{detail.sourcePage})</span> : null}
+                    </a>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <FileText className="w-3.5 h-3.5" />
+                      {detail.sourcePdf}
+                      {detail.sourcePage ? ` (p.${detail.sourcePage})` : ""}
+                    </span>
+                  )}
                 </Field>
               )}
               <div className="text-xs text-muted-foreground border-t pt-3">

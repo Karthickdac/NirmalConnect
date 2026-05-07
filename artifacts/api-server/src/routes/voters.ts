@@ -582,10 +582,11 @@ router.get("/admin/voters/stats", ...requireVoterScope, async (req: AuthRequest,
 //
 // These two endpoints are gated by `requireStaff`, NOT requireVoterScope,
 // because we want grievance officers / coordinators to see voters within
-// their assigned wards / areas / booths. Admins (super_admin / admin /
-// minister) see everything; everyone else is filtered through
-// `getVoterScopeForUser`. Out-of-scope detail look-ups return 404 (not
-// 403) so they don't leak existence of voters outside an officer's area.
+// their assigned wards / areas / booths. Only super_admin and admin see
+// everything; every other staff role (including minister) is filtered
+// through `getVoterScopeForUser`. Out-of-scope detail look-ups return
+// 404 (not 403) so they don't leak existence of voters outside an
+// officer's area.
 
 // Per-user in-memory token bucket: 60 requests / 60s window per userId.
 // Naive but sufficient for a single-process deployment; switch to Redis
