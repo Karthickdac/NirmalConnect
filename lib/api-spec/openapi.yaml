@@ -2858,6 +2858,28 @@ components:
               count: { type: integer }
               avgResolutionHours: { type: ["number", "null"] }
             required: [wardId, name, count]
+        byWardTop10:
+          type: array
+          items:
+            type: object
+            properties:
+              wardId: { type: integer }
+              name: { type: string }
+              nameTa: { type: ["string", "null"] }
+              count: { type: integer }
+              avgResolutionHours: { type: ["number", "null"] }
+            required: [wardId, name, count]
+        byWardCategory:
+          type: array
+          items:
+            type: object
+            properties:
+              wardId: { type: integer }
+              wardName: { type: string }
+              wardNameTa: { type: ["string", "null"] }
+              category: { type: string }
+              count: { type: integer }
+            required: [wardId, wardName, category, count]
         byCategory:
           type: array
           items:
@@ -2887,7 +2909,7 @@ components:
             required: [officerId, name, total, open]
         cachedAt: { type: string, format: date-time }
         cacheTtlSeconds: { type: integer }
-      required: [totals, heatPoints, byWard, byCategory, byStatus, byOfficer]
+      required: [totals, heatPoints, byWard, byWardTop10, byWardCategory, byCategory, byStatus, byOfficer]
 
     AnalyticsOfficerListResponse:
       type: object

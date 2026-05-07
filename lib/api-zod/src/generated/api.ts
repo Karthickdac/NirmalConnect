@@ -1515,6 +1515,24 @@ export const AdminGrievanceAnalyticsResponse = zod.object({
       avgResolutionHours: zod.number().nullish(),
     }),
   ),
+  byWardTop10: zod.array(
+    zod.object({
+      wardId: zod.number(),
+      name: zod.string(),
+      nameTa: zod.string().nullish(),
+      count: zod.number(),
+      avgResolutionHours: zod.number().nullish(),
+    }),
+  ),
+  byWardCategory: zod.array(
+    zod.object({
+      wardId: zod.number(),
+      wardName: zod.string(),
+      wardNameTa: zod.string().nullish(),
+      category: zod.string(),
+      count: zod.number(),
+    }),
+  ),
   byCategory: zod.array(
     zod.object({
       category: zod.string(),

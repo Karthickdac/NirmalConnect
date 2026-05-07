@@ -924,6 +924,25 @@ export type GrievanceAnalyticsByWardItem = {
   avgResolutionHours?: number | null;
 };
 
+export type GrievanceAnalyticsByWardTop10Item = {
+  wardId: number;
+  name: string;
+  /** @nullable */
+  nameTa?: string | null;
+  count: number;
+  /** @nullable */
+  avgResolutionHours?: number | null;
+};
+
+export type GrievanceAnalyticsByWardCategoryItem = {
+  wardId: number;
+  wardName: string;
+  /** @nullable */
+  wardNameTa?: string | null;
+  category: string;
+  count: number;
+};
+
 export type GrievanceAnalyticsByCategoryItem = {
   category: string;
   count: number;
@@ -948,6 +967,8 @@ export interface GrievanceAnalytics {
   totals: GrievanceAnalyticsTotals;
   heatPoints: GrievanceAnalyticsHeatPointsItem[];
   byWard: GrievanceAnalyticsByWardItem[];
+  byWardTop10: GrievanceAnalyticsByWardTop10Item[];
+  byWardCategory: GrievanceAnalyticsByWardCategoryItem[];
   byCategory: GrievanceAnalyticsByCategoryItem[];
   byStatus: GrievanceAnalyticsByStatusItem[];
   byOfficer: GrievanceAnalyticsByOfficerItem[];

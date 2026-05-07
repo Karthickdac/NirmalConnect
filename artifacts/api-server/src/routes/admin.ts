@@ -1955,6 +1955,9 @@ router.get(
 
       const fromDate = f.from ? new Date(f.from) : null;
       const toDate = f.to ? new Date(f.to) : null;
+      if (toDate && !isNaN(toDate.getTime()) && /^\d{4}-\d{2}-\d{2}$/.test(f.to ?? "")) {
+        toDate.setUTCHours(23, 59, 59, 999);
+      }
       const conds = [] as ReturnType<typeof eq>[];
       if (fromDate && !isNaN(fromDate.getTime())) conds.push(gte(grievancesTable.createdAt, fromDate));
       if (toDate && !isNaN(toDate.getTime())) conds.push(lte(grievancesTable.createdAt, toDate));
