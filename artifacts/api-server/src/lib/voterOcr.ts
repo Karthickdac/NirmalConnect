@@ -12,7 +12,7 @@
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 
 const requireCjs = createRequire(import.meta.url);
 
@@ -119,6 +119,18 @@ export async function ocrScannedPages(
         console.log(
           `[voter-ocr] page ${pageNo}: ${text.length} chars; preview="${text.replace(/\s+/g, " ").slice(0, 100)}"`,
         );
+        // Dev-only: dump the full OCR text per page so we can tune the
+        // grid-cell parser without needing the user to re-upload every
+        // time. Disabled in production.
+        if (process.env["NODE_ENV"] !== "production") {
+          try {
+            const dir = "/tmp/voter-ocr-debug";
+            mkdirSync(dir, { recursive: true });
+            writeFileSync(`${dir}/page-${pageNo}.txt`, text, "utf8");
+          } catch {
+            // best-effort; never let dump failures break OCR
+          }
+        }
         out.push({ page: pageNo, text });
       } catch (e) {
         console.error(`[voter-ocr] page ${pageNo} failed:`, (e as Error).message);
