@@ -66,12 +66,38 @@ const DEFAULT_CONFIG: AboutConfig = {
   ],
 };
 
+const URL_RE = /^https?:\/\/[^\s]+$/i;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validateConfig(c: AboutConfig): Record<string, string> {
+  const errs: Record<string, string> = {};
+  if (!c.name.trim()) errs.name = "Name is required";
+  if (!c.designation.trim()) errs.designation = "Designation is required";
+  if (!c.constituency.trim()) errs.constituency = "Constituency is required";
+  if (!c.party.trim()) errs.party = "Party is required";
+  if (!c.bioBrief.trim()) errs.bioBrief = "Brief bio is required";
+  if (!c.phone.trim()) errs.phone = "Phone is required";
+  if (!c.email.trim()) errs.email = "Email is required";
+  else if (!EMAIL_RE.test(c.email.trim())) errs.email = "Invalid email address";
+
+  const photo = c.photoUrl.trim();
+  if (photo && !URL_RE.test(photo) && !photo.startsWith("/uploads/") && !photo.startsWith("/api/uploads/")) {
+    errs.photoUrl = "Must be a valid URL or /uploads/ path";
+  }
+  (["facebook", "twitter", "instagram", "youtube"] as const).forEach((k) => {
+    const v = c[k].trim();
+    if (v && !URL_RE.test(v)) errs[k] = "Must be a valid http(s) URL";
+  });
+  return errs;
+}
+
 export default function AboutAdmin() {
   const [config, setConfig] = useState<AboutConfig>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     adminApi.getAbout()
@@ -96,6 +122,12 @@ export default function AboutAdmin() {
     setConfig(c => ({ ...c, highlights: c.highlights.filter((_, idx) => idx !== i) }));
 
   async function handleSave() {
+    const errs = validateConfig(config);
+    setFieldErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      setError("Please fix the errors below before saving.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -108,6 +140,9 @@ export default function AboutAdmin() {
       setSaving(false);
     }
   }
+
+  const errClass = (k: string) => fieldErrors[k] ? "border-red-500 focus-visible:ring-red-500" : "";
+  const errMsg = (k: string) => fieldErrors[k] ? <p className="text-xs text-red-500 mt-1">{fieldErrors[k]}</p> : null;
 
   if (loading) return <div className="py-20 text-center text-muted-foreground">Loading…</div>;
 
@@ -142,8 +177,9 @@ export default function AboutAdmin() {
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">Full Name (English)</Label>
-              <Input value={config.name} onChange={e => set("name", e.target.value)} className="mt-1 text-sm" />
+              <Label className="text-xs">Full Name (English) *</Label>
+              <Input value={config.name} onChange={e => set("name", e.target.value)} className={`mt-1 text-sm ${errClass("name")}`} />
+              {errMsg("name")}
             </div>
             <div>
               <Label className="text-xs">பெயர் (Tamil)</Label>
@@ -152,8 +188,9 @@ export default function AboutAdmin() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">Designation</Label>
-              <Input value={config.designation} onChange={e => set("designation", e.target.value)} className="mt-1 text-sm" />
+              <Label className="text-xs">Designation *</Label>
+              <Input value={config.designation} onChange={e => set("designation", e.target.value)} className={`mt-1 text-sm ${errClass("designation")}`} />
+              {errMsg("designation")}
             </div>
             <div>
               <Label className="text-xs">பதவி (Tamil)</Label>
@@ -162,8 +199,9 @@ export default function AboutAdmin() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">Constituency</Label>
-              <Input value={config.constituency} onChange={e => set("constituency", e.target.value)} className="mt-1 text-sm" />
+              <Label className="text-xs">Constituency *</Label>
+              <Input value={config.constituency} onChange={e => set("constituency", e.target.value)} className={`mt-1 text-sm ${errClass("constituency")}`} />
+              {errMsg("constituency")}
             </div>
             <div>
               <Label className="text-xs">தொகுதி (Tamil)</Label>
@@ -172,8 +210,9 @@ export default function AboutAdmin() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">Party</Label>
-              <Input value={config.party} onChange={e => set("party", e.target.value)} className="mt-1 text-sm" />
+              <Label className="text-xs">Party *</Label>
+              <Input value={config.party} onChange={e => set("party", e.target.value)} className={`mt-1 text-sm ${errClass("party")}`} />
+              {errMsg("party")}
             </div>
             <div>
               <Label className="text-xs">கட்சி (Tamil)</Label>
@@ -192,7 +231,8 @@ export default function AboutAdmin() {
           </div>
           <div>
             <Label className="text-xs">Profile Photo URL</Label>
-            <Input value={config.photoUrl} onChange={e => set("photoUrl", e.target.value)} placeholder="https://…" className="mt-1 text-sm" />
+            <Input value={config.photoUrl} onChange={e => set("photoUrl", e.target.value)} placeholder="https://… or /uploads/…" className={`mt-1 text-sm ${errClass("photoUrl")}`} />
+            {errMsg("photoUrl")}
           </div>
         </CardContent>
       </Card>
@@ -204,8 +244,9 @@ export default function AboutAdmin() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
-            <Label className="text-xs">Brief Bio (English) — shown on hero section</Label>
-            <Textarea value={config.bioBrief} onChange={e => set("bioBrief", e.target.value)} rows={2} className="mt-1 text-sm" />
+            <Label className="text-xs">Brief Bio (English) * — shown on hero section</Label>
+            <Textarea value={config.bioBrief} onChange={e => set("bioBrief", e.target.value)} rows={2} className={`mt-1 text-sm ${errClass("bioBrief")}`} />
+            {errMsg("bioBrief")}
           </div>
           <div>
             <Label className="text-xs">சுருக்க வாழ்க்கை வரலாறு (Tamil)</Label>
@@ -257,12 +298,14 @@ export default function AboutAdmin() {
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">Phone</Label>
-              <Input value={config.phone} onChange={e => set("phone", e.target.value)} className="mt-1 text-sm" />
+              <Label className="text-xs">Phone *</Label>
+              <Input value={config.phone} onChange={e => set("phone", e.target.value)} className={`mt-1 text-sm ${errClass("phone")}`} />
+              {errMsg("phone")}
             </div>
             <div>
-              <Label className="text-xs">Email</Label>
-              <Input value={config.email} onChange={e => set("email", e.target.value)} className="mt-1 text-sm" />
+              <Label className="text-xs">Email *</Label>
+              <Input type="email" value={config.email} onChange={e => set("email", e.target.value)} className={`mt-1 text-sm ${errClass("email")}`} />
+              {errMsg("email")}
             </div>
           </div>
           <div>
@@ -285,21 +328,25 @@ export default function AboutAdmin() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">Facebook URL</Label>
-              <Input value={config.facebook} onChange={e => set("facebook", e.target.value)} placeholder="https://facebook.com/…" className="mt-1 text-sm" />
+              <Input value={config.facebook} onChange={e => set("facebook", e.target.value)} placeholder="https://facebook.com/…" className={`mt-1 text-sm ${errClass("facebook")}`} />
+              {errMsg("facebook")}
             </div>
             <div>
               <Label className="text-xs">Twitter/X URL</Label>
-              <Input value={config.twitter} onChange={e => set("twitter", e.target.value)} placeholder="https://x.com/…" className="mt-1 text-sm" />
+              <Input value={config.twitter} onChange={e => set("twitter", e.target.value)} placeholder="https://x.com/…" className={`mt-1 text-sm ${errClass("twitter")}`} />
+              {errMsg("twitter")}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">Instagram URL</Label>
-              <Input value={config.instagram} onChange={e => set("instagram", e.target.value)} placeholder="https://instagram.com/…" className="mt-1 text-sm" />
+              <Input value={config.instagram} onChange={e => set("instagram", e.target.value)} placeholder="https://instagram.com/…" className={`mt-1 text-sm ${errClass("instagram")}`} />
+              {errMsg("instagram")}
             </div>
             <div>
               <Label className="text-xs">YouTube URL</Label>
-              <Input value={config.youtube} onChange={e => set("youtube", e.target.value)} placeholder="https://youtube.com/…" className="mt-1 text-sm" />
+              <Input value={config.youtube} onChange={e => set("youtube", e.target.value)} placeholder="https://youtube.com/…" className={`mt-1 text-sm ${errClass("youtube")}`} />
+              {errMsg("youtube")}
             </div>
           </div>
         </CardContent>

@@ -600,9 +600,51 @@ router.get("/admin/about", async (_req, res) => {
   }
 });
 
+const OptionalUrl = z
+  .string()
+  .trim()
+  .refine((v) => v === "" || /^https?:\/\/[^\s]+$/i.test(v), { message: "Must be a valid http(s) URL" });
+
+const AboutBody = z.object({
+  name: z.string().trim().min(1, "Name is required"),
+  nameTa: z.string().default(""),
+  designation: z.string().trim().min(1, "Designation is required"),
+  designationTa: z.string().default(""),
+  constituency: z.string().trim().min(1, "Constituency is required"),
+  constituencyTa: z.string().default(""),
+  party: z.string().trim().min(1, "Party is required"),
+  partyTa: z.string().default(""),
+  photoUrl: ImageRef.default(""),
+  bioBrief: z.string().trim().min(1, "Brief bio is required"),
+  bioBriefTa: z.string().default(""),
+  bioFull: z.string().default(""),
+  bioFullTa: z.string().default(""),
+  education: z.string().default(""),
+  born: z.string().default(""),
+  phone: z.string().trim().min(1, "Phone is required"),
+  email: z.string().trim().email("Invalid email address"),
+  officeAddress: z.string().default(""),
+  officeAddressTa: z.string().default(""),
+  facebook: OptionalUrl.default(""),
+  twitter: OptionalUrl.default(""),
+  instagram: OptionalUrl.default(""),
+  youtube: OptionalUrl.default(""),
+  highlights: z.array(z.object({
+    title: z.string().default(""),
+    titleTa: z.string().default(""),
+    value: z.string().default(""),
+    icon: z.string().default("Star"),
+  })).default([]),
+});
+
 router.put("/admin/about", requireRole("super_admin", "admin", "pa_staff"), async (req: AuthRequest, res) => {
   try {
-    const value = JSON.stringify(req.body);
+    const parsed = AboutBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid", details: parsed.error.issues });
+      return;
+    }
+    const value = JSON.stringify(parsed.data);
     const existing = await db.select({ id: siteConfigTable.id }).from(siteConfigTable)
       .where(eq(siteConfigTable.key, "about")).limit(1);
     if (existing.length > 0) {
@@ -611,7 +653,7 @@ router.put("/admin/about", requireRole("super_admin", "admin", "pa_staff"), asyn
       await db.insert(siteConfigTable).values({ key: "about", value });
     }
     await logAudit(req, "UPDATE", "site_config:about");
-    res.json(req.body);
+    res.json(parsed.data);
   } catch (err) {
     console.error("[admin] about update:", err);
     res.status(500).json({ error: "Internal server error" });
