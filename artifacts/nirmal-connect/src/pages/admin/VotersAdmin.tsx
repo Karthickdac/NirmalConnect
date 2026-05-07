@@ -17,7 +17,7 @@ import {
 import { useWards } from "@/lib/useWards";
 import { getToken } from "@/lib/auth";
 import { useGetMe } from "@workspace/api-client-react";
-import { Loader2, Search, ChevronLeft, ChevronRight, FileText, Tag as TagIcon, Plus, Pencil, Trash2, X, Download } from "lucide-react";
+import { Loader2, Search, ChevronLeft, ChevronRight, FileText, Tag as TagIcon, Plus, Pencil, Trash2, X, Download, AlertTriangle, Save, Eraser } from "lucide-react";
 import type { Language } from "@/lib/i18n";
 import { useVoterTags, type VoterTag } from "./VoterTagsAdmin";
 import HouseholdsTab from "./HouseholdsTab";
@@ -107,6 +107,7 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
   // hide the link for everyone else to avoid a confusing 403.
   const canViewSourcePdf = me?.role === "super_admin";
   const isAdminRole = me?.role === "super_admin" || me?.role === "admin";
+  const isSuperAdmin = me?.role === "super_admin";
   const { data: tagCatalog } = useVoterTags();
   const allTags = useMemo(() => tagCatalog?.items ?? [], [tagCatalog]);
 
@@ -191,6 +192,14 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
   // the household id in sessionStorage and switches the active tab.
   const [activeTab, setActiveTab] = useState<"voters" | "households">("voters");
   const [pendingHouseholdId, setPendingHouseholdId] = useState<number | null>(null);
+
+  // Bulk selection — Set of voter ids selected across pages. Persists
+  // until the operator clears it or runs an action. We deliberately
+  // keep selections cross-page so an operator can curate, then act.
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
+  // Inline edit + delete state for the detail sheet.
+  const [editingDetail, setEditingDetail] = useState(false);
+  const qcMain = useQueryClient();
   // Deep-link from GrievanceOfficer: clicking a linked-voter chip
   // stashes the voter id in sessionStorage and navigates here.
   useEffect(() => {
@@ -431,8 +440,85 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
             </div>
           </div>
           <ExportBar filters={filters} total={total} />
+          {isSuperAdmin && (
+            <div className="flex items-center gap-2 border-t pt-3 flex-wrap">
+              <span className="text-xs text-muted-foreground">Cleanup tools:</span>
+              <Button
+                size="sm" variant="outline" className="h-8 text-xs"
+                onClick={async () => {
+                  try {
+                    const r = await authJson<{ count: number; sampleEpics: string[] }>(
+                      `/admin/voters/bulk-delete/preview`,
+                      { method: "POST", body: JSON.stringify({ filter: { epicPrefix: "OCR-" } }) },
+                    );
+                    if (r.count === 0) {
+                      alert("No surrogate-EPIC voters found. Nothing to clean up.");
+                      return;
+                    }
+                    const samp = r.sampleEpics.slice(0, 5).join("\n  ");
+                    if (!window.confirm(
+                      `Permanently delete ${r.count.toLocaleString()} voter${r.count === 1 ? "" : "s"} whose EPIC begins with "OCR-"?\n\nSample EPICs:\n  ${samp}\n\nThis also removes their tags and notes. Linked grievances are preserved.`,
+                    )) return;
+                    const del = await authJson<{ ok: boolean; deletedCount: number }>(
+                      `/admin/voters/bulk-delete`,
+                      { method: "POST", body: JSON.stringify({ filter: { epicPrefix: "OCR-" }, confirmCount: r.count }) },
+                    );
+                    invalidateAllVoterQueries(qcMain);
+                    setSelectedIds(new Set());
+                    alert(`Deleted ${del.deletedCount.toLocaleString()} surrogate-EPIC voters.`);
+                  } catch (e) {
+                    alert(`Cleanup failed: ${(e as Error).message}`);
+                  }
+                }}
+                data-testid="button-cleanup-surrogates"
+              >
+                <Eraser className="w-3.5 h-3.5 mr-1" /> Delete surrogate-EPIC voters (OCR-…)
+              </Button>
+              <span className="text-xs text-muted-foreground italic">
+                Removes voters whose EPIC was synthesized because OCR failed to read it. Use after re-running an import with better OCR.
+              </span>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Bulk actions bar — visible while any voter row is checked. */}
+      {selectedIds.size > 0 && (
+        <div
+          className="sticky top-2 z-20 mx-1 mb-2 rounded-md border bg-background shadow-md px-4 py-2 flex items-center gap-3 text-sm"
+          data-testid="voter-bulk-actions-bar"
+        >
+          <span className="font-medium">
+            {selectedIds.size.toLocaleString()} selected
+          </span>
+          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setSelectedIds(new Set())}>
+            Clear
+          </Button>
+          {isSuperAdmin && (
+            <Button
+              size="sm" variant="destructive" className="h-7 text-xs ml-auto"
+              data-testid="button-bulk-delete-selected"
+              onClick={async () => {
+                const ids = Array.from(selectedIds);
+                if (!window.confirm(`Permanently delete ${ids.length} voter${ids.length === 1 ? "" : "s"}? This also removes their tags and notes.`)) return;
+                try {
+                  const r = await authJson<{ ok: boolean; deletedCount: number }>(
+                    `/admin/voters/bulk-delete`,
+                    { method: "POST", body: JSON.stringify({ voterIds: ids }) },
+                  );
+                  setSelectedIds(new Set());
+                  invalidateAllVoterQueries(qcMain);
+                  alert(`Deleted ${r.deletedCount} voters.`);
+                } catch (e) {
+                  alert(`Bulk delete failed: ${(e as Error).message}`);
+                }
+              }}
+            >
+              <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete {selectedIds.size}
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Results table */}
       <Card>
@@ -450,6 +536,29 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
             <table className="w-full text-sm">
               <thead className="border-b bg-muted/40">
                 <tr>
+                  {isSuperAdmin && (
+                    <th className="text-left pl-4 pr-1 py-2 w-8">
+                      <input
+                        type="checkbox"
+                        aria-label="Select all on this page"
+                        data-testid="checkbox-select-all-page"
+                        checked={items.length > 0 && items.every((v) => selectedIds.has(v.id))}
+                        ref={(el) => {
+                          if (!el) return;
+                          const sel = items.filter((v) => selectedIds.has(v.id)).length;
+                          el.indeterminate = sel > 0 && sel < items.length;
+                        }}
+                        onChange={(e) => {
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) items.forEach((v) => next.add(v.id));
+                            else items.forEach((v) => next.delete(v.id));
+                            return next;
+                          });
+                        }}
+                      />
+                    </th>
+                  )}
                   {["Name", "EPIC", "Age", "Gender", "Booth", "Part / Sl.", ""].map(h => (
                     <th key={h} className="text-left px-4 py-2 font-medium text-muted-foreground text-xs uppercase tracking-wider">{h}</th>
                   ))}
@@ -457,7 +566,24 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
               </thead>
               <tbody className="divide-y">
                 {items.map(v => (
-                  <tr key={v.id} className="hover:bg-muted/20">
+                  <tr key={v.id} className={`hover:bg-muted/20 ${selectedIds.has(v.id) ? "bg-primary/5" : ""}`}>
+                    {isSuperAdmin && (
+                      <td className="pl-4 pr-1 py-2 w-8">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select voter ${v.epicNumber}`}
+                          data-testid={`checkbox-select-voter-${v.id}`}
+                          checked={selectedIds.has(v.id)}
+                          onChange={(e) => {
+                            setSelectedIds((prev) => {
+                              const next = new Set(prev);
+                              if (e.target.checked) next.add(v.id); else next.delete(v.id);
+                              return next;
+                            });
+                          }}
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-2">
                       <div className="font-medium">{pickName(v.fullName, v.fullNameTa)}</div>
                       {pickSubName(v.fullName, v.fullNameTa) && (
@@ -486,12 +612,12 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
                   </tr>
                 ))}
                 {items.length === 0 && !isFetching && (
-                  <tr><td colSpan={7} className="text-center text-muted-foreground py-12">
+                  <tr><td colSpan={isSuperAdmin ? 8 : 7} className="text-center text-muted-foreground py-12">
                     No voters match your filters.
                   </td></tr>
                 )}
                 {isFetching && items.length === 0 && (
-                  <tr><td colSpan={7} className="text-center text-muted-foreground py-12">
+                  <tr><td colSpan={isSuperAdmin ? 8 : 7} className="text-center text-muted-foreground py-12">
                     <Loader2 className="w-5 h-5 animate-spin inline" />
                   </td></tr>
                 )}
@@ -512,7 +638,7 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
       </Card>
 
       {/* Detail slide-over */}
-      <Sheet open={detailId != null} onOpenChange={(o) => { if (!o) setDetailId(null); }}>
+      <Sheet open={detailId != null} onOpenChange={(o) => { if (!o) { setDetailId(null); setEditingDetail(false); } }}>
         <SheetContent className="w-[420px] sm:w-[480px] overflow-y-auto" data-testid="voter-detail-sheet">
           <SheetHeader>
             <SheetTitle>{detail ? pickName(detail.fullName, detail.fullNameTa) : (detailLoading ? "Loading…" : "Voter")}</SheetTitle>
@@ -527,7 +653,46 @@ export default function VotersAdmin({ lang = "ta" }: VotersAdminProps) {
                 : (detailError as Error).message}
             </div>
           )}
-          {detail && (
+          {detail && isSuperAdmin && !editingDetail && (
+            <div className="mt-3 flex items-center gap-2 border-b pb-3" data-testid="voter-detail-actions">
+              <Button
+                size="sm" variant="outline" className="h-7 text-xs"
+                onClick={() => setEditingDetail(true)}
+                data-testid="button-edit-voter"
+              >
+                <Pencil className="w-3 h-3 mr-1" /> Edit
+              </Button>
+              <Button
+                size="sm" variant="destructive" className="h-7 text-xs"
+                data-testid="button-delete-voter"
+                onClick={async () => {
+                  if (!window.confirm(
+                    `Permanently delete voter ${detail.epicNumber} (${detail.fullName})?\n\nThis also removes their tags and notes. Linked grievances are preserved.`,
+                  )) return;
+                  try {
+                    await authJson<{ ok: boolean }>(`/admin/voters/${detail.id}`, { method: "DELETE" });
+                    invalidateAllVoterQueries(qcMain);
+                    setDetailId(null);
+                  } catch (e) {
+                    alert(`Delete failed: ${(e as Error).message}`);
+                  }
+                }}
+              >
+                <Trash2 className="w-3 h-3 mr-1" /> Delete
+              </Button>
+            </div>
+          )}
+          {detail && editingDetail && (
+            <EditVoterForm
+              voter={detail}
+              onCancel={() => setEditingDetail(false)}
+              onSaved={() => {
+                setEditingDetail(false);
+                invalidateAllVoterQueries(qcMain);
+              }}
+            />
+          )}
+          {detail && !editingDetail && (
             <div className="mt-4 space-y-4 text-sm">
               <Field label="EPIC">{detail.epicNumber}</Field>
               <div className="grid grid-cols-2 gap-3">
@@ -634,6 +799,20 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function capitalize(s: string): string {
   return s.length ? s[0].toUpperCase() + s.slice(1) : s;
+}
+
+// Invalidates every cached query whose key starts with "voter" — this
+// covers the actual list (`voter-search`), detail (`voter-detail`),
+// per-voter tags/notes/grievances, and the booth options. Used after
+// any voter-mutating action (edit / delete / bulk-delete / cleanup) so
+// the table and detail panel reflect the new state immediately.
+function invalidateAllVoterQueries(qc: ReturnType<typeof useQueryClient>): void {
+  qc.invalidateQueries({
+    predicate: (q) =>
+      Array.isArray(q.queryKey)
+      && typeof q.queryKey[0] === "string"
+      && q.queryKey[0].startsWith("voter"),
+  });
 }
 
 interface VoterGrievanceItem {
@@ -1136,5 +1315,290 @@ function ExportBar({
         </div>
       )}
     </div>
+  );
+}
+
+// ── Inline voter edit form (super_admin) ─────────────────────────
+//
+// Reused inside the voter detail Sheet. Displays the editable subset
+// of voter columns; on save, PATCHes only the fields that actually
+// changed so the audit log delta is meaningful. Booth assignment is
+// intentionally NOT editable here — use the Households / bulk
+// reassign flows for that, since picking a booth needs a search UI.
+interface VoterDetailForEdit {
+  id: number;
+  epicNumber: string;
+  fullName: string;
+  fullNameTa: string | null;
+  age: number | null;
+  // Schema-level type is `string | null`; we narrow on read.
+  gender: string | null;
+  relationType: string | null;
+  relationName: string | null;
+  relationNameTa: string | null;
+  houseNumber: string | null;
+  addressLine: string | null;
+  partNumber: string | null;
+  serialInPart: number | null;
+}
+
+function EditVoterForm({
+  voter, onCancel, onSaved,
+}: {
+  voter: VoterDetailForEdit;
+  onCancel: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState({
+    epicNumber: voter.epicNumber ?? "",
+    fullName: voter.fullName ?? "",
+    fullNameTa: voter.fullNameTa ?? "",
+    age: voter.age != null ? String(voter.age) : "",
+    gender: ((voter.gender === "M" || voter.gender === "F" || voter.gender === "O")
+      ? voter.gender
+      : "") as "" | "M" | "F" | "O",
+    relationType: (voter.relationType ?? "") as string,
+    relationName: voter.relationName ?? "",
+    relationNameTa: voter.relationNameTa ?? "",
+    houseNumber: voter.houseNumber ?? "",
+    addressLine: voter.addressLine ?? "",
+    partNumber: voter.partNumber ?? "",
+    serialInPart: voter.serialInPart != null ? String(voter.serialInPart) : "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Build a sparse PATCH body containing ONLY changed fields. We
+  // distinguish "" → null (clear) from no-change by comparing against
+  // the original voter values normalized the same way.
+  function buildPatch(): Record<string, unknown> {
+    const patch: Record<string, unknown> = {};
+    const norm = (s: string) => s.trim();
+    function diff<T>(field: string, current: T, originalRaw: unknown) {
+      const original = originalRaw == null ? "" : String(originalRaw);
+      if (typeof current === "string") {
+        const c = norm(current);
+        if (c !== original) patch[field] = c === "" ? null : c;
+      } else if (current !== originalRaw) {
+        patch[field] = current;
+      }
+    }
+    diff("epicNumber", form.epicNumber.toUpperCase(), voter.epicNumber);
+    if (norm(form.fullName) !== voter.fullName) {
+      patch["fullName"] = norm(form.fullName);
+    }
+    diff("fullNameTa", form.fullNameTa, voter.fullNameTa);
+    // Age: empty string clears the field.
+    {
+      const c = form.age.trim();
+      const orig = voter.age != null ? String(voter.age) : "";
+      if (c !== orig) patch["age"] = c === "" ? null : Number.parseInt(c, 10);
+    }
+    {
+      const c = form.gender;
+      const orig = voter.gender ?? "";
+      if (c !== orig) patch["gender"] = c === "" ? null : c;
+    }
+    {
+      const c = form.relationType;
+      const orig = voter.relationType ?? "";
+      if (c !== orig) patch["relationType"] = c === "" ? null : c;
+    }
+    diff("relationName", form.relationName, voter.relationName);
+    diff("relationNameTa", form.relationNameTa, voter.relationNameTa);
+    diff("houseNumber", form.houseNumber, voter.houseNumber);
+    diff("addressLine", form.addressLine, voter.addressLine);
+    diff("partNumber", form.partNumber, voter.partNumber);
+    {
+      const c = form.serialInPart.trim();
+      const orig = voter.serialInPart != null ? String(voter.serialInPart) : "";
+      if (c !== orig) patch["serialInPart"] = c === "" ? null : Number.parseInt(c, 10);
+    }
+    return patch;
+  }
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    const patch = buildPatch();
+    if (Object.keys(patch).length === 0) {
+      onCancel();
+      return;
+    }
+    if (!form.fullName.trim()) {
+      setError("Name cannot be empty.");
+      return;
+    }
+    if (!form.epicNumber.trim()) {
+      setError("EPIC cannot be empty.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await authJson(`/admin/voters/${voter.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+      });
+      onSaved();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function setField<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
+    setForm((prev) => ({ ...prev, [k]: v }));
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="mt-4 space-y-3 text-sm" data-testid="form-edit-voter">
+      <div>
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">EPIC</label>
+        <Input
+          value={form.epicNumber}
+          onChange={(e) => setField("epicNumber", e.target.value)}
+          className="font-mono uppercase mt-0.5 h-8 text-sm"
+          maxLength={40}
+          data-testid="input-edit-epic"
+        />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Full name</label>
+        <Input
+          value={form.fullName}
+          onChange={(e) => setField("fullName", e.target.value)}
+          className="mt-0.5 h-8 text-sm"
+          maxLength={200}
+          data-testid="input-edit-name"
+        />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Full name (Tamil)</label>
+        <Input
+          value={form.fullNameTa}
+          onChange={(e) => setField("fullNameTa", e.target.value)}
+          className="mt-0.5 h-8 text-sm"
+          maxLength={200}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Age</label>
+          <Input
+            type="number" min={0} max={150}
+            value={form.age}
+            onChange={(e) => setField("age", e.target.value)}
+            className="mt-0.5 h-8 text-sm"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Gender</label>
+          <select
+            value={form.gender}
+            onChange={(e) => setField("gender", e.target.value as typeof form.gender)}
+            className="mt-0.5 h-8 w-full rounded-md border bg-background px-2 text-sm"
+            data-testid="select-edit-gender"
+          >
+            <option value="">—</option>
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+            <option value="O">Other</option>
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Relation type</label>
+          <select
+            value={form.relationType}
+            onChange={(e) => setField("relationType", e.target.value)}
+            className="mt-0.5 h-8 w-full rounded-md border bg-background px-2 text-sm"
+          >
+            <option value="">—</option>
+            <option value="father">Father</option>
+            <option value="mother">Mother</option>
+            <option value="husband">Husband</option>
+            <option value="wife">Wife</option>
+            <option value="guardian">Guardian</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Relation name</label>
+          <Input
+            value={form.relationName}
+            onChange={(e) => setField("relationName", e.target.value)}
+            className="mt-0.5 h-8 text-sm"
+            maxLength={200}
+          />
+        </div>
+      </div>
+      <div>
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Relation name (Tamil)</label>
+        <Input
+          value={form.relationNameTa}
+          onChange={(e) => setField("relationNameTa", e.target.value)}
+          className="mt-0.5 h-8 text-sm"
+          maxLength={200}
+        />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">House number</label>
+        <Input
+          value={form.houseNumber}
+          onChange={(e) => setField("houseNumber", e.target.value)}
+          className="mt-0.5 h-8 text-sm"
+          maxLength={80}
+        />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Address line</label>
+        <Input
+          value={form.addressLine}
+          onChange={(e) => setField("addressLine", e.target.value)}
+          className="mt-0.5 h-8 text-sm"
+          maxLength={500}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Part number</label>
+          <Input
+            value={form.partNumber}
+            onChange={(e) => setField("partNumber", e.target.value)}
+            className="mt-0.5 h-8 text-sm"
+            maxLength={20}
+          />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Serial in part</label>
+          <Input
+            type="number" min={0} max={100000}
+            value={form.serialInPart}
+            onChange={(e) => setField("serialInPart", e.target.value)}
+            className="mt-0.5 h-8 text-sm"
+          />
+        </div>
+      </div>
+      {error && (
+        <div className="text-xs text-destructive flex items-center gap-1">
+          <AlertTriangle className="w-3 h-3" /> {error}
+        </div>
+      )}
+      <div className="flex justify-end gap-2 border-t pt-3">
+        <Button type="button" size="sm" variant="ghost" className="h-8" onClick={onCancel} disabled={saving}>
+          Cancel
+        </Button>
+        <Button
+          type="submit" size="sm" className="h-8"
+          disabled={saving || !form.fullName.trim() || !form.epicNumber.trim()}
+          data-testid="button-save-voter-edit"
+        >
+          {saving ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1" />}
+          Save
+        </Button>
+      </div>
+    </form>
   );
 }

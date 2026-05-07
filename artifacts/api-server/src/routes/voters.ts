@@ -873,6 +873,438 @@ router.get("/admin/voters/:id", requireStaff, async (req: AuthRequest, res) => {
   }
 });
 
+// ── PATCH /api/admin/voters/:id — edit a single voter ────────────
+//
+// super_admin only. Used to manually correct OCR-imported rows (e.g.
+// fix a name, update an address, or replace a synthetic OCR-prefixed
+// EPIC with the real one once it's known). Null-safe: only fields
+// present in the request body are touched. EPIC uniqueness is checked
+// up front so the user gets a clear 409 instead of an opaque DB error.
+//
+// Audit: writes one VOTER_WRITE_UPDATE row per call with a per-field
+// delta JSON so reviewers can reconstruct exactly what was edited.
+
+const VOTER_RELATION_TYPES = [
+  "father", "mother", "husband", "wife", "guardian", "other",
+] as const;
+
+const voterPatchSchema = z.object({
+  fullName: z.string().trim().min(1).max(200).optional(),
+  fullNameTa: z.string().trim().max(200).nullable().optional(),
+  age: z.coerce.number().int().min(0).max(150).nullable().optional(),
+  gender: z.enum(["M", "F", "O"]).nullable().optional(),
+  relationType: z.enum(VOTER_RELATION_TYPES).nullable().optional(),
+  relationName: z.string().trim().max(200).nullable().optional(),
+  relationNameTa: z.string().trim().max(200).nullable().optional(),
+  houseNumber: z.string().trim().max(80).nullable().optional(),
+  addressLine: z.string().trim().max(500).nullable().optional(),
+  // EPIC: allow canonical [A-Z]{3}[0-9]{7} OR our OCR-prefixed
+  // surrogate format. Always uppercased server-side.
+  epicNumber: z.string().trim().min(6).max(40).regex(/^[A-Z0-9-]+$/i).optional(),
+  pollingStationId: z.number().int().positive().nullable().optional(),
+  partNumber: z.string().trim().max(20).nullable().optional(),
+  serialInPart: z.coerce.number().int().min(0).max(100000).nullable().optional(),
+}).strict();
+
+router.patch(
+  "/admin/voters/:id",
+  ...requireVoterScope,
+  async (req: AuthRequest, res) => {
+    try {
+      const id = Number.parseInt(String(req.params.id), 10);
+      if (!Number.isFinite(id) || id <= 0) {
+        res.status(400).json({ error: "Invalid id" }); return;
+      }
+      const parsed = voterPatchSchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid", details: parsed.error.flatten() });
+        return;
+      }
+      const patch = parsed.data;
+      if (Object.keys(patch).length === 0) {
+        res.status(400).json({ error: "Empty patch" }); return;
+      }
+
+      const [existing] = await db.select().from(votersTable).where(eq(votersTable.id, id)).limit(1);
+      if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+
+      // EPIC change: enforce global uniqueness up front so the user
+      // gets a clear error rather than the raw "duplicate key" leak.
+      let nextEpic = existing.epicNumber;
+      if (patch.epicNumber != null) {
+        nextEpic = patch.epicNumber.toUpperCase();
+        if (nextEpic !== existing.epicNumber) {
+          const [clash] = await db
+            .select({ id: votersTable.id })
+            .from(votersTable)
+            .where(eq(votersTable.epicNumber, nextEpic))
+            .limit(1);
+          if (clash && clash.id !== id) {
+            res.status(409).json({
+              error: "Another voter already has this EPIC",
+              conflictVoterId: clash.id,
+            });
+            return;
+          }
+        }
+      }
+
+      // Booth change: validate the polling station exists.
+      if (patch.pollingStationId != null) {
+        const [booth] = await db
+          .select({ id: pollingStationsTable.id })
+          .from(pollingStationsTable)
+          .where(eq(pollingStationsTable.id, patch.pollingStationId))
+          .limit(1);
+        if (!booth) { res.status(400).json({ error: "Unknown polling station" }); return; }
+      }
+
+      // Build update set + per-field delta for audit. We intentionally
+      // distinguish "explicit null" (clear field) from "undefined"
+      // (don't touch field) by using `in` on parsed.data.
+      const updateSet: Record<string, unknown> = {};
+      const delta: Record<string, { old: unknown; new: unknown }> = {};
+      const fieldMap: Array<[keyof typeof patch, keyof typeof existing]> = [
+        ["fullName", "fullName"], ["fullNameTa", "fullNameTa"],
+        ["age", "age"], ["gender", "gender"],
+        ["relationType", "relationType"], ["relationName", "relationName"],
+        ["relationNameTa", "relationNameTa"],
+        ["houseNumber", "houseNumber"], ["addressLine", "addressLine"],
+        ["pollingStationId", "pollingStationId"],
+        ["partNumber", "partNumber"], ["serialInPart", "serialInPart"],
+      ];
+      for (const [k, col] of fieldMap) {
+        if (k in patch) {
+          const incoming = patch[k] as unknown;
+          const before = existing[col] as unknown;
+          if (incoming !== before) {
+            updateSet[col as string] = incoming;
+            delta[k as string] = { old: before, new: incoming };
+          }
+        }
+      }
+      if (nextEpic !== existing.epicNumber) {
+        updateSet["epicNumber"] = nextEpic;
+        delta["epicNumber"] = { old: existing.epicNumber, new: nextEpic };
+      }
+
+      if (Object.keys(updateSet).length === 0) {
+        // No-op: respond with current row so the UI can refresh.
+        res.json({ ok: true, changedFields: [], voterId: id });
+        return;
+      }
+
+      await db.update(votersTable).set(updateSet).where(eq(votersTable.id, id));
+      await logVoterAudit(
+        req, "VOTER_EDIT", `voter:${nextEpic}`,
+        `voter_id=${id} changed=${JSON.stringify(delta)}`,
+      );
+      res.json({ ok: true, changedFields: Object.keys(delta), voterId: id });
+    } catch (err) {
+      console.error("[voters] patch:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+// ── DELETE /api/admin/voters/:id — delete a single voter ─────────
+//
+// super_admin only. Tag assignments and notes cascade via FK; linked
+// grievances are preserved with their voterId set to NULL (ON DELETE
+// SET NULL on grievances.voter_id).
+router.delete(
+  "/admin/voters/:id",
+  ...requireVoterScope,
+  async (req: AuthRequest, res) => {
+    try {
+      const id = Number.parseInt(String(req.params.id), 10);
+      if (!Number.isFinite(id) || id <= 0) {
+        res.status(400).json({ error: "Invalid id" }); return;
+      }
+      const [row] = await db
+        .select({ id: votersTable.id, epicNumber: votersTable.epicNumber })
+        .from(votersTable)
+        .where(eq(votersTable.id, id))
+        .limit(1);
+      if (!row) { res.status(404).json({ error: "Not found" }); return; }
+      await db.delete(votersTable).where(eq(votersTable.id, id));
+      await logVoterAudit(req, "VOTER_DELETE", `voter:${row.epicNumber}`, `voter_id=${id}`);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[voters] delete:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+// ── POST /api/admin/voters/bulk-delete — bulk delete by filter or IDs ──
+//
+// super_admin only. Two modes:
+//
+//  A) `{ voterIds: number[] }` — delete an explicit list (max 1000).
+//
+//  B) `{ filter: <same shape as GET /admin/voters>, confirmCount: number,
+//        epicPrefix?: string }` — delete every voter matching the filter.
+//      `confirmCount` MUST equal the server-counted match count. This is
+//      a safety interlock that prevents a stale UI from accidentally
+//      deleting more rows than the operator saw on screen. `epicPrefix`
+//      is a convenience (e.g. "OCR-") implemented as a server-side LIKE
+//      so you can wipe all surrogate-EPIC rows from a bad import without
+//      threading it through the search filter.
+//
+// Audits one VOTER_BULK_DELETE summary row plus chunked per-EPIC
+// rows so the deletion can be reconstructed later.
+const bulkDeleteSchema = z.union([
+  z.object({
+    voterIds: z.array(z.number().int().positive()).min(1).max(1000),
+  }).strict(),
+  z.object({
+    filter: z.object({
+      q: z.string().trim().max(120).optional(),
+      boothId: z.coerce.number().int().positive().optional(),
+      wardId: z.coerce.number().int().positive().optional(),
+      gender: z.enum(["M", "F", "O"]).optional(),
+      minAge: z.coerce.number().int().min(0).max(150).optional(),
+      maxAge: z.coerce.number().int().min(0).max(150).optional(),
+      tagIds: z.array(z.number().int().positive()).optional(),
+      epicPrefix: z.string().trim().max(40).optional(),
+    }).default({}),
+    confirmCount: z.number().int().min(0).max(1_000_000),
+  }).strict(),
+]);
+
+router.post(
+  "/admin/voters/bulk-delete",
+  ...requireVoterScope,
+  async (req: AuthRequest, res) => {
+    try {
+      const parsed = bulkDeleteSchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid", details: parsed.error.flatten() });
+        return;
+      }
+
+      // Resolve target voter ids.
+      let targetIds: number[];
+      let mode: "ids" | "filter";
+      let filterDesc = "";
+      if ("voterIds" in parsed.data) {
+        mode = "ids";
+        targetIds = Array.from(new Set(parsed.data.voterIds));
+        filterDesc = `voterIds(n=${targetIds.length})`;
+      } else {
+        mode = "filter";
+        const f = parsed.data.filter;
+        const conds: ReturnType<typeof eq>[] = [];
+        if (f.boothId) conds.push(eq(votersTable.pollingStationId, f.boothId));
+        if (f.wardId) {
+          const wardBooths = await db
+            .select({ id: pollingStationsTable.id })
+            .from(pollingStationsTable)
+            .where(eq(pollingStationsTable.wardId, f.wardId));
+          const ids = wardBooths.map((b) => b.id);
+          if (ids.length === 0) {
+            res.json({ ok: true, deletedCount: 0 });
+            return;
+          }
+          conds.push(inArray(votersTable.pollingStationId, ids));
+        }
+        if (f.gender) conds.push(eq(votersTable.gender, f.gender));
+        if (f.minAge != null) conds.push(gte(votersTable.age, f.minAge));
+        if (f.maxAge != null) conds.push(lte(votersTable.age, f.maxAge));
+        if (f.tagIds && f.tagIds.length > 0) {
+          const tagged = db
+            .select({ vid: voterTagAssignmentsTable.voterId })
+            .from(voterTagAssignmentsTable)
+            .where(inArray(voterTagAssignmentsTable.tagId, f.tagIds));
+          conds.push(inArray(votersTable.id, tagged));
+        }
+        if (f.epicPrefix) {
+          conds.push(sql`${votersTable.epicNumber} LIKE ${f.epicPrefix + "%"}`);
+        }
+        if (f.q) {
+          if (EPIC_RE.test(f.q)) {
+            conds.push(eq(votersTable.epicNumber, f.q.toUpperCase()));
+          } else {
+            const like = `%${f.q.toLowerCase()}%`;
+            conds.push(or(
+              sql`lower(${votersTable.fullName}) ILIKE ${like}`,
+              sql`${votersTable.fullNameTa} ILIKE ${like}`,
+            )!);
+          }
+        }
+        const where = conds.length > 0 ? and(...conds) : undefined;
+        // Interlock: get the EXACT match count first (no LIMIT) so a
+        // very large filter result can't bypass confirmCount by being
+        // truncated. Only after the count matches do we materialize ids.
+        const [{ n: actualCount }] = await db
+          .select({ n: sql<number>`count(*)::int` })
+          .from(votersTable)
+          .where(where);
+        if (actualCount !== parsed.data.confirmCount) {
+          res.status(409).json({
+            error: "Confirm count mismatch — refresh and try again",
+            actualCount,
+            confirmCount: parsed.data.confirmCount,
+          });
+          return;
+        }
+        // Even after confirm-count check, a UI-driven cleanup of
+        // hundreds of thousands of voters is suspicious — refuse and
+        // require the operator to chunk via filters. Adjust if needed.
+        const HARD_BULK_DELETE_CEILING = 100_000;
+        if (actualCount > HARD_BULK_DELETE_CEILING) {
+          res.status(413).json({
+            error: `Refusing to bulk-delete more than ${HARD_BULK_DELETE_CEILING} voters in one call`,
+            actualCount,
+          });
+          return;
+        }
+        const rows = await db
+          .select({ id: votersTable.id })
+          .from(votersTable)
+          .where(where);
+        targetIds = rows.map((r) => r.id);
+        filterDesc = `filter=${JSON.stringify(f)}`;
+      }
+
+      if (targetIds.length === 0) {
+        res.json({ ok: true, deletedCount: 0 });
+        return;
+      }
+
+      // Pull EPICs for audit BEFORE delete (post-delete the rows are gone).
+      const toDelete = await db
+        .select({ id: votersTable.id, epicNumber: votersTable.epicNumber })
+        .from(votersTable)
+        .where(inArray(votersTable.id, targetIds));
+
+      // Delete in chunks of 1000 ids per statement to stay well under
+      // any parameter limit on Postgres (~32k).
+      let deletedCount = 0;
+      const chunkSize = 1000;
+      for (let off = 0; off < targetIds.length; off += chunkSize) {
+        const chunk = targetIds.slice(off, off + chunkSize);
+        const result = await db
+          .delete(votersTable)
+          .where(inArray(votersTable.id, chunk))
+          .returning({ id: votersTable.id });
+        deletedCount += result.length;
+      }
+
+      // Audit: one summary row + per-EPIC rows (chunked).
+      await logVoterAudit(
+        req, "VOTER_BULK_DELETE", "voters",
+        `mode=${mode} ${filterDesc} deleted=${deletedCount}`,
+      );
+      try {
+        const auditRows = toDelete.map((v) => ({
+          actorId: req.user?.id ?? null,
+          actorName: req.user?.name ?? "Unknown",
+          action: "VOTER_DELETE" as const,
+          target: `voter:${v.epicNumber}`,
+          detail: `voter_id=${v.id} via_bulk`,
+        }));
+        for (let off = 0; off < auditRows.length; off += 500) {
+          await db.insert(auditLogTable).values(auditRows.slice(off, off + 500));
+        }
+      } catch (e) {
+        console.error("[voters] per-EPIC bulk-delete audit failed:", e);
+      }
+
+      res.json({ ok: true, deletedCount });
+    } catch (err) {
+      console.error("[voters] bulk-delete:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+// ── POST /api/admin/voters/bulk-delete/preview — count + sample ──
+//
+// Same filter shape as bulk-delete; returns the match count plus a
+// small EPIC sample so the UI can show a confirmation dialog like
+// "Delete 795 voters? (OCR-565BF…-P4R6C1, OCR-565BF…-P4R6C2, …)".
+const bulkDeletePreviewSchema = z.object({
+  filter: z.object({
+    q: z.string().trim().max(120).optional(),
+    boothId: z.coerce.number().int().positive().optional(),
+    wardId: z.coerce.number().int().positive().optional(),
+    gender: z.enum(["M", "F", "O"]).optional(),
+    minAge: z.coerce.number().int().min(0).max(150).optional(),
+    maxAge: z.coerce.number().int().min(0).max(150).optional(),
+    tagIds: z.array(z.number().int().positive()).optional(),
+    epicPrefix: z.string().trim().max(40).optional(),
+  }).default({}),
+}).strict();
+
+router.post(
+  "/admin/voters/bulk-delete/preview",
+  ...requireVoterScope,
+  async (req: AuthRequest, res) => {
+    try {
+      const parsed = bulkDeletePreviewSchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid", details: parsed.error.flatten() });
+        return;
+      }
+      const f = parsed.data.filter;
+      const conds: ReturnType<typeof eq>[] = [];
+      if (f.boothId) conds.push(eq(votersTable.pollingStationId, f.boothId));
+      if (f.wardId) {
+        const wardBooths = await db
+          .select({ id: pollingStationsTable.id })
+          .from(pollingStationsTable)
+          .where(eq(pollingStationsTable.wardId, f.wardId));
+        const ids = wardBooths.map((b) => b.id);
+        if (ids.length === 0) {
+          res.json({ count: 0, sampleEpics: [] });
+          return;
+        }
+        conds.push(inArray(votersTable.pollingStationId, ids));
+      }
+      if (f.gender) conds.push(eq(votersTable.gender, f.gender));
+      if (f.minAge != null) conds.push(gte(votersTable.age, f.minAge));
+      if (f.maxAge != null) conds.push(lte(votersTable.age, f.maxAge));
+      if (f.tagIds && f.tagIds.length > 0) {
+        const tagged = db
+          .select({ vid: voterTagAssignmentsTable.voterId })
+          .from(voterTagAssignmentsTable)
+          .where(inArray(voterTagAssignmentsTable.tagId, f.tagIds));
+        conds.push(inArray(votersTable.id, tagged));
+      }
+      if (f.epicPrefix) {
+        conds.push(sql`${votersTable.epicNumber} LIKE ${f.epicPrefix + "%"}`);
+      }
+      if (f.q) {
+        if (EPIC_RE.test(f.q)) {
+          conds.push(eq(votersTable.epicNumber, f.q.toUpperCase()));
+        } else {
+          const like = `%${f.q.toLowerCase()}%`;
+          conds.push(or(
+            sql`lower(${votersTable.fullName}) ILIKE ${like}`,
+            sql`${votersTable.fullNameTa} ILIKE ${like}`,
+          )!);
+        }
+      }
+      const where = conds.length > 0 ? and(...conds) : undefined;
+      const [{ n }] = await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(votersTable)
+        .where(where);
+      const sample = await db
+        .select({ epicNumber: votersTable.epicNumber, fullName: votersTable.fullName })
+        .from(votersTable)
+        .where(where)
+        .limit(5);
+      res.json({ count: n, sampleEpics: sample.map((s) => s.epicNumber), sample });
+    } catch (err) {
+      console.error("[voters] bulk-delete preview:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
 // ── Voter tags & private notes (task #44) ────────────────────────
 //
 // Tag catalog is super-admin–maintained. Per-voter tag assignment and

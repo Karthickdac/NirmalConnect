@@ -116,6 +116,23 @@ export const adminApi = {
     }),
   discardVoterImport: (id: number) =>
     authFetch(`/admin/voters/imports/${id}`, { method: "DELETE" }),
+  // Voter editing / deletion (super_admin only)
+  patchVoter: (id: number, patch: Record<string, unknown>) =>
+    authFetch(`/admin/voters/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+  deleteVoter: (id: number) =>
+    authFetch(`/admin/voters/${id}`, { method: "DELETE" }),
+  bulkDeleteVotersPreview: (filter: Record<string, unknown>) =>
+    authFetch(`/admin/voters/bulk-delete/preview`, {
+      method: "POST", body: JSON.stringify({ filter }),
+    }) as Promise<{ count: number; sampleEpics: string[]; sample: Array<{ epicNumber: string; fullName: string }> }>,
+  bulkDeleteVotersByFilter: (filter: Record<string, unknown>, confirmCount: number) =>
+    authFetch(`/admin/voters/bulk-delete`, {
+      method: "POST", body: JSON.stringify({ filter, confirmCount }),
+    }) as Promise<{ ok: boolean; deletedCount: number }>,
+  bulkDeleteVotersByIds: (voterIds: number[]) =>
+    authFetch(`/admin/voters/bulk-delete`, {
+      method: "POST", body: JSON.stringify({ voterIds }),
+    }) as Promise<{ ok: boolean; deletedCount: number }>,
   // Multipart upload — bypasses authFetch JSON wrapper.
   uploadVoterPdfs: async (files: File[], expectedBoothNo?: string) => {
     const fd = new FormData();
