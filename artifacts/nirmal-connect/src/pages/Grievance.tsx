@@ -28,7 +28,7 @@ interface GrievanceProps { lang: Language; }
 
 /** Submit grievance as multipart/form-data when files are attached. */
 async function submitGrievanceWithFiles(
-  data: { name: string; phone: string; category: string; description: string; address?: string | null; ward?: string | null; anonymous?: boolean },
+  data: { name: string; phone: string; category: string; description: string; address?: string | null; ward?: string | null; anonymous?: boolean; areaId?: number | null; pollingStationId?: number | null },
   files: File[]
 ): Promise<{ ticketNo: string }> {
   const fd = new globalThis.FormData();
@@ -38,6 +38,8 @@ async function submitGrievanceWithFiles(
   fd.append("description", data.description);
   if (data.address) fd.append("address", data.address);
   if (data.ward) fd.append("ward", data.ward);
+  if (data.areaId) fd.append("areaId", String(data.areaId));
+  if (data.pollingStationId) fd.append("pollingStationId", String(data.pollingStationId));
   fd.append("anonymous", String(data.anonymous ?? false));
   files.forEach((f) => fd.append("attachments", f));
   const res = await fetch("/api/grievances/submit", { method: "POST", body: fd });
@@ -89,9 +91,27 @@ const schema = z.object({
   description: z.string().min(20, "Provide at least 20 characters"),
   address: z.string().optional(),
   ward: z.string().optional(),
+  wardId: z.number().int().positive().optional(),
+  areaId: z.number().int().positive().optional(),
+  pollingStationId: z.number().int().positive().optional(),
   anonymous: z.boolean().optional(),
 });
 type FormData = z.infer<typeof schema>;
+
+interface AreaOption { id: number; name: string; nameTa?: string | null }
+interface BoothOption { id: number; boothNo: string; name: string }
+
+const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+async function fetchAreasByWard(wardId: number): Promise<AreaOption[]> {
+  const res = await fetch(`${BASE}/api/wards/${wardId}/areas`);
+  if (!res.ok) return [];
+  return res.json() as Promise<AreaOption[]>;
+}
+async function fetchBoothsByWard(wardId: number): Promise<BoothOption[]> {
+  const res = await fetch(`${BASE}/api/wards/${wardId}/polling-stations`);
+  if (!res.ok) return [];
+  return res.json() as Promise<BoothOption[]>;
+}
 
 function StatusTimeline({ status, lang }: { status: string; lang: Language }) {
   const idx = STATUS_FLOW.indexOf(status);
@@ -186,6 +206,24 @@ export default function Grievance({ lang }: GrievanceProps) {
     defaultValues: { name: "", phone: "", category: "", description: "", address: "", ward: "", anonymous: false },
   });
 
+  // Resolve currently-chosen ward id from its name (the form stores ward as
+  // a string for backwards compat) so we can drive the cascading queries.
+  const watchedWard = form.watch("ward");
+  const selectedWardId = wardList.find((w) => w.name === watchedWard)?.id ?? null;
+
+  const { data: areaOptions = [] } = useQuery({
+    queryKey: ["ward-areas", selectedWardId],
+    queryFn: () => (selectedWardId ? fetchAreasByWard(selectedWardId) : Promise.resolve([])),
+    enabled: !!selectedWardId,
+    staleTime: 5 * 60_000,
+  });
+  const { data: boothOptions = [] } = useQuery({
+    queryKey: ["ward-booths", selectedWardId],
+    queryFn: () => (selectedWardId ? fetchBoothsByWard(selectedWardId) : Promise.resolve([])),
+    enabled: !!selectedWardId,
+    staleTime: 5 * 60_000,
+  });
+
   const submitMutation = useMutation({
     mutationFn: (data: FormData) => {
       const payload = {
@@ -195,6 +233,8 @@ export default function Grievance({ lang }: GrievanceProps) {
         description: data.description,
         address: data.address || null,
         ward: data.ward || null,
+        areaId: data.areaId ?? null,
+        pollingStationId: data.pollingStationId ?? null,
         anonymous: data.anonymous ?? false,
       };
       if (attachedFiles.length > 0) {
@@ -362,7 +402,15 @@ export default function Grievance({ lang }: GrievanceProps) {
                       <FormField control={form.control} name="ward" render={({ field }) => (
                         <FormItem>
                           <FormLabel>{lang === "ta" ? "வார்டு / பகுதி" : "Ward / Area"}</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <Select
+                            onValueChange={(v) => {
+                              field.onChange(v);
+                              // Reset cascaded selections whenever the parent ward changes
+                              form.setValue("areaId", undefined);
+                              form.setValue("pollingStationId", undefined);
+                            }}
+                            value={field.value || ""}
+                          >
                             <FormControl>
                               <SelectTrigger data-testid="grievance-ward">
                                 <SelectValue placeholder={
@@ -391,6 +439,64 @@ export default function Grievance({ lang }: GrievanceProps) {
                         </FormItem>
                       )} />
                     </div>
+
+                    {/* Cascading area + polling-station — only when a ward is chosen */}
+                    {selectedWardId && (areaOptions.length > 0 || boothOptions.length > 0) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {areaOptions.length > 0 && (
+                          <FormField control={form.control} name="areaId" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{lang === "ta" ? "பகுதி (விரும்பினால்)" : "Area (optional)"}</FormLabel>
+                              <Select
+                                onValueChange={(v) => field.onChange(v === "none" ? undefined : Number(v))}
+                                value={field.value ? String(field.value) : "none"}
+                              >
+                                <FormControl>
+                                  <SelectTrigger data-testid="grievance-area">
+                                    <SelectValue placeholder={lang === "ta" ? "பகுதி தேர்வு" : "Select area"} />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="none">{lang === "ta" ? "—" : "—"}</SelectItem>
+                                  {areaOptions.map((a) => (
+                                    <SelectItem key={a.id} value={String(a.id)}>
+                                      {lang === "ta" && a.nameTa ? a.nameTa : a.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                        )}
+                        {boothOptions.length > 0 && (
+                          <FormField control={form.control} name="pollingStationId" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{lang === "ta" ? "வாக்குச்சாவடி (விரும்பினால்)" : "Polling Booth (optional)"}</FormLabel>
+                              <Select
+                                onValueChange={(v) => field.onChange(v === "none" ? undefined : Number(v))}
+                                value={field.value ? String(field.value) : "none"}
+                              >
+                                <FormControl>
+                                  <SelectTrigger data-testid="grievance-booth">
+                                    <SelectValue placeholder={lang === "ta" ? "சாவடி தேர்வு" : "Select booth"} />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="none">{lang === "ta" ? "—" : "—"}</SelectItem>
+                                  {boothOptions.map((b) => (
+                                    <SelectItem key={b.id} value={String(b.id)}>
+                                      #{b.boothNo} — {b.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                        )}
+                      </div>
+                    )}
 
                     <FormField control={form.control} name="description" render={({ field }) => (
                       <FormItem>

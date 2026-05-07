@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Newspaper, Calendar, Activity, Image,
   Users, MessageSquare, HelpCircle, UserCircle, LogOut, Menu, X,
-  ChevronRight, Settings, Megaphone, FileText, MapPin, ClipboardList,
+  ChevronRight, Settings, Megaphone, FileText, MapPin, ClipboardList, Network,
 } from "lucide-react";
 import { isAuthenticated, removeToken, getToken } from "@/lib/auth";
 import { useGetMe } from "@workspace/api-client-react";
@@ -24,6 +24,7 @@ import ConstituencyAdmin from "./admin/ConstituencyAdmin";
 import WardAdmin from "./admin/WardAdmin";
 import HierarchyAdmin from "./admin/HierarchyAdmin";
 import PressReleasesAdmin from "./admin/PressReleasesAdmin";
+import AssignmentsAdmin from "./admin/AssignmentsAdmin";
 import type { Language } from "@/lib/i18n";
 
 interface AdminProps { lang?: Language }
@@ -39,6 +40,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: "dashboard",    label: "Dashboard",         icon: LayoutDashboard },
   { id: "grievances",   label: "Grievances",        icon: MessageSquare },
+  { id: "assignments",  label: "Officer Assignments", icon: Network,    roles: ["super_admin", "admin", "constituency_coordinator"] },
   { id: "news",         label: "News",               icon: Newspaper,    roles: ["super_admin", "admin", "pa_staff", "media_team"] },
   { id: "press",        label: "Press Releases",    icon: FileText,     roles: ["super_admin", "admin", "pa_staff", "media_team"] },
   { id: "events",       label: "Events",             icon: Calendar,     roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator", "media_team"] },
@@ -202,6 +204,7 @@ export default function Admin({ lang = "ta" }: AdminProps) {
         <main className="flex-1 p-4 sm:p-6 overflow-auto">
           {active === "dashboard"    && <Dashboard />}
           {active === "grievances"   && <GrievanceOfficer lang={lang} token={token} />}
+          {active === "assignments"  && <AssignmentsAdmin token={token} />}
           {active === "news"         && <NewsAdmin />}
           {active === "press"        && <PressReleasesAdmin />}
           {active === "events"       && <EventsAdmin />}

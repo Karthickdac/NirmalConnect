@@ -500,6 +500,16 @@ paths:
           in: query
           schema:
             type: string
+        - name: mine
+          in: query
+          description: When "1", limit to grievances assigned to the calling officer.
+          schema:
+            type: string
+        - name: assignedTo
+          in: query
+          description: User id of the assignee, or the literal string "unassigned".
+          schema:
+            type: string
       responses:
         "200":
           description: Paginated grievance list
@@ -1277,6 +1287,71 @@ paths:
         "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
         "404": { description: Not found, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
 
+  /admin/assignments:
+    get:
+      operationId: adminListAssignments
+      tags: [admin]
+      summary: List officer→ward/area/booth assignments
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: userId, in: query, schema: { type: integer } }
+        - { name: wardId, in: query, schema: { type: integer } }
+        - { name: activeOnly, in: query, schema: { type: string } }
+      responses:
+        "200": { description: Assignment list, content: { application/json: { schema: { $ref: "#/components/schemas/OfficerAssignmentListResponse" } } } }
+        "401": { description: Unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "403": { description: Forbidden, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+    post:
+      operationId: adminCreateAssignment
+      tags: [admin]
+      summary: Create an officer assignment
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OfficerAssignmentBody" }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/OfficerAssignment" } } } }
+        "400": { description: Validation error, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        "409": { description: Duplicate, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /admin/assignments/{id}:
+    patch:
+      operationId: adminUpdateAssignment
+      tags: [admin]
+      summary: Update an assignment (toggle active or rename)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OfficerAssignmentPatchBody" }
+      responses:
+        "200": { description: Updated, content: { application/json: { schema: { $ref: "#/components/schemas/OfficerAssignment" } } } }
+        "404": { description: Not found, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+    delete:
+      operationId: adminDeleteAssignment
+      tags: [admin]
+      summary: Delete an officer assignment
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: Deleted, content: { application/json: { schema: { $ref: "#/components/schemas/DeletedResult" } } } }
+
+  /admin/assignments/routing-log:
+    get:
+      operationId: adminListRoutingLog
+      tags: [admin]
+      summary: List grievance routing-log entries (auto + manual)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 50 } }
+        - { name: grievanceId, in: query, schema: { type: integer } }
+      responses:
+        "200": { description: Routing log, content: { application/json: { schema: { $ref: "#/components/schemas/RoutingLogListResponse" } } } }
+
   /admin/grievances/bulk-assign:
     post:
       operationId: adminBulkAssignGrievances
@@ -1736,6 +1811,12 @@ components:
           type: ["string", "null"]
         anonymous:
           type: boolean
+        areaId:
+          type: ["integer", "null"]
+          description: Optional sub-ward area id (cascading from selected ward)
+        pollingStationId:
+          type: ["integer", "null"]
+          description: Optional polling-station (booth) id
       required:
         - name
         - phone
@@ -2389,6 +2470,76 @@ components:
           type: array
           items: { $ref: "#/components/schemas/HierarchyTreeWard" }
       required: [zones, orphanWards]
+
+    OfficerAssignmentBody:
+      type: object
+      properties:
+        userId: { type: integer }
+        wardId: { type: ["integer", "null"] }
+        areaId: { type: ["integer", "null"] }
+        pollingStationId: { type: ["integer", "null"] }
+        roleLabel: { type: ["string", "null"] }
+        isActive: { type: boolean }
+      required: [userId]
+
+    OfficerAssignmentPatchBody:
+      type: object
+      properties:
+        isActive: { type: boolean }
+        roleLabel: { type: ["string", "null"] }
+
+    OfficerAssignment:
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        userName: { type: ["string", "null"] }
+        userEmail: { type: ["string", "null"] }
+        userRole: { type: ["string", "null"] }
+        wardId: { type: ["integer", "null"] }
+        wardName: { type: ["string", "null"] }
+        areaId: { type: ["integer", "null"] }
+        areaName: { type: ["string", "null"] }
+        pollingStationId: { type: ["integer", "null"] }
+        boothNo: { type: ["string", "null"] }
+        boothName: { type: ["string", "null"] }
+        roleLabel: { type: ["string", "null"] }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+      required: [id, userId, isActive, createdAt]
+
+    OfficerAssignmentListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/OfficerAssignment" }
+      required: [items]
+
+    RoutingLogEntry:
+      type: object
+      properties:
+        id: { type: integer }
+        grievanceId: { type: integer }
+        fromOfficerId: { type: ["integer", "null"] }
+        toOfficerId: { type: ["integer", "null"] }
+        reason: { type: string, description: "auto | manual | reassign | unassigned" }
+        matchedScope: { type: string, description: "booth | area | ward | none" }
+        matchedScopeId: { type: ["integer", "null"] }
+        changedBy: { type: ["integer", "null"] }
+        changedByName: { type: string }
+        note: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+      required: [id, grievanceId, reason, matchedScope, changedByName, createdAt]
+
+    RoutingLogListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/RoutingLogEntry" }
+      required: [items]
 
     BulkGrievanceAssignBody:
       type: object

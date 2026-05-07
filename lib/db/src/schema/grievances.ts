@@ -53,6 +53,10 @@ export const grievancesTable = pgTable("grievances", {
   status: text("status").notNull().default("Submitted"),
   anonymous: boolean("anonymous").notNull().default(false),
   assignedTo: integer("assigned_to"),
+  // Optional sub-ward routing scope captured at submit time.
+  // Used by the auto-router and admin matrix.
+  areaId: integer("area_id"),
+  pollingStationId: integer("polling_station_id"),
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

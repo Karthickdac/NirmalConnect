@@ -13,7 +13,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import {
   ChevronLeft, ChevronRight, RefreshCw, Loader2, CheckCircle,
   Clock, AlertTriangle, MessageSquare, Filter, X, Paperclip, Users,
-  ListChecks, CalendarRange, FileDown, FileText,
+  ListChecks, CalendarRange, FileDown, FileText, Inbox,
 } from "lucide-react";
 import type { Language } from "@/lib/i18n";
 import {
@@ -122,6 +122,8 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
   const [filterConstituency, setFilterConstituency] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
+  // "Mine" toggle: when on, list is restricted to grievances assigned to the current officer.
+  const [mineOnly, setMineOnly] = useState(false);
   const { data: wardList = [] } = useWards();
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkStatus, setBulkStatus] = useState("");
@@ -154,6 +156,7 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
     ...(filterConstituency && { constituency: filterConstituency }),
     ...(filterDateFrom && { dateFrom: filterDateFrom }),
     ...(filterDateTo && { dateTo: filterDateTo }),
+    ...(mineOnly && { mine: "1" }),
   };
 
   const { data, isFetching, refetch } = useQuery({
@@ -366,7 +369,19 @@ export default function GrievanceOfficer({ lang, token }: GrievanceOfficerProps)
           title={lang === "ta" ? "புகார் அலுவலர் பலகை" : "Grievance Officer Dashboard"}
           subtitle={lang === "ta" ? "புகார்களை நிர்வகிக்கவும், நிலை புதுப்பிக்கவும்" : "Manage, assign and resolve constituent grievances"}
         />
-        <div className="flex gap-2 shrink-0">
+        <div className="flex gap-2 shrink-0 items-center">
+          <Button
+            variant={mineOnly ? "default" : "outline"}
+            size="sm"
+            className={`gap-1.5 h-8 ${mineOnly ? "bg-primary text-white hover:bg-primary/90" : ""}`}
+            onClick={() => { setMineOnly(v => !v); setPage(1); }}
+            data-testid="mine-toggle"
+          >
+            <Inbox className="w-3.5 h-3.5" />
+            {mineOnly
+              ? (lang === "ta" ? "என் புகார்கள்" : "My Inbox")
+              : (lang === "ta" ? "அனைத்து புகார்கள்" : "All Grievances")}
+          </Button>
           <Button variant="outline" size="sm" className="gap-1.5 h-8" onClick={exportCSV}>
             <FileText className="w-3.5 h-3.5" />
             {lang === "ta" ? "CSV ஏற்றுமதி" : "Export CSV"}

@@ -12,3 +12,4 @@ export * from "./audit_log";
 export * from "./banners";
 export * from "./wards";
 export * from "./hierarchy";
+export * from "./assignments";

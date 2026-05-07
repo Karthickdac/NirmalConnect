@@ -5,10 +5,12 @@ import {
   grievanceAttachmentsTable,
   grievanceRemarksTable,
   grievanceStatusLogTable,
+  grievanceRoutingLogTable,
   usersTable,
 } from "@workspace/db/schema";
 import { requireStaff, type AuthRequest } from "../lib/auth.js";
-import { eq, desc, and, count, gte, lte } from "drizzle-orm";
+import { eq, desc, and, count, gte, lte, sql } from "drizzle-orm";
+import { resolveOwnerForGrievance, logRouting } from "../lib/grievance-routing.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -60,6 +62,9 @@ const SubmitBody = z.object({
   ward: z.string().optional().nullable(),
   constituency: z.string().optional().nullable(),
   anonymous: z.boolean().optional(),
+  // optional sub-ward routing scope (cascading dropdowns)
+  areaId: z.coerce.number().int().positive().optional().nullable(),
+  pollingStationId: z.coerce.number().int().positive().optional().nullable(),
 });
 
 const StatusUpdateBody = z.object({
@@ -92,6 +97,15 @@ router.post("/grievances/submit", upload.array("attachments", 3), async (req, re
       .where(eq(grievancesTable.ticketNo, ticketNo)).limit(1);
     if (existing.length > 0) ticketNo = generateTicketNo();
 
+    // Resolve auto-routed officer BEFORE insert so we can persist
+    // assignedTo + scope in one row. Falls back to null (shared inbox)
+    // if no rule matches.
+    const routing = await resolveOwnerForGrievance({
+      wardName: body.data.ward ?? null,
+      areaId: body.data.areaId ?? null,
+      pollingStationId: body.data.pollingStationId ?? null,
+    });
+
     const [grievance] = await db.insert(grievancesTable).values({
       ticketNo,
       name: body.data.name,
@@ -101,10 +115,13 @@ router.post("/grievances/submit", upload.array("attachments", 3), async (req, re
       description: body.data.description,
       address: body.data.address ?? null,
       ward: body.data.ward ?? null,
+      areaId: body.data.areaId ?? null,
+      pollingStationId: body.data.pollingStationId ?? null,
       constituency: body.data.constituency ?? "Tirupparankundram",
       anonymous: body.data.anonymous ?? false,
       priority: "Medium",
       status: "Submitted",
+      assignedTo: routing.officerId,
     }).returning();
 
     // Persist uploaded attachments
@@ -128,6 +145,21 @@ router.post("/grievances/submit", upload.array("attachments", 3), async (req, re
       toStatus: "Submitted",
       changedByName: "System",
       note: "Grievance submitted by citizen",
+    });
+
+    // Audit-log the auto-routing decision (always — even when no rule matched).
+    await logRouting({
+      grievanceId: grievance.id,
+      fromOfficerId: null,
+      toOfficerId: routing.officerId,
+      reason: "auto",
+      matchedScope: routing.matchedScope,
+      matchedScopeId: routing.matchedScopeId,
+      changedBy: null,
+      changedByName: "System",
+      note: routing.officerId
+        ? `Auto-routed at ${routing.matchedScope} scope (${routing.candidateCount} candidate${routing.candidateCount === 1 ? "" : "s"})`
+        : "No assignment rule matched — falls back to shared inbox",
     });
 
     res.status(201).json(serializeGrievance(grievance));
@@ -236,6 +268,18 @@ router.get("/grievances", requireStaff, async (req: AuthRequest, res) => {
     if (req.query.priority) conditions.push(eq(grievancesTable.priority, String(req.query.priority)));
     if (req.query.ward) conditions.push(eq(grievancesTable.ward, String(req.query.ward)));
     if (req.query.constituency) conditions.push(eq(grievancesTable.constituency, String(req.query.constituency)));
+    // "mine=1" filter: officer's personal inbox view (defaults on for non-admin officers)
+    if (String(req.query.mine ?? "") === "1" && req.user?.id) {
+      conditions.push(eq(grievancesTable.assignedTo, req.user.id));
+    }
+    if (req.query.assignedTo) {
+      const v = String(req.query.assignedTo);
+      if (v === "unassigned") conditions.push(sql`${grievancesTable.assignedTo} IS NULL`);
+      else {
+        const id = parseInt(v, 10);
+        if (Number.isFinite(id)) conditions.push(eq(grievancesTable.assignedTo, id));
+      }
+    }
     if (req.query.dateFrom) {
       const from = new Date(String(req.query.dateFrom));
       if (!isNaN(from.getTime())) conditions.push(gte(grievancesTable.createdAt, from));
@@ -433,6 +477,19 @@ router.post("/grievances/:id/assign", requireStaff, async (req: AuthRequest, res
       changedBy: req.user!.id,
       changedByName: req.user!.name,
       note: body.data.note ?? `Assigned to ${body.data.officerName}`,
+    });
+
+    // Routing-log entry for the manual reassignment
+    await logRouting({
+      grievanceId: id,
+      fromOfficerId: current.assignedTo,
+      toOfficerId: body.data.officerId,
+      reason: current.assignedTo == null ? "manual" : "reassign",
+      matchedScope: "none",
+      matchedScopeId: null,
+      changedBy: req.user!.id,
+      changedByName: req.user!.name,
+      note: body.data.note ?? `Manually assigned to ${body.data.officerName}`,
     });
 
     res.json(serializeGrievance(updated));

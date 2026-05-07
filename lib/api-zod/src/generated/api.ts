@@ -362,6 +362,14 @@ export const SubmitGrievanceBody = zod.object({
   ward: zod.string().nullish(),
   constituency: zod.string().nullish(),
   anonymous: zod.boolean().optional(),
+  areaId: zod
+    .number()
+    .nullish()
+    .describe("Optional sub-ward area id (cascading from selected ward)"),
+  pollingStationId: zod
+    .number()
+    .nullish()
+    .describe("Optional polling-station (booth) id"),
 });
 
 /**
@@ -438,6 +446,16 @@ export const ListGrievancesQueryParams = zod.object({
   priority: zod.coerce.string().optional(),
   ward: zod.coerce.string().optional(),
   constituency: zod.coerce.string().optional(),
+  mine: zod.coerce
+    .string()
+    .optional()
+    .describe(
+      'When \"1\", limit to grievances assigned to the calling officer.',
+    ),
+  assignedTo: zod.coerce
+    .string()
+    .optional()
+    .describe('User id of the assignee, or the literal string \"unassigned\".'),
 });
 
 export const ListGrievancesResponse = zod.object({
@@ -1250,6 +1268,118 @@ export const AdminDeletePincodeParams = zod.object({
 
 export const AdminDeletePincodeResponse = zod.object({
   success: zod.boolean(),
+});
+
+/**
+ * @summary List officer→ward/area/booth assignments
+ */
+export const AdminListAssignmentsQueryParams = zod.object({
+  userId: zod.coerce.number().optional(),
+  wardId: zod.coerce.number().optional(),
+  activeOnly: zod.coerce.string().optional(),
+});
+
+export const AdminListAssignmentsResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      userId: zod.number(),
+      userName: zod.string().nullish(),
+      userEmail: zod.string().nullish(),
+      userRole: zod.string().nullish(),
+      wardId: zod.number().nullish(),
+      wardName: zod.string().nullish(),
+      areaId: zod.number().nullish(),
+      areaName: zod.string().nullish(),
+      pollingStationId: zod.number().nullish(),
+      boothNo: zod.string().nullish(),
+      boothName: zod.string().nullish(),
+      roleLabel: zod.string().nullish(),
+      isActive: zod.boolean(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Create an officer assignment
+ */
+export const AdminCreateAssignmentBody = zod.object({
+  userId: zod.number(),
+  wardId: zod.number().nullish(),
+  areaId: zod.number().nullish(),
+  pollingStationId: zod.number().nullish(),
+  roleLabel: zod.string().nullish(),
+  isActive: zod.boolean().optional(),
+});
+
+/**
+ * @summary Update an assignment (toggle active or rename)
+ */
+export const AdminUpdateAssignmentParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminUpdateAssignmentBody = zod.object({
+  isActive: zod.boolean().optional(),
+  roleLabel: zod.string().nullish(),
+});
+
+export const AdminUpdateAssignmentResponse = zod.object({
+  id: zod.number(),
+  userId: zod.number(),
+  userName: zod.string().nullish(),
+  userEmail: zod.string().nullish(),
+  userRole: zod.string().nullish(),
+  wardId: zod.number().nullish(),
+  wardName: zod.string().nullish(),
+  areaId: zod.number().nullish(),
+  areaName: zod.string().nullish(),
+  pollingStationId: zod.number().nullish(),
+  boothNo: zod.string().nullish(),
+  boothName: zod.string().nullish(),
+  roleLabel: zod.string().nullish(),
+  isActive: zod.boolean(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Delete an officer assignment
+ */
+export const AdminDeleteAssignmentParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminDeleteAssignmentResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary List grievance routing-log entries (auto + manual)
+ */
+export const adminListRoutingLogQueryLimitDefault = 50;
+
+export const AdminListRoutingLogQueryParams = zod.object({
+  limit: zod.coerce.number().default(adminListRoutingLogQueryLimitDefault),
+  grievanceId: zod.coerce.number().optional(),
+});
+
+export const AdminListRoutingLogResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      grievanceId: zod.number(),
+      fromOfficerId: zod.number().nullish(),
+      toOfficerId: zod.number().nullish(),
+      reason: zod.string().describe("auto | manual | reassign | unassigned"),
+      matchedScope: zod.string().describe("booth | area | ward | none"),
+      matchedScopeId: zod.number().nullish(),
+      changedBy: zod.number().nullish(),
+      changedByName: zod.string(),
+      note: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
 });
 
 /**

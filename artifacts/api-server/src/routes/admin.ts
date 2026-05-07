@@ -6,6 +6,7 @@ import {
   siteConfigTable, auditLogTable, bannersTable, constituencyStatsTable, wardsTable,
   zonesTable, areasTable, streetsTable, pollingStationsTable,
   pincodesTable, pincodeWardsTable,
+  officerAssignmentsTable, grievanceRoutingLogTable,
 } from "@workspace/db/schema";
 
 import { requireStaff, requireRole, type AuthRequest } from "../lib/auth.js";
@@ -1476,6 +1477,207 @@ router.delete("/admin/hierarchy/pincodes/:id", requireRole(...WARD_ROLES), async
     res.json({ success: true });
   } catch (err) {
     console.error("[admin] pincode delete:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ──────────────────────────────────────────────────────────
+// OFFICER ASSIGNMENTS (Task #17)
+// ──────────────────────────────────────────────────────────
+//
+// CRUD for officer→ward/area/booth assignments. Used by the auto-router
+// (resolveOwnerForGrievance) and by the admin Assignments matrix screen.
+// All routes are gated by WARD_ROLES (super_admin / admin / coordinator).
+
+const AssignmentBody = z.object({
+  userId: z.number().int().positive(),
+  wardId: z.number().int().positive().optional().nullable(),
+  areaId: z.number().int().positive().optional().nullable(),
+  pollingStationId: z.number().int().positive().optional().nullable(),
+  roleLabel: z.string().max(80).optional().nullable(),
+  isActive: z.boolean().optional(),
+}).refine(
+  (v) => !!(v.wardId || v.areaId || v.pollingStationId),
+  { message: "At least one of wardId, areaId, or pollingStationId is required" },
+);
+
+router.get("/admin/assignments", requireRole(...WARD_ROLES), async (req, res) => {
+  try {
+    const userIdParam = req.query.userId ? parseInt(String(req.query.userId), 10) : null;
+    const wardIdParam = req.query.wardId ? parseInt(String(req.query.wardId), 10) : null;
+    const onlyActive = String(req.query.activeOnly ?? "") === "1";
+
+    const conditions = [];
+    if (userIdParam) conditions.push(eq(officerAssignmentsTable.userId, userIdParam));
+    if (wardIdParam) conditions.push(eq(officerAssignmentsTable.wardId, wardIdParam));
+    if (onlyActive) conditions.push(eq(officerAssignmentsTable.isActive, true));
+    const where = conditions.length ? and(...conditions) : undefined;
+
+    const rows = await db
+      .select({
+        id: officerAssignmentsTable.id,
+        userId: officerAssignmentsTable.userId,
+        userName: usersTable.name,
+        userEmail: usersTable.email,
+        userRole: usersTable.role,
+        wardId: officerAssignmentsTable.wardId,
+        wardName: wardsTable.name,
+        areaId: officerAssignmentsTable.areaId,
+        areaName: areasTable.name,
+        pollingStationId: officerAssignmentsTable.pollingStationId,
+        boothNo: pollingStationsTable.boothNo,
+        boothName: pollingStationsTable.name,
+        roleLabel: officerAssignmentsTable.roleLabel,
+        isActive: officerAssignmentsTable.isActive,
+        createdAt: officerAssignmentsTable.createdAt,
+      })
+      .from(officerAssignmentsTable)
+      .leftJoin(usersTable, eq(usersTable.id, officerAssignmentsTable.userId))
+      .leftJoin(wardsTable, eq(wardsTable.id, officerAssignmentsTable.wardId))
+      .leftJoin(areasTable, eq(areasTable.id, officerAssignmentsTable.areaId))
+      .leftJoin(pollingStationsTable, eq(pollingStationsTable.id, officerAssignmentsTable.pollingStationId))
+      .where(where)
+      .orderBy(desc(officerAssignmentsTable.createdAt));
+
+    res.json({
+      items: rows.map(r => ({ ...r, createdAt: r.createdAt.toISOString() })),
+    });
+  } catch (err) {
+    console.error("[admin] assignments list:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/admin/assignments", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const body = AssignmentBody.safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+
+    const [u] = await db.select({ id: usersTable.id, name: usersTable.name })
+      .from(usersTable).where(eq(usersTable.id, body.data.userId)).limit(1);
+    if (!u) { res.status(400).json({ error: "User does not exist" }); return; }
+
+    // Cross-validate ward → area → booth consistency
+    if (body.data.areaId && body.data.wardId) {
+      const [a] = await db.select({ wardId: areasTable.wardId }).from(areasTable)
+        .where(eq(areasTable.id, body.data.areaId)).limit(1);
+      if (!a || a.wardId !== body.data.wardId) {
+        res.status(400).json({ error: "Area does not belong to selected ward" }); return;
+      }
+    }
+    if (body.data.pollingStationId && body.data.wardId) {
+      const [b] = await db.select({ wardId: pollingStationsTable.wardId }).from(pollingStationsTable)
+        .where(eq(pollingStationsTable.id, body.data.pollingStationId)).limit(1);
+      if (b && b.wardId != null && b.wardId !== body.data.wardId) {
+        res.status(400).json({ error: "Polling station does not belong to selected ward" }); return;
+      }
+    }
+
+    try {
+      const [item] = await db.insert(officerAssignmentsTable).values({
+        userId: body.data.userId,
+        wardId: body.data.wardId ?? null,
+        areaId: body.data.areaId ?? null,
+        pollingStationId: body.data.pollingStationId ?? null,
+        roleLabel: body.data.roleLabel ?? null,
+        isActive: body.data.isActive ?? true,
+      }).returning();
+      await logAudit(req, "CREATE", `officer_assignment:${item.id}`, `${u.name} → ward=${item.wardId ?? "-"} area=${item.areaId ?? "-"} booth=${item.pollingStationId ?? "-"}`);
+      res.status(201).json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/uniq|duplicate/i.test(msg)) {
+        res.status(409).json({ error: "This officer already has an assignment with the same scope" });
+        return;
+      }
+      throw e;
+    }
+  } catch (err) {
+    console.error("[admin] assignment create:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.patch("/admin/assignments/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    const body = z.object({
+      isActive: z.boolean().optional(),
+      roleLabel: z.string().max(80).optional().nullable(),
+      wardId: z.number().int().positive().optional().nullable(),
+      areaId: z.number().int().positive().optional().nullable(),
+      pollingStationId: z.number().int().positive().optional().nullable(),
+    }).safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    if (Object.keys(body.data).length === 0) {
+      res.status(400).json({ error: "No fields to update" }); return;
+    }
+
+    // Re-validate scope consistency after merging the patch with the
+    // existing record. PATCH may change just one of ward/area/booth, so
+    // the merged shape is what must be coherent.
+    if (body.data.wardId !== undefined || body.data.areaId !== undefined ||
+        body.data.pollingStationId !== undefined) {
+      const [existing] = await db.select().from(officerAssignmentsTable)
+        .where(eq(officerAssignmentsTable.id, id)).limit(1);
+      if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+      const merged = {
+        wardId: body.data.wardId !== undefined ? body.data.wardId : existing.wardId,
+        areaId: body.data.areaId !== undefined ? body.data.areaId : existing.areaId,
+        pollingStationId: body.data.pollingStationId !== undefined
+          ? body.data.pollingStationId : existing.pollingStationId,
+      };
+      if (merged.areaId && merged.wardId) {
+        const [a] = await db.select({ wardId: areasTable.wardId }).from(areasTable)
+          .where(eq(areasTable.id, merged.areaId)).limit(1);
+        if (!a || a.wardId !== merged.wardId) {
+          res.status(400).json({ error: "Area does not belong to selected ward" }); return;
+        }
+      }
+      if (merged.pollingStationId && merged.wardId) {
+        const [b] = await db.select({ wardId: pollingStationsTable.wardId })
+          .from(pollingStationsTable)
+          .where(eq(pollingStationsTable.id, merged.pollingStationId)).limit(1);
+        if (b && b.wardId != null && b.wardId !== merged.wardId) {
+          res.status(400).json({ error: "Polling station does not belong to selected ward" }); return;
+        }
+      }
+    }
+
+    const [item] = await db.update(officerAssignmentsTable).set(body.data)
+      .where(eq(officerAssignmentsTable.id, id)).returning();
+    if (!item) { res.status(404).json({ error: "Not found" }); return; }
+    await logAudit(req, "UPDATE", `officer_assignment:${id}`, `active=${item.isActive}`);
+    res.json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] assignment patch:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/admin/assignments/:id", requireRole(...WARD_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    await db.delete(officerAssignmentsTable).where(eq(officerAssignmentsTable.id, id));
+    await logAudit(req, "DELETE", `officer_assignment:${id}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[admin] assignment delete:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/admin/assignments/routing-log", requireRole(...WARD_ROLES), async (req, res) => {
+  try {
+    const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit ?? "50"), 10)));
+    const grievanceId = req.query.grievanceId ? parseInt(String(req.query.grievanceId), 10) : null;
+    const rows = await db.select().from(grievanceRoutingLogTable)
+      .where(grievanceId ? eq(grievanceRoutingLogTable.grievanceId, grievanceId) : undefined)
+      .orderBy(desc(grievanceRoutingLogTable.createdAt))
+      .limit(limit);
+    res.json({ items: rows.map(r => ({ ...r, createdAt: r.createdAt.toISOString() })) });
+  } catch (err) {
+    console.error("[admin] routing log:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

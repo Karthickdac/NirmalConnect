@@ -207,6 +207,16 @@ export interface GrievanceSubmitBody {
   /** @nullable */
   constituency?: string | null;
   anonymous?: boolean;
+  /**
+   * Optional sub-ward area id (cascading from selected ward)
+   * @nullable
+   */
+  areaId?: number | null;
+  /**
+   * Optional polling-station (booth) id
+   * @nullable
+   */
+  pollingStationId?: number | null;
 }
 
 export interface GrievancePublic {
@@ -697,6 +707,84 @@ export interface HierarchyTree {
   orphanWards: HierarchyTreeWard[];
 }
 
+export interface OfficerAssignmentBody {
+  userId: number;
+  /** @nullable */
+  wardId?: number | null;
+  /** @nullable */
+  areaId?: number | null;
+  /** @nullable */
+  pollingStationId?: number | null;
+  /** @nullable */
+  roleLabel?: string | null;
+  isActive?: boolean;
+}
+
+export interface OfficerAssignmentPatchBody {
+  isActive?: boolean;
+  /** @nullable */
+  roleLabel?: string | null;
+}
+
+export interface OfficerAssignment {
+  id: number;
+  userId: number;
+  /** @nullable */
+  userName?: string | null;
+  /** @nullable */
+  userEmail?: string | null;
+  /** @nullable */
+  userRole?: string | null;
+  /** @nullable */
+  wardId?: number | null;
+  /** @nullable */
+  wardName?: string | null;
+  /** @nullable */
+  areaId?: number | null;
+  /** @nullable */
+  areaName?: string | null;
+  /** @nullable */
+  pollingStationId?: number | null;
+  /** @nullable */
+  boothNo?: string | null;
+  /** @nullable */
+  boothName?: string | null;
+  /** @nullable */
+  roleLabel?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  [key: string]: unknown;
+}
+
+export interface OfficerAssignmentListResponse {
+  items: OfficerAssignment[];
+}
+
+export interface RoutingLogEntry {
+  id: number;
+  grievanceId: number;
+  /** @nullable */
+  fromOfficerId?: number | null;
+  /** @nullable */
+  toOfficerId?: number | null;
+  /** auto | manual | reassign | unassigned */
+  reason: string;
+  /** booth | area | ward | none */
+  matchedScope: string;
+  /** @nullable */
+  matchedScopeId?: number | null;
+  /** @nullable */
+  changedBy?: number | null;
+  changedByName: string;
+  /** @nullable */
+  note?: string | null;
+  createdAt: string;
+}
+
+export interface RoutingLogListResponse {
+  items: RoutingLogEntry[];
+}
+
 export interface BulkGrievanceAssignBody {
   /**
    * @minItems 1
@@ -805,8 +893,27 @@ export type ListGrievancesParams = {
   priority?: string;
   ward?: string;
   constituency?: string;
+  /**
+   * When "1", limit to grievances assigned to the calling officer.
+   */
+  mine?: string;
+  /**
+   * User id of the assignee, or the literal string "unassigned".
+   */
+  assignedTo?: string;
 };
 
 export type AdminDeleteWard200 = {
   success: boolean;
+};
+
+export type AdminListAssignmentsParams = {
+  userId?: number;
+  wardId?: number;
+  activeOnly?: string;
+};
+
+export type AdminListRoutingLogParams = {
+  limit?: number;
+  grievanceId?: number;
 };

@@ -20,6 +20,8 @@ import type {
   Activity,
   ActivityListResponse,
   AdminDeleteWard200,
+  AdminListAssignmentsParams,
+  AdminListRoutingLogParams,
   Area,
   AuthResponse,
   BulkGrievanceAssignBody,
@@ -69,8 +71,13 @@ import type {
   LoginBody,
   NewsArticle,
   NewsListResponse,
+  OfficerAssignment,
+  OfficerAssignmentBody,
+  OfficerAssignmentListResponse,
+  OfficerAssignmentPatchBody,
   PincodePublic,
   PollingStation,
+  RoutingLogListResponse,
   SiteSummary,
   User,
   Volunteer,
@@ -5069,6 +5076,473 @@ export const useAdminDeletePincode = <
 > => {
   return useMutation(getAdminDeletePincodeMutationOptions(options));
 };
+
+/**
+ * @summary List officer→ward/area/booth assignments
+ */
+export const getAdminListAssignmentsUrl = (
+  params?: AdminListAssignmentsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/assignments?${stringifiedParams}`
+    : `/api/admin/assignments`;
+};
+
+export const adminListAssignments = async (
+  params?: AdminListAssignmentsParams,
+  options?: RequestInit,
+): Promise<OfficerAssignmentListResponse> => {
+  return customFetch<OfficerAssignmentListResponse>(
+    getAdminListAssignmentsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getAdminListAssignmentsQueryKey = (
+  params?: AdminListAssignmentsParams,
+) => {
+  return [`/api/admin/assignments`, ...(params ? [params] : [])] as const;
+};
+
+export const getAdminListAssignmentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminListAssignments>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: AdminListAssignmentsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminListAssignments>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAdminListAssignmentsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminListAssignments>>
+  > = ({ signal }) =>
+    adminListAssignments(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminListAssignments>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminListAssignmentsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminListAssignments>>
+>;
+export type AdminListAssignmentsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List officer→ward/area/booth assignments
+ */
+
+export function useAdminListAssignments<
+  TData = Awaited<ReturnType<typeof adminListAssignments>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: AdminListAssignmentsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminListAssignments>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminListAssignmentsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create an officer assignment
+ */
+export const getAdminCreateAssignmentUrl = () => {
+  return `/api/admin/assignments`;
+};
+
+export const adminCreateAssignment = async (
+  officerAssignmentBody: OfficerAssignmentBody,
+  options?: RequestInit,
+): Promise<OfficerAssignment> => {
+  return customFetch<OfficerAssignment>(getAdminCreateAssignmentUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(officerAssignmentBody),
+  });
+};
+
+export const getAdminCreateAssignmentMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateAssignment>>,
+    TError,
+    { data: BodyType<OfficerAssignmentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminCreateAssignment>>,
+  TError,
+  { data: BodyType<OfficerAssignmentBody> },
+  TContext
+> => {
+  const mutationKey = ["adminCreateAssignment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminCreateAssignment>>,
+    { data: BodyType<OfficerAssignmentBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminCreateAssignment(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminCreateAssignmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminCreateAssignment>>
+>;
+export type AdminCreateAssignmentMutationBody = BodyType<OfficerAssignmentBody>;
+export type AdminCreateAssignmentMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create an officer assignment
+ */
+export const useAdminCreateAssignment = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateAssignment>>,
+    TError,
+    { data: BodyType<OfficerAssignmentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminCreateAssignment>>,
+  TError,
+  { data: BodyType<OfficerAssignmentBody> },
+  TContext
+> => {
+  return useMutation(getAdminCreateAssignmentMutationOptions(options));
+};
+
+/**
+ * @summary Update an assignment (toggle active or rename)
+ */
+export const getAdminUpdateAssignmentUrl = (id: number) => {
+  return `/api/admin/assignments/${id}`;
+};
+
+export const adminUpdateAssignment = async (
+  id: number,
+  officerAssignmentPatchBody: OfficerAssignmentPatchBody,
+  options?: RequestInit,
+): Promise<OfficerAssignment> => {
+  return customFetch<OfficerAssignment>(getAdminUpdateAssignmentUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(officerAssignmentPatchBody),
+  });
+};
+
+export const getAdminUpdateAssignmentMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateAssignment>>,
+    TError,
+    { id: number; data: BodyType<OfficerAssignmentPatchBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminUpdateAssignment>>,
+  TError,
+  { id: number; data: BodyType<OfficerAssignmentPatchBody> },
+  TContext
+> => {
+  const mutationKey = ["adminUpdateAssignment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminUpdateAssignment>>,
+    { id: number; data: BodyType<OfficerAssignmentPatchBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminUpdateAssignment(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminUpdateAssignmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminUpdateAssignment>>
+>;
+export type AdminUpdateAssignmentMutationBody =
+  BodyType<OfficerAssignmentPatchBody>;
+export type AdminUpdateAssignmentMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update an assignment (toggle active or rename)
+ */
+export const useAdminUpdateAssignment = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateAssignment>>,
+    TError,
+    { id: number; data: BodyType<OfficerAssignmentPatchBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminUpdateAssignment>>,
+  TError,
+  { id: number; data: BodyType<OfficerAssignmentPatchBody> },
+  TContext
+> => {
+  return useMutation(getAdminUpdateAssignmentMutationOptions(options));
+};
+
+/**
+ * @summary Delete an officer assignment
+ */
+export const getAdminDeleteAssignmentUrl = (id: number) => {
+  return `/api/admin/assignments/${id}`;
+};
+
+export const adminDeleteAssignment = async (
+  id: number,
+  options?: RequestInit,
+): Promise<DeletedResult> => {
+  return customFetch<DeletedResult>(getAdminDeleteAssignmentUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getAdminDeleteAssignmentMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteAssignment>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminDeleteAssignment>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["adminDeleteAssignment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminDeleteAssignment>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return adminDeleteAssignment(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminDeleteAssignmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminDeleteAssignment>>
+>;
+
+export type AdminDeleteAssignmentMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete an officer assignment
+ */
+export const useAdminDeleteAssignment = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteAssignment>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminDeleteAssignment>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAdminDeleteAssignmentMutationOptions(options));
+};
+
+/**
+ * @summary List grievance routing-log entries (auto + manual)
+ */
+export const getAdminListRoutingLogUrl = (
+  params?: AdminListRoutingLogParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/assignments/routing-log?${stringifiedParams}`
+    : `/api/admin/assignments/routing-log`;
+};
+
+export const adminListRoutingLog = async (
+  params?: AdminListRoutingLogParams,
+  options?: RequestInit,
+): Promise<RoutingLogListResponse> => {
+  return customFetch<RoutingLogListResponse>(
+    getAdminListRoutingLogUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getAdminListRoutingLogQueryKey = (
+  params?: AdminListRoutingLogParams,
+) => {
+  return [
+    `/api/admin/assignments/routing-log`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getAdminListRoutingLogQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminListRoutingLog>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: AdminListRoutingLogParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminListRoutingLog>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAdminListRoutingLogQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminListRoutingLog>>
+  > = ({ signal }) =>
+    adminListRoutingLog(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminListRoutingLog>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminListRoutingLogQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminListRoutingLog>>
+>;
+export type AdminListRoutingLogQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List grievance routing-log entries (auto + manual)
+ */
+
+export function useAdminListRoutingLog<
+  TData = Awaited<ReturnType<typeof adminListRoutingLog>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: AdminListRoutingLogParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminListRoutingLog>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminListRoutingLogQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Bulk-assign grievances to an officer
