@@ -129,7 +129,13 @@ export const VOTER_EPIC_RE = /^[A-Z]{3}\d{7}$/i;
 export function voterListOrderBy(q?: string | null): SQL[] {
   if (q && VOTER_EPIC_RE.test(q)) return [desc(votersTable.id)];
   if (q && q.length >= 2) {
-    return [desc(sql`similarity(lower(${votersTable.fullName}), ${q.toLowerCase()})`)];
+    // Secondary sort on id keeps tied-similarity rows in a stable
+    // order so search pagination and exports stay in lock-step
+    // regardless of query plan.
+    return [
+      desc(sql`similarity(lower(${votersTable.fullName}), ${q.toLowerCase()})`),
+      desc(votersTable.id),
+    ];
   }
   return [desc(votersTable.id)];
 }
