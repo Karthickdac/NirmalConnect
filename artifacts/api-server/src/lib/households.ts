@@ -12,7 +12,7 @@
 
 import { db } from "@workspace/db";
 import { votersTable, householdsTable } from "@workspace/db/schema";
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 export function normalizeAddressKey(
   houseNumber: string | null | undefined,
@@ -234,20 +234,25 @@ export async function regroupHouseholds(
  * (manual unlink): if the household becomes empty AND was not
  * manually edited, delete it. Cheap to call in a hot path.
  */
-export async function pruneEmptyHousehold(householdId: number): Promise<void> {
+export async function pruneEmptyHousehold(
+  householdId: number,
+  opts: { force?: boolean } = {},
+): Promise<void> {
   const [stillUsed] = await db
     .select({ id: votersTable.id })
     .from(votersTable)
     .where(eq(votersTable.householdId, householdId))
     .limit(1);
   if (stillUsed) return;
-  await db
-    .delete(householdsTable)
-    .where(and(eq(householdsTable.id, householdId), eq(householdsTable.manuallyEdited, false)));
+  // By default we leave manually-edited households alone (staff may
+  // want to put voters back later). The split route passes
+  // {force:true} because moving every member out is an explicit
+  // intent to dissolve the source.
+  const where = opts.force
+    ? eq(householdsTable.id, householdId)
+    : and(eq(householdsTable.id, householdId), eq(householdsTable.manuallyEdited, false));
+  await db.delete(householdsTable).where(where);
 }
 
 // Re-export for tests.
 export const _internal = { normalizeAddressKey, pickHouseholdLabel };
-// Mark `isNull` as used so the type-narrow above still imports — drizzle's
-// inferred query helpers occasionally need this in the where-clause shape.
-void isNull;

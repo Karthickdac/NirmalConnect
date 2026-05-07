@@ -325,8 +325,11 @@ router.post("/admin/households/:id/split", requireStaff, async (req: AuthRequest
       .set({ manuallyEdited: true })
       .where(eq(householdsTable.id, id));
 
-    // If the source emptied out, remove it.
-    await pruneEmptyHousehold(id);
+    // If the source emptied out, remove it. Force=true because we
+    // just locked the source above (manuallyEdited=true) and a
+    // post-split empty household is an explicit dissolution, not
+    // staff-preserved scratch space.
+    await pruneEmptyHousehold(id, { force: true });
 
     await logHouseholdAudit(
       req, "HOUSEHOLD_SPLIT",
