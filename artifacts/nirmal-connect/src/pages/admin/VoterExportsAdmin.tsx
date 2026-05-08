@@ -22,6 +22,8 @@ interface ExportRow {
   fileSizeBytes: number | null;
   createdAt: string;
   completedAt: string | null;
+  expiresAt: string | null;
+  downloadAvailable: boolean;
 }
 
 function bytes(n: number | null): string {
@@ -36,6 +38,53 @@ export default function VoterExportsAdmin() {
   const [limit, setLimit] = useState(100);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+
+  // Re-download flow: ask the server for a short-lived signed URL, then
+  // fetch it with the user's bearer token (the download endpoint also
+  // requires a valid logged-in super-admin, not just the signature) and
+  // hand the resulting blob to the browser as a file save. We can't use
+  // a plain `<a download>` here because the link must carry the
+  // Authorization header.
+  async function handleDownload(row: ExportRow) {
+    const tok = getToken();
+    setDownloadingId(row.id);
+    try {
+      const headers: Record<string, string> = tok ? { Authorization: `Bearer ${tok}` } : {};
+      const urlRes = await fetch(
+        `${BASE}/api/admin/voter-exports/${row.id}/download-url`,
+        { method: "POST", headers },
+      );
+      if (!urlRes.ok) {
+        const body = await urlRes.json().catch(() => ({}));
+        throw new Error(body.message ?? body.error ?? `HTTP ${urlRes.status}`);
+      }
+      const { url } = (await urlRes.json()) as { url: string };
+
+      const fileRes = await fetch(`${BASE}${url}`, { headers });
+      if (!fileRes.ok) {
+        const body = await fileRes.json().catch(() => ({}));
+        throw new Error(body.message ?? body.error ?? `HTTP ${fileRes.status}`);
+      }
+      const blob = await fileRes.blob();
+      const disposition = fileRes.headers.get("Content-Disposition") ?? "";
+      const match = disposition.match(/filename="([^"]+)"/);
+      const filename = match?.[1] ?? `voter-export-${row.id}.${row.format}`;
+
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to start download");
+    } finally {
+      setDownloadingId(null);
+    }
+  }
 
   useEffect(() => {
     const tok = getToken();
@@ -136,8 +185,26 @@ export default function VoterExportsAdmin() {
                           {e.fileHash.slice(0, 16)}…
                         </span>
                       )}
+                      {e.expiresAt && (
+                        <span title={`Saved file expires ${new Date(e.expiresAt).toLocaleString("en-IN")}`}>
+                          file kept until {new Date(e.expiresAt).toLocaleDateString("en-IN")}
+                        </span>
+                      )}
                     </div>
                   </div>
+                  {e.downloadAvailable && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0"
+                      disabled={downloadingId === e.id}
+                      onClick={() => handleDownload(e)}
+                      data-testid={`download-export-${e.id}`}
+                    >
+                      <Download className="w-3.5 h-3.5 mr-1" />
+                      {downloadingId === e.id ? "Preparing…" : "Download"}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

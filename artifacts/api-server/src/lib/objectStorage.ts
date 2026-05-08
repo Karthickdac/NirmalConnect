@@ -1,5 +1,5 @@
 import { Storage, type Bucket } from "@google-cloud/storage";
-import { Readable } from "stream";
+import { Readable, type Writable } from "stream";
 
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
 
@@ -61,6 +61,62 @@ export async function uploadAdminImage(
     resumable: false,
     metadata: { contentType, cacheControl: "public, max-age=31536000, immutable" },
   });
+}
+
+/** Returns the bucket + object name for a saved voter-export file (task #48). */
+function voterExportLocation(key: string): { bucket: Bucket; objectName: string } {
+  const dir = process.env["PRIVATE_OBJECT_DIR"];
+  if (!dir) {
+    throw new Error(
+      "PRIVATE_OBJECT_DIR is not set — Object Storage has not been provisioned for this app.",
+    );
+  }
+  // `key` is a relative key (e.g. "voter-exports/123-abcd.csv") — namespaced
+  // to keep voter-export blobs isolated from admin CMS uploads.
+  const safeKey = key.replace(/^\/+/, "");
+  const { bucketName, objectName } = parseObjectPath(`${dir.replace(/\/$/, "")}/${safeKey}`);
+  return { bucket: objectStorageClient.bucket(bucketName), objectName };
+}
+
+/** Open a GCS write stream for a voter export. Used so we can tee the
+ *  export bytes into App Storage *while* they're being streamed to the
+ *  client — avoids ever holding the whole file in memory and lets us
+ *  persist exports of arbitrary size. */
+export function createVoterExportWriteStream(
+  key: string,
+  contentType: string,
+): Writable {
+  const { bucket, objectName } = voterExportLocation(key);
+  return bucket.file(objectName).createWriteStream({
+    contentType,
+    resumable: false,
+    metadata: { contentType },
+  });
+}
+
+/** Delete a saved voter export blob. Used by the TTL sweeper to bound
+ *  storage cost — paired with clearing `storageKey` on the audit row. */
+export async function deleteVoterExport(key: string): Promise<void> {
+  const { bucket, objectName } = voterExportLocation(key);
+  await bucket.file(objectName).delete({ ignoreNotFound: true });
+}
+
+/** Stream a saved voter-export back out, or throw ObjectNotFoundError. */
+export async function fetchVoterExport(key: string): Promise<{
+  stream: Readable;
+  contentType: string;
+  size?: number;
+}> {
+  const { bucket, objectName } = voterExportLocation(key);
+  const file = bucket.file(objectName);
+  const [exists] = await file.exists();
+  if (!exists) throw new ObjectNotFoundError();
+  const [metadata] = await file.getMetadata();
+  return {
+    stream: file.createReadStream(),
+    contentType: (metadata.contentType as string) || "application/octet-stream",
+    size: metadata.size ? Number(metadata.size) : undefined,
+  };
 }
 
 /** Stream an admin image from object storage as a Web Response, or throw ObjectNotFoundError. */

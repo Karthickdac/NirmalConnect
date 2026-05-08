@@ -44,6 +44,15 @@ export const voterExportsTable = pgTable("voter_exports", {
   // finishes successfully.
   fileHash: text("file_hash"),
   fileSizeBytes: integer("file_size_bytes"),
+  // App Storage object key for the saved file bytes (task #48 — lets
+  // super-admins re-download a past export via a short-lived signed URL).
+  // NULL when the file wasn't kept (older rows, aborted streams, or after
+  // TTL cleanup).
+  storageKey: text("storage_key"),
+  // Soft-TTL: download endpoint refuses to serve once `expiresAt` is in
+  // the past. Bytes may still sit in App Storage until a separate cleanup
+  // job removes them; the gate is enforced server-side regardless.
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
 }, (t) => ({
