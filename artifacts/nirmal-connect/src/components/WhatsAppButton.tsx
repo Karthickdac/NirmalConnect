@@ -7,7 +7,7 @@ export function WhatsAppButton() {
       target="_blank"
       rel="noopener noreferrer"
       data-testid="whatsapp-button"
-      className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
+      className="hidden md:flex fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-xl items-center justify-center transition-transform hover:scale-110 active:scale-95"
       style={{ backgroundColor: "#25D366" }}
       aria-label="Contact via WhatsApp"
     >

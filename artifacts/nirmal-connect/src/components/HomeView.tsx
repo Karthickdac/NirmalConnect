@@ -208,32 +208,74 @@ export function HomeView({
           <div className="absolute bottom-20 right-10 w-96 h-96 rounded-full bg-red-400 blur-3xl" />
         </div>
 
-        <div className={`relative ${embedded ? "w-full" : "max-w-7xl mx-auto"} px-4 py-12 md:py-20 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center`}>
-          <div className="text-white">
-            <Badge className="mb-4 bg-yellow-400/20 text-yellow-300 border-yellow-400/30 text-xs font-medium px-3 py-1">
+        <div className={`relative ${embedded ? "w-full" : "max-w-7xl mx-auto"} w-full px-4 py-8 md:py-20 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 items-center`}>
+          <div className="text-white text-center lg:text-left">
+            {/* Mobile-only portrait — keeps the leader visible above the fold
+                on phones (desktop shows the richer card on the right). */}
+            <div className="lg:hidden flex justify-center mb-5">
+              <div className="relative">
+                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-yellow-400 shadow-2xl ring-4 ring-yellow-400/20">
+                  <img src={photoSrc} alt={tx(config.headline, config.headlineTa)} className="w-full h-full object-cover" />
+                </div>
+                <span className="absolute -bottom-1 -right-1 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
+                  MLA
+                </span>
+              </div>
+            </div>
+
+            <Badge className="mb-3 md:mb-4 bg-yellow-400/20 text-yellow-300 border-yellow-400/30 text-[11px] md:text-xs font-medium px-3 py-1">
               {tx(config.badge, config.badgeTa)}
             </Badge>
-            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
+            <h1 className="text-[28px] sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.15] mb-3 md:mb-4">
               {tx(config.headline, config.headlineTa)}
             </h1>
-            <p className="text-lg md:text-2xl text-yellow-300 font-semibold mb-4 md:mb-6">
+            <p className="text-base sm:text-lg md:text-2xl text-yellow-300 font-semibold mb-3 md:mb-6 leading-snug">
               {tx(config.subheadline, config.subheadlineTa)}
             </p>
-            <p className="text-white/75 text-sm md:text-lg max-w-lg mb-6 md:mb-8 leading-relaxed">
+            <p className="text-white/80 text-sm md:text-lg max-w-lg mx-auto lg:mx-0 mb-6 md:mb-8 leading-relaxed">
               {tx(config.description, config.descriptionTa)}
             </p>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-col sm:flex-row gap-3 sm:flex-wrap sm:justify-center lg:justify-start">
               <Link href={config.primaryCtaHref || "/grievance"}>
-                <Button data-testid="hero-grievance-btn" className="bg-primary hover:bg-primary/90 text-white px-6 py-3 text-base">
+                <Button data-testid="hero-grievance-btn" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white h-12 px-6 text-base font-semibold shadow-lg">
                   {tx(config.primaryCtaLabel, config.primaryCtaLabelTa)}
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </Link>
               <Link href={config.secondaryCtaHref || "/volunteer"}>
-                <Button data-testid="hero-volunteer-btn" variant="outline" className="border-white/30 text-white hover:bg-white/10 px-6 py-3 text-base">
+                <Button data-testid="hero-volunteer-btn" variant="outline" className="w-full sm:w-auto border-white/40 text-white hover:bg-white/10 h-12 px-6 text-base">
                   {tx(config.secondaryCtaLabel, config.secondaryCtaLabelTa)}
                 </Button>
               </Link>
+            </div>
+
+            {/* Mobile-only quick stats strip — reuses the desktop card data
+                in a horizontal layout so phones aren't bare below the CTAs. */}
+            <div className="lg:hidden mt-7 grid grid-cols-3 gap-2 text-center">
+              <div className="glass-card rounded-xl py-3 px-1">
+                <div className="text-xl font-bold text-yellow-400 leading-none">
+                  {summary?.totalVolunteers?.toLocaleString() ?? "—"}
+                </div>
+                <div className="text-[10px] text-white/75 mt-1 leading-tight">
+                  {tx("Volunteers", "தன்னார்வலர்கள்")}
+                </div>
+              </div>
+              <div className="glass-card rounded-xl py-3 px-1">
+                <div className="text-xl font-bold text-yellow-400 leading-none">
+                  {summary?.totalEvents?.toLocaleString() ?? "—"}
+                </div>
+                <div className="text-[10px] text-white/75 mt-1 leading-tight">
+                  {tx("Events", "நிகழ்வுகள்")}
+                </div>
+              </div>
+              <div className="glass-card rounded-xl py-3 px-1">
+                <div className="text-xl font-bold text-yellow-400 leading-none">
+                  {summary?.totalNews?.toLocaleString() ?? "—"}
+                </div>
+                <div className="text-[10px] text-white/75 mt-1 leading-tight">
+                  {tx("News", "செய்திகள்")}
+                </div>
+              </div>
             </div>
           </div>
 
