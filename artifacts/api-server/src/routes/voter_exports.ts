@@ -32,6 +32,28 @@ import ExcelJS from "exceljs";
 import { requireStaff, type AuthRequest, verifyPassword } from "../lib/auth.js";
 import { getVoterScopeForUser, resolveScopeBoothIds, voterListOrderBy, VOTER_EPIC_RE } from "../lib/voterScope.js";
 
+// PII masking for officer-scope (non-admin) exports. Officers see the
+// full data on screen one row at a time, but a downloaded sheet of
+// thousands of rows is a much larger PII surface — so EPIC + address
+// columns are reduced to a non-leaky form before the bytes are written.
+//
+// Rules (kept simple so the file is still useful in the field):
+//   - epicNumber  → "••••••<last 4>" (e.g. "••••••3456")
+//   - addressLine → "Booth <boothNo> / Part <partNumber>"
+//   - houseNumber → blanked
+// Booth no, booth name, part, serial, name, age, gender stay intact.
+function maskEpic(v: unknown): string {
+  if (v == null) return "";
+  const s = String(v);
+  if (s.length <= 4) return "•".repeat(Math.max(0, s.length - 1)) + s.slice(-1);
+  return "•".repeat(s.length - 4) + s.slice(-4);
+}
+function maskAddress(boothNo: unknown, partNumber: unknown): string {
+  const b = boothNo == null || boothNo === "" ? "—" : String(boothNo);
+  const p = partNumber == null || partNumber === "" ? "—" : String(partNumber);
+  return `Booth ${b} / Part ${p}`;
+}
+
 const router = Router();
 
 const EXPORT_PASSWORD_THRESHOLD = 5000;
@@ -216,6 +238,11 @@ router.post("/admin/voters/export", requireStaff, async (req: AuthRequest, res) 
 
   // 1) Resolve scope + build where.
   const built = await buildExportWhere(req.user, filters);
+  // Officer-scope (non-admin) callers get masked EPIC + address fields
+  // in the file. Mirror the role check inside getVoterScopeForUser so
+  // both stay in lock-step.
+  const scope = await getVoterScopeForUser(req.user);
+  const maskPII = !scope.unrestricted;
   let total = 0;
   let where: ReturnType<typeof and> | undefined;
   if (built) {
@@ -265,6 +292,7 @@ router.post("/admin/voters/export", requireStaff, async (req: AuthRequest, res) 
     rowCount: total,
     thresholdAtExport: effectiveThreshold,
     passwordGatePassed: passwordGatePassed ? "true" : "false",
+    masked: maskPII ? "true" : "false",
   }).returning();
 
   // Mirror into the central audit log so it shows up alongside other
@@ -274,7 +302,7 @@ router.post("/admin/voters/export", requireStaff, async (req: AuthRequest, res) 
     actorName: req.user.name,
     action: "VOTER_EXPORT",
     target: `voter_exports:${exportRow.id}`,
-    detail: `format=${format};rows=${total};threshold=${effectiveThreshold};${summary}`,
+    detail: `format=${format};rows=${total};threshold=${effectiveThreshold};masked=${maskPII};${summary}`,
   }).catch(() => null);
 
   // 4) Headers + watermark.
@@ -351,6 +379,11 @@ router.post("/admin/voters/export", requireStaff, async (req: AuthRequest, res) 
       for await (const batch of batches()) {
         for (const row of batch) {
           const r = row as Record<string, unknown>;
+          if (maskPII) {
+            r.epicNumber = maskEpic(r.epicNumber);
+            r.addressLine = maskAddress(r.boothNo, r.partNumber);
+            r.houseNumber = "";
+          }
           r.watermark = watermark;
           const line = writeCols.map((c) => csvCell(r[c.key])).join(",") + "\r\n";
           if (!hasher.write(line)) {
@@ -373,6 +406,11 @@ router.post("/admin/voters/export", requireStaff, async (req: AuthRequest, res) 
       for await (const batch of batches()) {
         for (const row of batch) {
           const r = row as Record<string, unknown>;
+          if (maskPII) {
+            r.epicNumber = maskEpic(r.epicNumber);
+            r.addressLine = maskAddress(r.boothNo, r.partNumber);
+            r.houseNumber = "";
+          }
           r.watermark = watermark;
           sheet.addRow(r).commit();
         }
@@ -421,6 +459,7 @@ router.get("/admin/voter-exports", requireStaff, async (req: AuthRequest, res) =
     items: rows.map((r) => ({
       ...r,
       passwordGatePassed: r.passwordGatePassed === "true",
+      masked: r.masked === "true",
       createdAt: r.createdAt.toISOString(),
       completedAt: r.completedAt?.toISOString() ?? null,
     })),

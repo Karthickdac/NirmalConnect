@@ -36,6 +36,10 @@ export const voterExportsTable = pgTable("voter_exports", {
   thresholdAtExport: integer("threshold_at_export").notNull().default(5000),
   // True when the over-threshold password gate was satisfied.
   passwordGatePassed: text("password_gate_passed").notNull().default("false"),
+  // True when sensitive voter fields (EPIC, address) were masked in
+  // the file because the actor was a non-admin (officer-scope) caller.
+  // super_admin / admin pulls keep the data unmasked → "false".
+  masked: text("masked").notNull().default("false"),
   // Hex SHA-256 of the streamed file bytes. NULL until the stream
   // finishes successfully.
   fileHash: text("file_hash"),

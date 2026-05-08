@@ -17,6 +17,7 @@ interface ExportRow {
   rowCount: number;
   thresholdAtExport: number;
   passwordGatePassed: boolean;
+  masked: boolean;
   fileHash: string | null;
   fileSizeBytes: number | null;
   createdAt: string;
@@ -104,6 +105,14 @@ export default function VoterExportsAdmin() {
                       {e.passwordGatePassed && (
                         <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">
                           password-gated (over {e.thresholdAtExport.toLocaleString()})
+                        </Badge>
+                      )}
+                      {e.masked && (
+                        <Badge
+                          className="bg-purple-100 text-purple-700 border-purple-200 text-xs"
+                          title="EPIC last-4 only; address replaced with Booth/Part summary"
+                        >
+                          PII masked (officer scope)
                         </Badge>
                       )}
                       {!e.fileHash && (
