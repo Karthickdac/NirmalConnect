@@ -36,6 +36,7 @@ import {
   createVoterExportWriteStream, deleteVoterExport, fetchVoterExport,
   ObjectNotFoundError,
 } from "../lib/objectStorage.js";
+import { sweepExpiredVoterExports } from "../lib/voterExportSweeper.js";
 
 // PII masking for officer-scope (non-admin) exports. Officers see the
 // full data on screen one row at a time, but a downloaded sheet of
@@ -598,50 +599,6 @@ router.post("/admin/voters/export", requireStaff, async (req: AuthRequest, res) 
   }
 });
 
-// ── Retention sweeper ─────────────────────────────────────
-//
-// Real TTL enforcement: deletes App Storage blobs whose audit row has
-// aged past `expiresAt`, then nulls the storageKey so the row is no
-// longer marked re-downloadable. Runs as a fire-and-forget pass on
-// each super-admin audit-log fetch — frequent enough to bound storage
-// cost without needing a separate cron worker. Bounded to 50 rows per
-// pass so it can't stall a request.
-let sweepInFlight: Promise<void> | null = null;
-async function sweepExpiredVoterExports(): Promise<void> {
-  if (sweepInFlight) return sweepInFlight;
-  sweepInFlight = (async () => {
-    try {
-      const now = new Date();
-      const expired = await db
-        .select({
-          id: voterExportsTable.id,
-          storageKey: voterExportsTable.storageKey,
-        })
-        .from(voterExportsTable)
-        .where(and(
-          sql`${voterExportsTable.storageKey} is not null`,
-          lte(voterExportsTable.expiresAt, now),
-        ))
-        .limit(50);
-      for (const row of expired) {
-        if (!row.storageKey) continue;
-        try {
-          await deleteVoterExport(row.storageKey);
-        } catch (e) {
-          console.warn(`[voter-export] sweeper delete failed for id=${row.id}:`, e);
-          continue;
-        }
-        await db.update(voterExportsTable)
-          .set({ storageKey: null, expiresAt: null })
-          .where(eq(voterExportsTable.id, row.id));
-      }
-    } finally {
-      sweepInFlight = null;
-    }
-  })();
-  return sweepInFlight;
-}
-
 // ── Super-admin audit log ─────────────────────────────────
 router.get("/admin/voter-exports", requireStaff, async (req: AuthRequest, res) => {
   if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -650,8 +607,11 @@ router.get("/admin/voter-exports", requireStaff, async (req: AuthRequest, res) =
     return;
   }
   // Fire-and-forget retention pass: deletes blobs whose TTL has expired
-  // so storage cost stays bounded. Doesn't block the response.
-  void sweepExpiredVoterExports();
+  // so storage cost stays bounded. Doesn't block the response. Local
+  // catch keeps a failed sweep from surfacing as an unhandled rejection.
+  void sweepExpiredVoterExports().catch((err) => {
+    console.warn("[voter-export] opportunistic sweep failed:", err);
+  });
   const limit = Math.min(500, Math.max(1, Number.parseInt(String(req.query["limit"] ?? "100"), 10) || 100));
   const rows = await db
     .select()

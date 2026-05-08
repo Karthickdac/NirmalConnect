@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { startVoterExportSweeper } from "./lib/voterExportSweeper";
 
 // Background jobs (PDF parsing, OCR via pdfjs/tesseract) can produce
 // detached promise rejections deep inside their worker pipelines that
@@ -34,4 +35,7 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+  // Daily background sweep of expired voter-export blobs (task #52).
+  // Schedules an in-process timer; safe to call once at startup.
+  startVoterExportSweeper();
 });
