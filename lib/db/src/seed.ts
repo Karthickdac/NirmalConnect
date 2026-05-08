@@ -336,17 +336,8 @@ async function seed() {
     },
   ]).onConflictDoNothing();
 
-  // Gallery
-  await db.insert(galleryTable).values([
-    { title: "Road Inauguration – Pallapatti Ward", mediaUrl: "https://images.unsplash.com/photo-1485738422979-f5c462d49f74?w=800", thumbnailUrl: "https://images.unsplash.com/photo-1485738422979-f5c462d49f74?w=400", mediaType: "photo", album: "development" },
-    { title: "Free Medical Camp – March 2025", mediaUrl: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800", thumbnailUrl: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=400", mediaType: "photo", album: "welfare" },
-    { title: "Youth Meet – Tirupparankundram", mediaUrl: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800", thumbnailUrl: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400", mediaType: "photo", album: "events" },
-    { title: "School Kit Distribution", mediaUrl: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800", thumbnailUrl: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400", mediaType: "photo", album: "education" },
-    { title: "Tree Plantation Drive", mediaUrl: "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800", thumbnailUrl: "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=400", mediaType: "photo", album: "environment" },
-    { title: "Water Tank Inauguration", mediaUrl: "https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=800", thumbnailUrl: "https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400", mediaType: "photo", album: "development" },
-    { title: "Assembly Session – Chennai", mediaUrl: "https://images.unsplash.com/photo-1551818255-e6e10975bc17?w=800", thumbnailUrl: "https://images.unsplash.com/photo-1551818255-e6e10975bc17?w=400", mediaType: "photo", album: "assembly" },
-    { title: "Women's SHG Launch", mediaUrl: "https://images.unsplash.com/photo-1573497019236-17f8177b81e8?w=800", thumbnailUrl: "https://images.unsplash.com/photo-1573497019236-17f8177b81e8?w=400", mediaType: "photo", album: "welfare" },
-  ]).onConflictDoNothing();
+  // Gallery — intentionally left empty. Real photos are uploaded by
+  // staff through Admin → Gallery; we don't ship stock placeholders.
 
   // ── Constituency hierarchy ──────────────────────────────
   // Real, sourced master data for AC 195 Thiruparankundram. See
