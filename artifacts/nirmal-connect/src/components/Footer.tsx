@@ -116,6 +116,21 @@ export function Footer({ lang }: FooterProps) {
             <span className="text-xs text-gray-500">{lang === "ta" ? "தனியுரிமைக் கொள்கை" : "Privacy Policy"}</span>
           </div>
         </div>
+
+        <div className="mt-4 pt-4 border-t border-gray-800/50 text-center">
+          <p className="text-xs text-gray-500">
+            {lang === "ta" ? "வழங்கியவர்" : "Powered by"}{" "}
+            <a
+              href="https://www.automystics.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:text-primary/80 transition-colors font-medium inline-flex items-center gap-1"
+            >
+              www.automystics.com
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </p>
+        </div>
       </div>
     </footer>
   );
