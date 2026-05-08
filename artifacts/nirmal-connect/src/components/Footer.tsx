@@ -117,17 +117,17 @@ export function Footer({ lang }: FooterProps) {
           </div>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-gray-800/50 text-center">
-          <p className="text-xs text-gray-500">
+        <div className="mt-6 pt-6 border-t border-gray-800/50 text-center">
+          <p className="text-base md:text-lg text-gray-400">
             {lang === "ta" ? "வழங்கியவர்" : "Powered by"}{" "}
             <a
               href="https://www.automystics.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:text-primary/80 transition-colors font-medium inline-flex items-center gap-1"
+              className="text-primary hover:text-primary/80 transition-colors font-semibold inline-flex items-center gap-1.5"
             >
               www.automystics.com
-              <ExternalLink className="w-3 h-3" />
+              <ExternalLink className="w-4 h-4" />
             </a>
           </p>
         </div>
