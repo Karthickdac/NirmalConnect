@@ -150,6 +150,24 @@ router.get("/home-hero", async (_req, res) => {
   }
 });
 
+// Public endpoint returning the leader_config JSON blob — used by the
+// LeaderConfigContext so every component gets name, constituency, party,
+// contact info etc. from the DB without hard-coding them.
+router.get("/leader-config", async (_req, res) => {
+  try {
+    const [row] = await db
+      .select()
+      .from(siteConfigTable)
+      .where(eq(siteConfigTable.key, "leader_config"))
+      .limit(1);
+    if (!row) { res.json(null); return; }
+    res.json(JSON.parse(row.value));
+  } catch (err) {
+    console.error("[site] leader-config get:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Mirrors GET /api/admin/about (which is staff-only) so the public
 // About page can render live CMS content without exposing admin routes.
 router.get("/about", async (_req, res) => {

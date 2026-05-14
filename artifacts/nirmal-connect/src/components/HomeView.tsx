@@ -10,6 +10,41 @@ import type { Language } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
 import { format } from "date-fns";
 import leaderPhoto from "@assets/image_1778085777744.png";
+import { type LeaderConfig, DEFAULT_LEADER_CONFIG } from "@/lib/LeaderConfigContext";
+
+export function createDefaultHomeHero(lc: LeaderConfig): HomeHeroConfig {
+  return {
+    badge: `${lc.partyShort} – ${lc.partyEn}`,
+    badgeTa: lc.partyTa,
+    headline: lc.nameEn,
+    headlineTa: lc.nameTa,
+    subheadline: `${lc.titleEn} – ${lc.constituencyEn} Constituency, Tamil Nadu`,
+    subheadlineTa: `${lc.titleTa} – ${lc.constituencyTa} தொகுதி`,
+    description: `A leader dedicated to the people of ${lc.constituencyEn} — committed to development, transparency, and citizen welfare.`,
+    descriptionTa: `மக்களுக்காக பாடுபடும் தலைவர். வளர்ச்சியில் உறுதிபூண்ட ${lc.constituencyTa}யின் குரல்.`,
+    primaryCtaLabel: "Submit Grievance",
+    primaryCtaLabelTa: "புகார் அளிக்க",
+    primaryCtaHref: "/grievance",
+    secondaryCtaLabel: "Join the Movement",
+    secondaryCtaLabelTa: "இயக்கத்தில் இணையுங்கள்",
+    secondaryCtaHref: "/volunteer",
+    photoUrl: lc.photoUrl || "",
+    statsHeadline: "Constituency Development at a Glance",
+    statsHeadlineTa: "தொகுதி வளர்ச்சி புள்ளிவிவரம்",
+    statsSubheadline: `Key development milestones in ${lc.constituencyEn}`,
+    statsSubheadlineTa: `${lc.constituencyTa}தில் நடந்த வளர்ச்சி பணிகள்`,
+    grievanceCtaTitle: "Your Voice Matters",
+    grievanceCtaTitleTa: "உங்கள் குரல் முக்கியம்",
+    grievanceCtaBody: "Report issues in your area directly to the office. Submit your grievance and track its resolution in real time.",
+    grievanceCtaBodyTa: "உங்கள் பகுதியில் உள்ள பிரச்சினைகளை நேரடியாக தெரிவியுங்கள். புகார் அனுப்பி நிலையை கண்காணியுங்கள்.",
+    volunteerCtaTitle: "Join the Movement",
+    volunteerCtaTitleTa: "இயக்கத்தில் இணையுங்கள்",
+    volunteerCtaBody: `Be part of positive change in ${lc.constituencyEn}. Register as a volunteer and contribute to our community.`,
+    volunteerCtaBodyTa: `${lc.constituencyTa}யின் வளர்ச்சிக்கு பங்காற்றுங்கள். தன்னார்வலராக பதிவு செய்யுங்கள்.`,
+  };
+}
+
+export const DEFAULT_HOME_HERO: HomeHeroConfig = createDefaultHomeHero(DEFAULT_LEADER_CONFIG);
 
 export interface HomeHeroConfig {
   badge: string;
@@ -41,41 +76,6 @@ export interface HomeHeroConfig {
   volunteerCtaBodyTa: string;
 }
 
-export const DEFAULT_HOME_HERO: HomeHeroConfig = {
-  badge: "TVK – Tamilaga Vettri Kazhagam",
-  badgeTa: "தமிழக வெற்றி கழகம்",
-  headline: "C.T.R. Nirmal Kumar",
-  headlineTa: "சி.டி.ஆர். நிர்மல் குமார்",
-  subheadline: "Minister – Tirupparankundram Constituency, Tamil Nadu",
-  subheadlineTa: "அமைச்சர் – திருப்பரங்குன்றம் தொகுதி",
-  description:
-    "A leader dedicated to the people of Tirupparankundram — committed to development, transparency, and citizen welfare.",
-  descriptionTa:
-    "மக்களுக்காக பாடுபடும் தலைவர். வளர்ச்சியில் உறுதிபூண்ட திருப்பரங்குன்றத்தின் குரல்.",
-  primaryCtaLabel: "Submit Grievance",
-  primaryCtaLabelTa: "புகார் அளிக்க",
-  primaryCtaHref: "/grievance",
-  secondaryCtaLabel: "Join the Movement",
-  secondaryCtaLabelTa: "இயக்கத்தில் இணையுங்கள்",
-  secondaryCtaHref: "/volunteer",
-  photoUrl: "",
-  statsHeadline: "Constituency Development at a Glance",
-  statsHeadlineTa: "தொகுதி வளர்ச்சி புள்ளிவிவரம்",
-  statsSubheadline: "Key development milestones in Tirupparankundram",
-  statsSubheadlineTa: "திருப்பரங்குன்றத்தில் நடந்த வளர்ச்சி பணிகள்",
-  grievanceCtaTitle: "Your Voice Matters",
-  grievanceCtaTitleTa: "உங்கள் குரல் முக்கியம்",
-  grievanceCtaBody:
-    "Report issues in your area directly to the MLA's office. Submit your grievance and track its resolution in real time.",
-  grievanceCtaBodyTa:
-    "உங்கள் பகுதியில் உள்ள பிரச்சினைகளை நேரடியாக தெரிவியுங்கள். புகார் அனுப்பி நிலையை கண்காணியுங்கள்.",
-  volunteerCtaTitle: "Join the Movement",
-  volunteerCtaTitleTa: "இயக்கத்தில் இணையுங்கள்",
-  volunteerCtaBody:
-    "Be part of positive change in Tirupparankundram. Register as a volunteer and contribute to our community.",
-  volunteerCtaBodyTa:
-    "திருப்பரங்குன்றத்தின் வளர்ச்சிக்கு பங்காற்றுங்கள். தன்னார்வலராக பதிவு செய்யுங்கள்.",
-};
 
 export interface HomeStats {
   roadsBuiltKm: number;

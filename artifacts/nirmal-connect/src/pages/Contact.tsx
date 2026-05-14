@@ -2,21 +2,29 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Phone, Mail, MapPin, Clock, MessageSquare } from "lucide-react";
 import type { Language } from "@/lib/i18n";
+import { useLeaderConfig } from "@/lib/LeaderConfigContext";
 
 interface ContactProps { lang: Language; }
 
 export default function Contact({ lang }: ContactProps) {
+  const lc = useLeaderConfig();
+  const num = lc.whatsapp.replace(/\D/g, "");
+
   const contacts = [
-    { icon: Phone, label: lang === "ta" ? "தொலைபேசி" : "Phone", value: "+91 (Contact Office)", href: "tel:+91" },
-    { icon: Mail, label: "Email", value: "office@nirmalconnect.in", href: "mailto:office@nirmalconnect.in" },
-    { icon: MessageSquare, label: "WhatsApp", value: "+91 98765 43210", href: "https://wa.me/919876543210" },
+    { icon: Phone, label: lang === "ta" ? "தொலைபேசி" : "Phone", value: lc.phone, href: `tel:${lc.phone}` },
+    { icon: Mail, label: "Email", value: lc.email, href: `mailto:${lc.email}` },
+    { icon: MessageSquare, label: "WhatsApp", value: `+${num}`, href: `https://wa.me/${num}` },
   ];
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
       <SectionHeader
         title={lang === "ta" ? "தொடர்பு கொள்ளுங்கள்" : "Contact the Office"}
-        subtitle={lang === "ta" ? "எங்களை தொடர்பு கொள்ள பல்வேறு வழிகள் உள்ளன" : "Multiple ways to reach MLA Nirmal Kumar's constituency office"}
+        subtitle={
+          lang === "ta"
+            ? "எங்களை தொடர்பு கொள்ள பல்வேறு வழிகள் உள்ளன"
+            : `Multiple ways to reach ${lc.nameEn}'s constituency office`
+        }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
@@ -28,9 +36,7 @@ export default function Contact({ lang }: ContactProps) {
                 <div>
                   <p className="font-semibold text-sm mb-1">{lang === "ta" ? "அலுவலக முகவரி" : "Office Address"}</p>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    MLA Office, Tirupparankundram,<br />
-                    Madurai – 625005,<br />
-                    Tamil Nadu, India
+                    {lang === "ta" ? lc.addressTa : lc.addressEn}
                   </p>
                 </div>
               </div>
@@ -38,10 +44,8 @@ export default function Contact({ lang }: ContactProps) {
                 <Clock className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="font-semibold text-sm mb-1">{lang === "ta" ? "அலுவலக நேரம்" : "Office Hours"}</p>
-                  <p className="text-muted-foreground text-sm">
-                    {lang === "ta"
-                      ? "திங்கள் – சனி: காலை 9:00 – மாலை 6:00\nஞாயிறு: மூடல்"
-                      : "Monday – Saturday: 9:00 AM – 6:00 PM\nSunday: Closed"}
+                  <p className="text-muted-foreground text-sm whitespace-pre-line">
+                    {lang === "ta" ? lc.officeHoursTa : lc.officeHoursEn}
                   </p>
                 </div>
               </div>
@@ -65,13 +69,12 @@ export default function Contact({ lang }: ContactProps) {
           ))}
         </div>
 
-        {/* Map placeholder + info */}
         <div className="space-y-5">
           <div className="rounded-xl overflow-hidden border border-border h-64 bg-muted flex items-center justify-center">
             <div className="text-center text-muted-foreground">
               <MapPin className="w-10 h-10 mx-auto mb-2 text-primary" />
-              <p className="font-medium">Tirupparankundram</p>
-              <p className="text-sm">Madurai, Tamil Nadu</p>
+              <p className="font-medium">{lang === "ta" ? lc.constituencyTa : lc.constituencyEn}</p>
+              <p className="text-sm">{lang === "ta" ? lc.districtTa : lc.districtEn}, Tamil Nadu</p>
             </div>
           </div>
 
@@ -85,7 +88,7 @@ export default function Contact({ lang }: ContactProps) {
                 {lang === "ta" ? "உடனடி மறுமொழிக்கு WhatsApp பயன்படுத்துங்கள்" : "For quick responses, reach us on WhatsApp"}
               </p>
               <a
-                href="https://wa.me/919876543210?text=Hello%2C%20I%20need%20assistance"
+                href={`https://wa.me/${num}?text=Hello%2C%20I%20need%20assistance`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-block bg-[#25D366] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#20b558] transition-colors text-sm"

@@ -8,7 +8,8 @@ import {
   useListGallery,
 } from "@workspace/api-client-react";
 import type { Language } from "@/lib/i18n";
-import { HomeView, DEFAULT_HOME_HERO, type HomeHeroConfig } from "@/components/HomeView";
+import { HomeView, createDefaultHomeHero, type HomeHeroConfig } from "@/components/HomeView";
+import { useLeaderConfig } from "@/lib/LeaderConfigContext";
 
 const BASE = import.meta.env.VITE_API_URL ?? "/api";
 
@@ -17,6 +18,7 @@ interface HomeProps {
 }
 
 export default function Home({ lang }: HomeProps) {
+  const leaderConfig = useLeaderConfig();
   const { data: summary } = useGetSiteSummary();
   const { data: stats } = useGetConstituencyStats();
   const { data: featuredNews } = useGetFeaturedNews({ limit: 4 });
@@ -24,17 +26,17 @@ export default function Home({ lang }: HomeProps) {
   const { data: recentActivities } = useGetRecentActivities({ limit: 5 });
   const { data: gallery } = useListGallery({ limit: 8, type: "photo" });
 
-  // Hero copy is editable via the Home admin (CMS) and stored under the
-  // "home_hero" site_config key. Falls back to baked-in defaults.
-  const [hero, setHero] = useState<HomeHeroConfig>(DEFAULT_HOME_HERO);
+  // Hero copy: starts from leader config defaults, then DB CMS overrides any field.
+  const [dbHeroOverrides, setDbHeroOverrides] = useState<Partial<HomeHeroConfig>>({});
   useEffect(() => {
     fetch(`${BASE}/home-hero`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d: Partial<HomeHeroConfig> | null) => {
-        if (d && typeof d === "object") setHero((prev) => ({ ...prev, ...d }));
+        if (d && typeof d === "object") setDbHeroOverrides(d);
       })
       .catch(() => { /* keep defaults */ });
   }, []);
+  const hero: HomeHeroConfig = { ...createDefaultHomeHero(leaderConfig), ...dbHeroOverrides };
 
   return (
     <HomeView

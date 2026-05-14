@@ -9,10 +9,12 @@ import { useListActivities } from "@workspace/api-client-react";
 import type { Language } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
 import { format } from "date-fns";
+import { useLeaderConfig } from "@/lib/LeaderConfigContext";
 
 interface ActivitiesProps { lang: Language; }
 
 export default function Activities({ lang }: ActivitiesProps) {
+  const lc = useLeaderConfig();
   const [page, setPage] = useState(1);
   const { data, isLoading } = useListActivities({ page, limit: 10 });
 
@@ -20,7 +22,7 @@ export default function Activities({ lang }: ActivitiesProps) {
     <div className="max-w-4xl mx-auto px-4 py-12">
       <SectionHeader
         title={lang === "ta" ? "தினசரி நடவடிக்கைகள்" : "Daily Activities"}
-        subtitle={lang === "ta" ? "அமைச்சர் நிர்மல் குமார் அவர்களின் தினசரி பொது நடவடிக்கைகள்" : "A log of Minister Nirmal Kumar's daily public activities and engagements"}
+        subtitle={lang === "ta" ? `${lc.nameTa} அவர்களின் தினசரி பொது நடவடிக்கைகள்` : `A log of ${lc.nameEn}'s daily public activities and engagements`}
       />
 
       {isLoading ? (

@@ -12,6 +12,7 @@ import {
   pincodesTable,
   pincodeWardsTable,
   pollingStationsTable,
+  siteConfigTable,
 } from "./schema/index.js";
 import { createHmac, randomBytes } from "crypto";
 import { eq, sql } from "drizzle-orm";
@@ -147,8 +148,62 @@ async function importPollingStations() {
   console.log(`[seed] polling stations imported: ${inserted} booths, ${distinctPanchayats.size} distinct panchayats`);
 }
 
+// ── Tenant leader configurations ─────────────────────────────────────
+// Add a new entry here for each new minister / deployment.
+// TENANT env var selects which config to seed (default: "nirmal").
+const TENANT_CONFIGS: Record<string, object> = {
+  nirmal: {
+    nameEn: "C.T.R. Nirmal Kumar",
+    nameTa: "சி.டி.ஆர். நிர்மல் குமார்",
+    titleEn: "Minister",
+    titleTa: "அமைச்சர்",
+    constituencyEn: "Tirupparankundram",
+    constituencyTa: "திருப்பரங்குன்றம்",
+    partyEn: "Tamilaga Vettri Kazhagam (TVK)",
+    partyTa: "தமிழக வெற்றி கழகம் (TVK)",
+    partyShort: "TVK",
+    phone: "+91 (Contact Office)",
+    whatsapp: "919876543210",
+    email: "office@nirmalconnect.in",
+    addressEn: "Minister's Office, Tirupparankundram, Madurai – 625005, Tamil Nadu",
+    addressTa: "அமைச்சர் அலுவலகம், திருப்பரங்குன்றம், மதுரை – 625005, தமிழ்நாடு",
+    officeHoursEn: "Monday – Saturday: 9:00 AM – 6:00 PM",
+    officeHoursTa: "திங்கள் – சனி: காலை 9:00 – மாலை 6:00",
+    photoUrl: "",
+    siteTitle: "Nirmal Connect",
+    logoInitial: "N",
+    districtEn: "Madurai",
+    districtTa: "மதுரை",
+  },
+  tkprabhu: {
+    nameEn: "Dr. T.K. Prabhu",
+    nameTa: "டாக்டர் டி.கே. பிரபு",
+    titleEn: "Minister",
+    titleTa: "அமைச்சர்",
+    constituencyEn: "Karaikudi",
+    constituencyTa: "காரைக்குடி",
+    partyEn: "Tamilaga Vettri Kazhagam (TVK)",
+    partyTa: "தமிழக வெற்றி கழகம் (TVK)",
+    partyShort: "TVK",
+    phone: "+91 (Contact Office)",
+    whatsapp: "919876543210",
+    email: "office@tkprabhu.in",
+    addressEn: "Minister's Office, Karaikudi, Sivaganga District – 630001, Tamil Nadu",
+    addressTa: "அமைச்சர் அலுவலகம், காரைக்குடி, சிவகங்கை மாவட்டம் – 630001, தமிழ்நாடு",
+    officeHoursEn: "Monday – Saturday: 9:00 AM – 6:00 PM",
+    officeHoursTa: "திங்கள் – சனி: காலை 9:00 – மாலை 6:00",
+    photoUrl: "",
+    siteTitle: "TK Prabhu Connect",
+    logoInitial: "T",
+    districtEn: "Sivaganga",
+    districtTa: "சிவகங்கை",
+  },
+};
+
 async function seed() {
-  console.log("Seeding database...");
+  const TENANT = process.env.TENANT ?? "nirmal";
+  const leaderCfg = TENANT_CONFIGS[TENANT] ?? TENANT_CONFIGS["nirmal"];
+  console.log(`Seeding database for tenant: ${TENANT}`);
 
   // Users
   await db.insert(usersTable).values([
@@ -160,6 +215,16 @@ async function seed() {
       isActive: "true",
     },
   ]).onConflictDoNothing();
+
+  // Leader config — upsert so re-running with a different TENANT updates the live value.
+  await db.insert(siteConfigTable).values({
+    key: "leader_config",
+    value: JSON.stringify(leaderCfg),
+  }).onConflictDoUpdate({
+    target: siteConfigTable.key,
+    set: { value: JSON.stringify(leaderCfg), updatedAt: new Date() },
+  });
+  console.log(`[seed] leader_config upserted for tenant: ${TENANT}`);
 
   // Constituency Stats
   await db.insert(constituencyStatsTable).values([

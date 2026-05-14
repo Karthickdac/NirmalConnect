@@ -11,12 +11,14 @@ import { useListNews } from "@workspace/api-client-react";
 import type { Language } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
 import { format } from "date-fns";
+import { useLeaderConfig } from "@/lib/LeaderConfigContext";
 
 interface NewsProps { lang: Language; }
 
 const CATEGORIES = ["All", "General", "Development", "Welfare", "Event", "Announcement"];
 
 export default function News({ lang }: NewsProps) {
+  const lc = useLeaderConfig();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const { data, isLoading } = useListNews({ page, limit: 12 });
@@ -30,7 +32,7 @@ export default function News({ lang }: NewsProps) {
     <section className="max-w-7xl mx-auto px-4 py-12">
       <SectionHeader
         title={lang === "ta" ? "செய்திகள் & அறிவிப்புகள்" : "News & Announcements"}
-        subtitle={lang === "ta" ? "சமீபத்திய செய்திகள் மற்றும் அறிவிப்புகளை இங்கே காணலாம்" : "Stay informed with the latest news and announcements from Minister Nirmal Kumar's office"}
+        subtitle={lang === "ta" ? "சமீபத்திய செய்திகள் மற்றும் அறிவிப்புகளை இங்கே காணலாம்" : `Stay informed with the latest news and announcements from ${lc.nameEn}'s office`}
       />
 
       <div className="mb-6 max-w-md">

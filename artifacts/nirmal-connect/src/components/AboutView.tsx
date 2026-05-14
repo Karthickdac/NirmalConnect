@@ -7,6 +7,43 @@ import {
 } from "lucide-react";
 import type { Language } from "@/lib/i18n";
 import leaderPhoto from "@assets/image_1778085777744.png";
+import { type LeaderConfig, DEFAULT_LEADER_CONFIG } from "@/lib/LeaderConfigContext";
+
+export function createDefaultAboutConfig(lc: LeaderConfig): AboutConfig {
+  return {
+    name: lc.nameEn,
+    nameTa: lc.nameTa,
+    designation: lc.titleEn,
+    designationTa: lc.titleTa,
+    constituency: lc.constituencyEn,
+    constituencyTa: lc.constituencyTa,
+    party: lc.partyEn,
+    partyTa: lc.partyTa,
+    photoUrl: lc.photoUrl || "",
+    bioBrief: `Hon. ${lc.nameEn} serves as ${lc.titleEn} for the ${lc.constituencyEn} constituency under the ${lc.partyEn}.`,
+    bioBriefTa: `${lc.nameTa} அவர்கள் ${lc.constituencyTa} தொகுதியின் ${lc.titleTa}ராக திகழ்கிறார்.`,
+    bioFull: `A dedicated public servant committed to the holistic development of ${lc.constituencyEn}, known for a ground-level approach and direct engagement with citizens. Significant strides have been made in infrastructure development, educational improvement, and healthcare access.`,
+    bioFullTa: `மக்களுடன் நேரடியாக தொடர்பு வைத்துக்கொண்டு, அவர்களின் பிரச்சினைகளை உடனடியாக தீர்க்கும் இவர், ${lc.constituencyTa}யின் உள்கட்டமைப்பு வளர்ச்சி, கல்வி மேம்பாடு, சுகாதார சேவைகளில் குறிப்பிடத்தக்க பங்காற்றியுள்ளார்.`,
+    education: "",
+    born: "",
+    phone: lc.phone,
+    email: lc.email,
+    officeAddress: lc.addressEn,
+    officeAddressTa: lc.addressTa,
+    facebook: "",
+    twitter: "",
+    instagram: "",
+    youtube: "",
+    highlights: [
+      { title: "Roads Built", titleTa: "சாலைகள்", value: "120+ km", icon: "Road" },
+      { title: "Schools Upgraded", titleTa: "பள்ளிகள்", value: "45+", icon: "School" },
+      { title: "Water Projects", titleTa: "நீர் திட்டங்கள்", value: "30+", icon: "Droplets" },
+      { title: "Jobs Created", titleTa: "வேலைவாய்ப்பு", value: "5000+", icon: "Briefcase" },
+    ],
+  };
+}
+
+export const DEFAULT_ABOUT_CONFIG: AboutConfig = createDefaultAboutConfig(DEFAULT_LEADER_CONFIG);
 
 export interface AboutConfig {
   name: string;
@@ -35,37 +72,6 @@ export interface AboutConfig {
   highlights: { title: string; titleTa: string; value: string; icon: string }[];
 }
 
-export const DEFAULT_ABOUT_CONFIG: AboutConfig = {
-  name: "C.T.R. Nirmal Kumar",
-  nameTa: "சி.டி.ஆர். நிர்மல் குமார்",
-  designation: "Minister",
-  designationTa: "அமைச்சர்",
-  constituency: "Tirupparankundram",
-  constituencyTa: "திருப்பரங்குன்றம்",
-  party: "Tamilaga Vettri Kazhagam (TVK)",
-  partyTa: "தமிழக வெற்றி கழகம்",
-  photoUrl: "",
-  bioBrief: "Hon. C.T.R. Nirmal Kumar serves as Minister for the Tirupparankundram constituency under the Tamilaga Vettri Kazhagam (TVK) party.",
-  bioBriefTa: "சி.டி.ஆர். நிர்மல் குமார் அவர்கள் திருப்பரங்குன்றம் தொகுதியின் அமைச்சராக திகழ்கிறார்.",
-  bioFull: "A dedicated public servant committed to the holistic development of Tirupparankundram, he has been instrumental in bringing transformative change to the constituency. Known for his ground-level approach and direct engagement with citizens, he has made significant strides in infrastructure development, educational improvement, and healthcare access. Under his leadership, the constituency has witnessed unprecedented development in roads, drinking water infrastructure, schools, and primary health centers.",
-  bioFullTa: "மக்களுடன் நேரடியாக தொடர்பு வைத்துக்கொண்டு, அவர்களின் பிரச்சினைகளை உடனடியாக தீர்க்கும் இவர், திருப்பரங்குன்றத்தின் உள்கட்டமைப்பு வளர்ச்சி, கல்வி மேம்பாடு, சுகாதார சேவைகள் ஆகியவற்றில் குறிப்பிடத்தக்க பங்காற்றியுள்ளார்.",
-  education: "",
-  born: "",
-  phone: "+91 98765 43210",
-  email: "mla.tirupparankundram@tn.gov.in",
-  officeAddress: "Minister's Office, Tirupparankundram, Madurai District, Tamil Nadu - 625005",
-  officeAddressTa: "அமைச்சர் அலுவலகம், திருப்பரங்குன்றம், மதுரை மாவட்டம்",
-  facebook: "",
-  twitter: "",
-  instagram: "",
-  youtube: "",
-  highlights: [
-    { title: "Roads Built", titleTa: "சாலைகள்", value: "120+ km", icon: "Road" },
-    { title: "Schools Upgraded", titleTa: "பள்ளிகள்", value: "45+", icon: "School" },
-    { title: "Water Projects", titleTa: "நீர் திட்டங்கள்", value: "30+", icon: "Droplets" },
-    { title: "Jobs Created", titleTa: "வேலைவாய்ப்பு", value: "5000+", icon: "Briefcase" },
-  ],
-};
 
 export interface AboutViewProps {
   config: AboutConfig;

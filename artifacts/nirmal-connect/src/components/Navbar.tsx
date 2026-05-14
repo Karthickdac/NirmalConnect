@@ -4,6 +4,7 @@ import { Menu, X, Sun, Moon, Globe, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Language } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
+import { useLeaderConfig } from "@/lib/LeaderConfigContext";
 
 interface NavbarProps {
   lang: Language;
@@ -29,6 +30,7 @@ export function Navbar({ lang, setLang, darkMode, setDarkMode }: NavbarProps) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [location] = useLocation();
+  const lc = useLeaderConfig();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -40,8 +42,6 @@ export function Navbar({ lang, setLang, darkMode, setDarkMode }: NavbarProps) {
     setOpen(false);
   }, [location]);
 
-  // Lock body scroll while the mobile drawer is open so the page behind
-  // doesn't ghost-scroll under it.
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -59,42 +59,39 @@ export function Navbar({ lang, setLang, darkMode, setDarkMode }: NavbarProps) {
           : "bg-white dark:bg-gray-950"
       }`}
     >
-      {/* Top bar — hidden on mobile to keep the fixed header compact;
-          the same identity is reinforced inside the mobile drawer. */}
       <div className="hidden md:block bg-primary text-primary-foreground">
         <div className="max-w-7xl mx-auto px-4 py-1 flex items-center justify-between text-xs">
           <span className="font-medium">
-            {lang === "ta" ? "தமிழக வெற்றி கழகம் (TVK)" : "Tamilaga Vettri Kazhagam (TVK)"}
+            {lang === "ta" ? lc.partyTa : lc.partyEn}
           </span>
           <span>
             {lang === "ta"
-              ? "திருப்பரங்குன்றம் தொகுதி சட்டமன்ற உறுப்பினர்"
-              : "MLA – Tirupparankundram Constituency, Tamil Nadu"}
+              ? `${lc.titleTa} – ${lc.constituencyTa} தொகுதி, தமிழ்நாடு`
+              : `${lc.titleEn} – ${lc.constituencyEn} Constituency, Tamil Nadu`}
           </span>
         </div>
       </div>
 
-      {/* Main nav */}
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-14 md:h-16">
-          {/* Logo */}
           <Link href="/" data-testid="logo-link">
             <div className="flex items-center gap-2.5 md:gap-3 cursor-pointer">
               <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-base md:text-lg shadow-sm">
-                N
+                {lc.logoInitial}
               </div>
               <div className="leading-tight">
                 <p className="font-bold text-[13px] md:text-sm text-foreground">
-                  {lang === "ta" ? "சி.டி.ஆர். நிர்மல் குமார்" : "C.T.R. Nirmal Kumar"}
+                  {lang === "ta" ? lc.nameTa : lc.nameEn}
                 </p>
                 <p className="text-[10px] md:text-xs text-muted-foreground">
-                  {lang === "ta" ? "சட்டமன்ற உறுப்பினர்" : "MLA, Tirupparankundram"}
+                  {lang === "ta"
+                    ? `${lc.titleTa}, ${lc.constituencyTa}`
+                    : `${lc.titleEn}, ${lc.constituencyEn}`}
                 </p>
               </div>
             </div>
           </Link>
 
-          {/* Desktop nav */}
           <nav className="hidden xl:flex items-center gap-1">
             {navLinks.slice(0, 7).map((link) => (
               <Link key={link.href} href={link.href}>
@@ -112,9 +109,7 @@ export function Navbar({ lang, setLang, darkMode, setDarkMode }: NavbarProps) {
             ))}
           </nav>
 
-          {/* Right actions */}
           <div className="flex items-center gap-1 md:gap-2">
-            {/* Lang toggle — compact on mobile */}
             <button
               data-testid="lang-toggle"
               onClick={() => setLang(lang === "en" ? "ta" : "en")}
@@ -125,7 +120,6 @@ export function Navbar({ lang, setLang, darkMode, setDarkMode }: NavbarProps) {
               <span>{lang === "en" ? "தமிழ்" : "EN"}</span>
             </button>
 
-            {/* Theme toggle */}
             <button
               data-testid="theme-toggle"
               onClick={() => setDarkMode(!darkMode)}
@@ -135,7 +129,6 @@ export function Navbar({ lang, setLang, darkMode, setDarkMode }: NavbarProps) {
               {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
-            {/* Grievance CTA */}
             <Link href="/grievance">
               <Button
                 data-testid="nav-grievance-cta"
@@ -146,7 +139,6 @@ export function Navbar({ lang, setLang, darkMode, setDarkMode }: NavbarProps) {
               </Button>
             </Link>
 
-            {/* Mobile menu */}
             <button
               data-testid="mobile-menu-toggle"
               onClick={() => setOpen(!open)}
@@ -161,9 +153,6 @@ export function Navbar({ lang, setLang, darkMode, setDarkMode }: NavbarProps) {
       </div>
     </header>
 
-    {/* Mobile drawer — full-screen overlay with a left-side panel.
-        Lives outside <header> so it can be a true fixed overlay above
-        all page content while the header remains fixed at top. */}
     <div
       data-testid="mobile-drawer"
       className={`xl:hidden fixed inset-0 z-[60] transition-opacity duration-200 ${
@@ -171,12 +160,10 @@ export function Navbar({ lang, setLang, darkMode, setDarkMode }: NavbarProps) {
       }`}
       aria-hidden={!open}
     >
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={() => setOpen(false)}
       />
-      {/* Sliding panel */}
       <aside
         className={`absolute top-0 right-0 h-full w-[86%] max-w-sm bg-background shadow-2xl flex flex-col transform transition-transform duration-300 ${
           open ? "translate-x-0" : "translate-x-full"
@@ -185,18 +172,17 @@ export function Navbar({ lang, setLang, darkMode, setDarkMode }: NavbarProps) {
         aria-modal="true"
         aria-label="Site navigation"
       >
-        {/* Drawer header */}
         <div className="bg-primary text-primary-foreground px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-white text-primary flex items-center justify-center font-bold">
-              N
+              {lc.logoInitial}
             </div>
             <div className="leading-tight">
               <p className="font-bold text-sm">
-                {lang === "ta" ? "சி.டி.ஆர். நிர்மல் குமார்" : "C.T.R. Nirmal Kumar"}
+                {lang === "ta" ? lc.nameTa : lc.nameEn}
               </p>
               <p className="text-[11px] opacity-90">
-                {lang === "ta" ? "தமிழக வெற்றி கழகம்" : "Tamilaga Vettri Kazhagam"}
+                {lang === "ta" ? lc.partyTa : lc.partyEn}
               </p>
             </div>
           </div>
@@ -209,7 +195,6 @@ export function Navbar({ lang, setLang, darkMode, setDarkMode }: NavbarProps) {
           </button>
         </div>
 
-        {/* Links */}
         <nav className="flex-1 overflow-y-auto px-2 py-3">
           <ul className="space-y-0.5">
             {navLinks.map((link) => {
@@ -235,7 +220,6 @@ export function Navbar({ lang, setLang, darkMode, setDarkMode }: NavbarProps) {
           </ul>
         </nav>
 
-        {/* Drawer footer CTA */}
         <div
           className="px-4 pt-3 pb-4 border-t border-border bg-muted/30"
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
@@ -251,8 +235,8 @@ export function Navbar({ lang, setLang, darkMode, setDarkMode }: NavbarProps) {
           </Link>
           <p className="text-[11px] text-muted-foreground text-center mt-2">
             {lang === "ta"
-              ? "திருப்பரங்குன்றம் தொகுதி – மதுரை"
-              : "Tirupparankundram Constituency – Madurai"}
+              ? `${lc.constituencyTa} தொகுதி – ${lc.districtTa}`
+              : `${lc.constituencyEn} Constituency – ${lc.districtEn}`}
           </p>
         </div>
       </aside>

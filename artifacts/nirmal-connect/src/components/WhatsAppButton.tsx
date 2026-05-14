@@ -1,9 +1,14 @@
 import { MessageCircle } from "lucide-react";
+import { useLeaderConfig } from "@/lib/LeaderConfigContext";
 
 export function WhatsAppButton() {
+  const lc = useLeaderConfig();
+  const num = lc.whatsapp.replace(/\D/g, "");
+  const href = `https://wa.me/${num}?text=Hello%2C%20I%20need%20assistance%20from%20the%20office%20of%20${encodeURIComponent(lc.nameEn)}`;
+
   return (
     <a
-      href="https://wa.me/919876543210?text=Hello%2C%20I%20need%20assistance%20from%20the%20office%20of%20MLA%20C.T.R.%20Nirmal%20Kumar"
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       data-testid="whatsapp-button"
