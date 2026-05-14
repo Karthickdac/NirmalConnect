@@ -398,6 +398,58 @@ async function seed() {
 
   console.log("Constituency hierarchy seeded.");
 
+  // Gallery
+  await db.insert(galleryTable).values([
+    {
+      title: "திருப்பரங்குன்றம் சாலை திறப்பு விழா",
+      mediaUrl: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800",
+      thumbnailUrl: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400",
+      mediaType: "photo",
+      album: "Development Works",
+      displayOrder: 1,
+    },
+    {
+      title: "இலவச மருத்துவ முகாம் – திருப்பரங்குன்றம்",
+      mediaUrl: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800",
+      thumbnailUrl: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=400",
+      mediaType: "photo",
+      album: "Welfare",
+      displayOrder: 2,
+    },
+    {
+      title: "பொதுக் கூட்டம் – மக்கள் சந்திப்பு",
+      mediaUrl: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800",
+      thumbnailUrl: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400",
+      mediaType: "photo",
+      album: "Events",
+      displayOrder: 3,
+    },
+    {
+      title: "பள்ளி கட்டிட திறப்பு விழா",
+      mediaUrl: "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=800",
+      thumbnailUrl: "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=400",
+      mediaType: "photo",
+      album: "Development Works",
+      displayOrder: 4,
+    },
+    {
+      title: "இளைஞர் விளையாட்டு போட்டி 2025",
+      mediaUrl: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800",
+      thumbnailUrl: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=400",
+      mediaType: "photo",
+      album: "Events",
+      displayOrder: 5,
+    },
+    {
+      title: "குடிநீர் திட்டம் – தொகுதி வளர்ச்சி",
+      mediaUrl: "https://images.unsplash.com/photo-1548535294-f74c1fb77b97?w=800",
+      thumbnailUrl: "https://images.unsplash.com/photo-1548535294-f74c1fb77b97?w=400",
+      mediaType: "photo",
+      album: "Development Works",
+      displayOrder: 6,
+    },
+  ]).onConflictDoNothing();
+
   // FAQs
   await db.insert(faqsTable).values([
     {
