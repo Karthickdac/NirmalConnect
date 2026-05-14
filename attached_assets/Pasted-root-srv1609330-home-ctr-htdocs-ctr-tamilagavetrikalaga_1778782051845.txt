@@ -1,0 +1,28 @@
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect# ls /home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect/artifacts/nirmal-connect/dist/public/
+apple-touch-icon.png  assets  favicon-32.png  favicon.png  gallery  index.html  opengraph.jpg
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect# ls /etc/nginx/sites-enabled/
+nginx -t
+ctr.tamilagavetrikalagam.com.conf  kuralai.automystics.tech.conf                 mysticshr.automystics.tech.conf   solarnexus.automystics.tech.conf
+default.conf                       kuralai.automystics.tech.conf.bak.1777997518  mysticsinv.automystics.tech.conf  www.automystics.com.conf
+kalvicore.automystics.tech.conf    kuralai.automystics.tech.conf.bak.1778000544  nirmalconnect                     www.fitro360.com.conf
+nginx: [warn] "ssl_stapling" ignored, no OCSP responder URL in the certificate "/etc/nginx/ssl-certificates/ctr.tamilagavetrikalagam.com.crt"
+nginx: [warn] "ssl_stapling" ignored, no OCSP responder URL in the certificate "/etc/nginx/ssl-certificates/kalvicore.automystics.tech.crt"
+nginx: [warn] "ssl_stapling" ignored, no OCSP responder URL in the certificate "/etc/nginx/ssl-certificates/kuralai.automystics.tech.crt"
+nginx: [warn] "ssl_stapling" ignored, no OCSP responder URL in the certificate "/etc/nginx/ssl-certificates/mysticshr.automystics.tech.crt"
+nginx: [warn] "ssl_stapling" ignored, no OCSP responder URL in the certificate "/etc/nginx/ssl-certificates/mysticsinv.automystics.tech.crt"
+nginx: [warn] "ssl_stapling" ignored, no OCSP responder URL in the certificate "/etc/nginx/ssl-certificates/solarnexus.automystics.tech.crt"
+nginx: [warn] "ssl_stapling" ignored, no OCSP responder URL in the certificate "/etc/nginx/ssl-certificates/www.automystics.com.crt"
+nginx: [warn] "ssl_stapling" ignored, no OCSP responder URL in the certificate "/etc/nginx/ssl-certificates/www.automystics.com.crt"
+nginx: [warn] "ssl_stapling" ignored, no OCSP responder URL in the certificate "/etc/nginx/ssl-certificates/www.fitro360.com.crt"
+nginx: [warn] "ssl_stapling" ignored, no OCSP responder URL in the certificate "/etc/nginx/ssl-certificates/www.fitro360.com.crt"
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect# grep -r "ctr.tamilagavetrikalagam.com" /etc/nginx/sites-enabled/
+grep -r "ctr.tamilagavetrikalagam.com" /etc/nginx/sites-available/
+/etc/nginx/sites-enabled/ctr.tamilagavetrikalagam.com.conf:  ssl_certificate_key /etc/nginx/ssl-certificates/ctr.tamilagavetrikalagam.com.key;
+/etc/nginx/sites-enabled/ctr.tamilagavetrikalagam.com.conf:  ssl_certificate /etc/nginx/ssl-certificates/ctr.tamilagavetrikalagam.com.crt;
+/etc/nginx/sites-enabled/ctr.tamilagavetrikalagam.com.conf:  server_name ctr.tamilagavetrikalagam.com;
+/etc/nginx/sites-enabled/ctr.tamilagavetrikalagam.com.conf:  root /home/ctr/htdocs/ctr.tamilagavetrikalagam.com;
+/etc/nginx/sites-available/nirmalconnect:    server_name ctr.tamilagavetrikalagam.com;
+/etc/nginx/sites-available/nirmalconnect:    root /home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect/artifacts/nirmal-connect/dist/public;
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect# 
