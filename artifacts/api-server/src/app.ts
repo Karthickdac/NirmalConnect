@@ -47,6 +47,7 @@ app.use(express.urlencoded({ extended: true }));
 // (which only routes /api → this service) can still reach files via the
 // browser.
 const uploadsRoot = path.resolve(process.cwd(), "uploads");
+const attachedAssetsRoot = path.resolve(process.cwd(), "..", "..", "attached_assets");
 const ADMIN_FILENAME_RE = /^[A-Za-z0-9._-]+$/;
 
 async function serveAdminFromBucket(filename: string, res: Response): Promise<boolean> {
@@ -90,6 +91,11 @@ app.use("/uploads", uploadsStatic);
 app.get("/uploads/admin/:filename", adminBucketHandler);
 app.use("/api/uploads", uploadsStatic);
 app.get("/api/uploads/admin/:filename", adminBucketHandler);
+
+// Serve project attached_assets at /media and /api/media
+const mediaStatic = express.static(attachedAssetsRoot, { dotfiles: "deny" });
+app.use("/media", mediaStatic);
+app.use("/api/media", mediaStatic);
 
 app.use("/api", router);
 
