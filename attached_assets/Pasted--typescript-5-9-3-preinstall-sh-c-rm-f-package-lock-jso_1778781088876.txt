@@ -1,0 +1,54 @@
++ typescript 5.9.3
+
+. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+│ Use pnpm instead
+└─ Failed in 124ms at /home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect
+[ELIFECYCLE] Command failed with exit code 1.
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect# # Enable pg_trgm extension first (run in psql)
+psql $DATABASE_URL -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+
+# Push schema
+cd lib/db && pnpm run push && cd ../..
+
+# Seed admin user and sample data
+npx tsx lib/db/src/seed.ts
+psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: FATAL:  role "root" does not exist
+Scope: all 9 workspace projects
+../.. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+│ Use pnpm instead
+└─ Failed in 48ms at /home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect
+[ELIFECYCLE] Command failed with exit code 1.
+[ERROR] Command failed with exit code 1: pnpm install
+
+pnpm: Command failed with exit code 1: pnpm install
+    at getFinalError (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:28776:14)
+    at makeError (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:31083:21)
+    at getSyncResult (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32927:10)
+    at spawnSubprocessSync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32887:14)
+    at execaCoreSync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32817:23)
+    at callBoundExeca (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35345:23)
+    at boundExeca (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35322:49)
+    at sync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35477:14)
+    at runPnpmCli (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:211260:5)
+    at runDepsStatusCheck (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:212964:7)
+
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect/lib/db/lib/db/src/seed.ts' imported from /home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect/lib/db/
+    at finalizeResolution (node:internal/modules/esm/resolve:275:11)
+    at moduleResolve (node:internal/modules/esm/resolve:861:10)
+    at defaultResolve (node:internal/modules/esm/resolve:985:11)
+    at nextResolve (node:internal/modules/esm/hooks:748:28)
+    at resolveBase (file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/esm/index.mjs?1778781074393:2:3744)
+    at resolveDirectory (file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/esm/index.mjs?1778781074393:2:4243)
+    at resolveTsPaths (file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/esm/index.mjs?1778781074393:2:4984)
+    at resolve (file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/esm/index.mjs?1778781074393:2:5361)
+    at nextResolve (node:internal/modules/esm/hooks:748:28)
+    at Hooks.resolve (node:internal/modules/esm/hooks:240:30) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect/lib/db/lib/db/src/seed.ts'
+}
+
+Node.js v22.22.2
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect/lib/db# 
