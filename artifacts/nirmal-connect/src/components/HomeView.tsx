@@ -46,8 +46,8 @@ export const DEFAULT_HOME_HERO: HomeHeroConfig = {
   badgeTa: "தமிழக வெற்றி கழகம்",
   headline: "C.T.R. Nirmal Kumar",
   headlineTa: "சி.டி.ஆர். நிர்மல் குமார்",
-  subheadline: "MLA – Tirupparankundram Constituency, Tamil Nadu",
-  subheadlineTa: "சட்டமன்ற உறுப்பினர் – திருப்பரங்குன்றம் தொகுதி",
+  subheadline: "Minister – Tirupparankundram Constituency, Tamil Nadu",
+  subheadlineTa: "அமைச்சர் – திருப்பரங்குன்றம் தொகுதி",
   description:
     "A leader dedicated to the people of Tirupparankundram — committed to development, transparency, and citizen welfare.",
   descriptionTa:
@@ -218,7 +218,7 @@ export function HomeView({
                   <img src={photoSrc} alt={tx(config.headline, config.headlineTa)} className="w-full h-full object-cover" />
                 </div>
                 <span className="absolute -bottom-1 -right-1 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
-                  MLA
+                  Minister
                 </span>
               </div>
             </div>

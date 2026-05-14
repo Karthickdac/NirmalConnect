@@ -30,7 +30,7 @@ export default function News({ lang }: NewsProps) {
     <section className="max-w-7xl mx-auto px-4 py-12">
       <SectionHeader
         title={lang === "ta" ? "செய்திகள் & அறிவிப்புகள்" : "News & Announcements"}
-        subtitle={lang === "ta" ? "சமீபத்திய செய்திகள் மற்றும் அறிவிப்புகளை இங்கே காணலாம்" : "Stay informed with the latest news and announcements from MLA Nirmal Kumar's office"}
+        subtitle={lang === "ta" ? "சமீபத்திய செய்திகள் மற்றும் அறிவிப்புகளை இங்கே காணலாம்" : "Stay informed with the latest news and announcements from Minister Nirmal Kumar's office"}
       />
 
       <div className="mb-6 max-w-md">

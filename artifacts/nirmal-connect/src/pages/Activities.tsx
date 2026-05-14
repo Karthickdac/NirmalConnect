@@ -20,7 +20,7 @@ export default function Activities({ lang }: ActivitiesProps) {
     <div className="max-w-4xl mx-auto px-4 py-12">
       <SectionHeader
         title={lang === "ta" ? "தினசரி நடவடிக்கைகள்" : "Daily Activities"}
-        subtitle={lang === "ta" ? "MLA நிர்மல் குமார் அவர்களின் தினசரி பொது நடவடிக்கைகள்" : "A log of MLA Nirmal Kumar's daily public activities and engagements"}
+        subtitle={lang === "ta" ? "அமைச்சர் நிர்மல் குமார் அவர்களின் தினசரி பொது நடவடிக்கைகள்" : "A log of Minister Nirmal Kumar's daily public activities and engagements"}
       />
 
       {isLoading ? (

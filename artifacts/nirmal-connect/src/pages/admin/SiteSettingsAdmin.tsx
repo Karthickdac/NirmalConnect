@@ -9,7 +9,7 @@ interface ContactInfo { phone: string; email: string; address: string; addressTa
 interface EmergencyContacts { primary: string; secondary: string; police: string; ambulance: string; }
 
 const defaultSocial: SocialLinks = { facebook: "", twitter: "", instagram: "", youtube: "", whatsapp: "" };
-const defaultContact: ContactInfo = { phone: "+91 98765 43210", email: "mla.tirupparankundram@tn.gov.in", address: "MLA Office, Tirupparankundram, Madurai District, Tamil Nadu - 625005", addressTa: "சட்டமன்ற உறுப்பினர் அலுவலகம், திருப்பரங்குன்றம்", officeHours: "Mon–Fri 10 AM – 5 PM" };
+const defaultContact: ContactInfo = { phone: "+91 98765 43210", email: "mla.tirupparankundram@tn.gov.in", address: "Minister's Office, Tirupparankundram, Madurai District, Tamil Nadu - 625005", addressTa: "அமைச்சர் அலுவலகம், திருப்பரங்குன்றம்", officeHours: "Mon–Fri 10 AM – 5 PM" };
 const defaultEmergency: EmergencyContacts = { primary: "+91 98765 43210", secondary: "+91 98765 43211", police: "100", ambulance: "108" };
 
 function Field({ label, value, onChange, type = "text", placeholder = "" }: { label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; }) {

@@ -8,7 +8,7 @@ interface SimplePageProps { lang: Language; }
 
 export function Journey({ lang }: SimplePageProps) {
   const milestones = [
-    { year: "2024", title: lang === "ta" ? "சட்டமன்ற உறுப்பினராக தேர்வு" : "Elected as MLA", desc: lang === "ta" ? "திருப்பரங்குன்றம் தொகுதியில் மக்களின் ஆதரவுடன் சட்டமன்றத்திற்கு தேர்வு" : "Won the Tirupparankundram assembly seat with overwhelming public support" },
+    { year: "2024", title: lang === "ta" ? "அமைச்சராக தேர்வு" : "Elected as Minister", desc: lang === "ta" ? "திருப்பரங்குன்றம் தொகுதியில் மக்களின் ஆதரவுடன் சட்டமன்றத்திற்கு தேர்வு" : "Won the Tirupparankundram assembly seat with overwhelming public support" },
     { year: "2023", title: lang === "ta" ? "TVK இல் சேர்வு" : "Joined TVK", desc: lang === "ta" ? "தமிழக வெற்றி கழகத்தில் இணைந்து மக்கள் சேவையில் ஈடுபடுதல்" : "Joined Tamilaga Vettri Kazhagam and began grassroots public service" },
     { year: "2020", title: lang === "ta" ? "சமூக சேவை தொடக்கம்" : "Community Service Begins", desc: lang === "ta" ? "திருப்பரங்குன்றம் பகுதியில் சமூக நலப் பணிகள் தொடங்கினார்" : "Began active community welfare work in Tirupparankundram area" },
     { year: "2015", title: lang === "ta" ? "கல்வி முடிவு" : "Higher Education", desc: lang === "ta" ? "உயர்கல்வி முடித்து சமூக நலப் பணிகளில் கவனம் செலுத்தினார்" : "Completed higher education and focused on public welfare activities" },
@@ -163,7 +163,7 @@ export function Emergency({ lang }: SimplePageProps) {
     { label: lang === "ta" ? "தீயணைப்பு படை" : "Fire & Rescue", number: "101", color: "bg-red-600" },
     { label: lang === "ta" ? "ஆம்புலன்ஸ்" : "Ambulance", number: "102", color: "bg-green-600" },
     { label: lang === "ta" ? "தேசிய அவசர கால சேவை" : "National Emergency", number: "112", color: "bg-yellow-600" },
-    { label: lang === "ta" ? "MLA அலுவலகம்" : "MLA Office", number: "+91 98765 43210", color: "bg-primary" },
+    { label: lang === "ta" ? "அமைச்சர் அலுவலகம்" : "Minister's Office", number: "+91 98765 43210", color: "bg-primary" },
     { label: lang === "ta" ? "மாவட்ட ஆட்சியர் அலுவலகம்" : "District Collector Office", number: "0452-2526526", color: "bg-gray-700" },
   ];
   return (
