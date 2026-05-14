@@ -1,0 +1,86 @@
+Using 'pg' driver for database querying
+[✓] Pulling schema from database...
+[✓] Changes applied
+Seeding database...
+[seed] polling stations imported: 295 booths, 40 distinct panchayats
+Constituency hierarchy seeded.
+Database seeded successfully!
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [nirmal-api](ids: [ 8 ])
+[PM2] [nirmal-api](8) ✓
+┌────┬────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name               │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 6  │ automystics-api    │ default     │ 0.0.0   │ fork    │ 554222   │ 9D     │ 21   │ online    │ 0%       │ 136.3mb  │ root     │ disabled │
+│ 2  │ fitro360           │ default     │ 1.0.0   │ fork    │ 554197   │ 9D     │ 9    │ online    │ 0%       │ 125.0mb  │ root     │ disabled │
+│ 3  │ kalvicore-api      │ default     │ 0.0.0   │ fork    │ 554213   │ 9D     │ 3    │ online    │ 0%       │ 114.0mb  │ root     │ disabled │
+│ 7  │ mystics-api        │ default     │ 0.0.0   │ fork    │ 3094536  │ 8h     │ 43   │ online    │ 0%       │ 327.1mb  │ root     │ disabled │
+│ 8  │ nirmal-api         │ default     │ 0.0.0   │ fork    │ 113169   │ 0s     │ 2    │ online    │ 0%       │ 14.9mb   │ root     │ disabled │
+└────┴────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect# cd /home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect
+
+# Find drizzle-kit location
+find . -name "drizzle-kit" -not -path "*/node_modules/.pnpm/*" 2>/dev/null
+
+# Also check lib/db local node_modules
+ls lib/db/node_modules/.bin/ 2>/dev/null | head -10
+./lib/db/node_modules/drizzle-kit
+./lib/db/node_modules/.bin/drizzle-kit
+bcrypt
+drizzle-kit
+pdf-parse
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect# export DATABASE_URL="postgresql://ctr:ctrtvk2026@localhost:5432/nirmalconnect"
+
+# Push schema
+pnpm --filter @workspace/db run push
+
+# Seed
+pnpm --filter @workspace/db run seed
+$ drizzle-kit push --config ./drizzle.config.ts
+Reading config file '/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect/lib/db/drizzle.config.ts'
+Using 'pg' driver for database querying
+[✓] Pulling schema from database...
+[i] No changes detected
+$ tsx src/seed.ts
+Seeding database...
+[seed] polling stations imported: 295 booths, 40 distinct panchayats
+Constituency hierarchy seeded.
+Database seeded successfully!
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect# npm install -g drizzle-kit tsx
+
+# Push schema from lib/db
+cd lib/db
+drizzle-kit push --config ./drizzle.config.ts
+cd ../..
+
+# Seed from project root
+tsx lib/db/src/seed.ts
+
+# Restart
+pm2 restart nirmal-api
+npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+
+added 16 packages in 2s
+
+2 packages are looking for funding
+  run `npm fund` for details
+Reading config file '/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect/lib/db/drizzle.config.ts'
+Error please install required packages: 'drizzle-orm'
+Seeding database...
+[seed] polling stations imported: 295 booths, 40 distinct panchayats
+Constituency hierarchy seeded.
+Database seeded successfully!
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [nirmal-api](ids: [ 8 ])
+[PM2] [nirmal-api](8) ✓
+┌────┬────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name               │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 6  │ automystics-api    │ default     │ 0.0.0   │ fork    │ 554222   │ 9D     │ 21   │ online    │ 0%       │ 136.3mb  │ root     │ disabled │
+│ 2  │ fitro360           │ default     │ 1.0.0   │ fork    │ 554197   │ 9D     │ 9    │ online    │ 0%       │ 125.0mb  │ root     │ disabled │
+│ 3  │ kalvicore-api      │ default     │ 0.0.0   │ fork    │ 554213   │ 9D     │ 3    │ online    │ 0%       │ 114.0mb  │ root     │ disabled │
+│ 7  │ mystics-api        │ default     │ 0.0.0   │ fork    │ 3094536  │ 8h     │ 43   │ online    │ 0%       │ 327.1mb  │ root     │ disabled │
+│ 8  │ nirmal-api         │ default     │ 0.0.0   │ fork    │ 118266   │ 0s     │ 3    │ online    │ 0%       │ 15.0mb   │ root     │ disabled │
+└────┴────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect# 
