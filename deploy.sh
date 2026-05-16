@@ -7,7 +7,7 @@
 
 set -e
 
-DEPLOY_DIR="/home/tamilagavetrikalagam/htdocs/tkprabhu.tamilagavetrikalagam.com"
+DEPLOY_DIR="/home/tamilagavetrikalagam/htdocs/ctr.tamilagavetrikalagam.com"
 
 echo ""
 echo "╔══════════════════════════════════════════════╗"
@@ -16,6 +16,7 @@ echo "╚═══════════════════════�
 echo ""
 
 cd "$DEPLOY_DIR"
+
 
 # ── 1. Pull latest changes ────────────────────────
 echo "▶ Pulling latest changes..."

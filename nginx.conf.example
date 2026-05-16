@@ -1,17 +1,17 @@
 ## Nginx config for People Connect
-## Domain: tkprabhu.tamilagavetrikalagam.com
+## Domain: ctr.tamilagavetrikalagam.com
 ## Copy to: /etc/nginx/sites-available/people-connect
 ## Then: ln -s /etc/nginx/sites-available/people-connect /etc/nginx/sites-enabled/
 ## Then: nginx -t && systemctl reload nginx
 
 server {
     listen 80;
-    server_name tkprabhu.tamilagavetrikalagam.com www.tkprabhu.tamilagavetrikalagam.com;
+    server_name ctr.tamilagavetrikalagam.com www.ctr.tamilagavetrikalagam.com;
 
     # Redirect HTTP → HTTPS (uncomment after SSL is set up)
     # return 301 https://$host$request_uri;
 
-    root /home/tamilagavetrikalagam/htdocs/tkprabhu.tamilagavetrikalagam.com/artifacts/nirmal-connect/dist;
+    root /home/tamilagavetrikalagam/htdocs/ctr.tamilagavetrikalagam.com/artifacts/nirmal-connect/dist;
     index index.html;
 
     # Gzip compression
@@ -45,15 +45,15 @@ server {
     }
 }
 
-# HTTPS (uncomment after running: certbot --nginx -d tkprabhu.tamilagavetrikalagam.com)
+# HTTPS (uncomment after running: certbot --nginx -d ctr.tamilagavetrikalagam.com)
 # server {
 #     listen 443 ssl http2;
-#     server_name tkprabhu.tamilagavetrikalagam.com www.tkprabhu.tamilagavetrikalagam.com;
-#     ssl_certificate /etc/letsencrypt/live/tkprabhu.tamilagavetrikalagam.com/fullchain.pem;
-#     ssl_certificate_key /etc/letsencrypt/live/tkprabhu.tamilagavetrikalagam.com/privkey.pem;
+#     server_name ctr.tamilagavetrikalagam.com www.ctr.tamilagavetrikalagam.com;
+#     ssl_certificate /etc/letsencrypt/live/ctr.tamilagavetrikalagam.com/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/ctr.tamilagavetrikalagam.com/privkey.pem;
 #     include /etc/letsencrypt/options-ssl-nginx.conf;
 #
-#     root /home/tamilagavetrikalagam/htdocs/tkprabhu.tamilagavetrikalagam.com/artifacts/nirmal-connect/dist;
+#     root /home/tamilagavetrikalagam/htdocs/ctr.tamilagavetrikalagam.com/artifacts/nirmal-connect/dist;
 #     index index.html;
 #
 #     location /api/ {
