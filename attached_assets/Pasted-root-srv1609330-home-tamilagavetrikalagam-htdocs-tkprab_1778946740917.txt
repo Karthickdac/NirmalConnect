@@ -1,0 +1,53 @@
+root@srv1609330:/home/tamilagavetrikalagam/htdocs/tkprabhu.tamilagavetrikalagam.com# cd /home/ctr/htdocs/ctr.tamilagavetrikalagam.com
+git pull origin main
+pnpm install --frozen-lockfile
+pnpm --filter @workspace/api-server run build
+pnpm --filter @workspace/nirmal-connect run build
+pm2 restart all
+fatal: not a git repository (or any of the parent directories): .git
+[ERR_PNPM_NO_PKG_MANIFEST] No package.json found in /home/ctr/htdocs/ctr.tamilagavetrikalagam.com
+[ERR_PNPM_NO_PKG_MANIFEST] No package.json found in /home/ctr/htdocs/ctr.tamilagavetrikalagam.com
+[ERROR] Command failed with exit code 1: pnpm install
+
+pnpm: Command failed with exit code 1: pnpm install
+    at getFinalError (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:28776:14)
+    at makeError (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:31083:21)
+    at getSyncResult (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32927:10)
+    at spawnSubprocessSync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32887:14)
+    at execaCoreSync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32817:23)
+    at callBoundExeca (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35345:23)
+    at boundExeca (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35322:49)
+    at sync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35477:14)
+    at runPnpmCli (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:211260:5)
+    at runDepsStatusCheck (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:212964:7)
+[ERR_PNPM_NO_PKG_MANIFEST] No package.json found in /home/ctr/htdocs/ctr.tamilagavetrikalagam.com
+[ERROR] Command failed with exit code 1: pnpm install
+
+pnpm: Command failed with exit code 1: pnpm install
+    at getFinalError (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:28776:14)
+    at makeError (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:31083:21)
+    at getSyncResult (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32927:10)
+    at spawnSubprocessSync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32887:14)
+    at execaCoreSync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32817:23)
+    at callBoundExeca (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35345:23)
+    at boundExeca (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35322:49)
+    at sync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35477:14)
+    at runPnpmCli (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:211260:5)
+    at runDepsStatusCheck (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:212964:7)
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [all](ids: [ 2, 3, 6, 7, 8 ])
+[PM2] [fitro360](2) ✓
+[PM2] [kalvicore-api](3) ✓
+[PM2] [automystics-api](6) ✓
+[PM2] [mystics-api](7) ✓
+[PM2] [nirmal-api](8) ✓
+┌────┬────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name               │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 6  │ automystics-api    │ default     │ 0.0.0   │ fork    │ 2713226  │ 0s     │ 22   │ online    │ 0%       │ 58.0mb   │ root     │ disabled │
+│ 2  │ fitro360           │ default     │ 1.0.0   │ fork    │ 2713206  │ 0s     │ 10   │ online    │ 0%       │ 61.3mb   │ root     │ disabled │
+│ 3  │ kalvicore-api      │ default     │ 0.0.0   │ fork    │ 2713208  │ 0s     │ 4    │ online    │ 0%       │ 62.4mb   │ root     │ disabled │
+│ 7  │ mystics-api        │ default     │ 0.0.0   │ fork    │ 2713243  │ 0s     │ 47   │ online    │ 0%       │ 35.5mb   │ root     │ disabled │
+│ 8  │ nirmal-api         │ default     │ 0.0.0   │ fork    │ 2713249  │ 0s     │ 7    │ online    │ 0%       │ 13.1mb   │ root     │ disabled │
+└────┴────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com# 
