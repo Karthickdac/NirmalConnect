@@ -1,0 +1,42 @@
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com# cd /home/ctr/htdocs/ctr.tamilagavetrikalagam.com
+git remote set-url origin https://github.com/Karthickdac/NirmalConnect.git
+git fetch origin main
+git reset --hard origin/main
+pnpm install --frozen-lockfile
+pnpm --filter @workspace/api-server run build
+pnpm --filter @workspace/nirmal-connect run build
+pm2 restart nirmal-api
+fatal: couldn't find remote ref main
+HEAD is now at 638e744 Delete C-T-R-Nirmal.zip
+[ERR_PNPM_NO_PKG_MANIFEST] No package.json found in /home/ctr/htdocs/ctr.tamilagavetrikalagam.com
+[ERR_PNPM_NO_PKG_MANIFEST] No package.json found in /home/ctr/htdocs/ctr.tamilagavetrikalagam.com
+[ERROR] Command failed with exit code 1: pnpm install
+
+pnpm: Command failed with exit code 1: pnpm install
+    at getFinalError (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:28776:14)
+    at makeError (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:31083:21)
+    at getSyncResult (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32927:10)
+    at spawnSubprocessSync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32887:14)
+    at execaCoreSync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32817:23)
+    at callBoundExeca (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35345:23)
+    at boundExeca (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35322:49)
+    at sync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35477:14)
+    at runPnpmCli (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:211260:5)
+    at runDepsStatusCheck (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:212964:7)
+[ERR_PNPM_NO_PKG_MANIFEST] No package.json found in /home/ctr/htdocs/ctr.tamilagavetrikalagam.com
+[ERROR] Command failed with exit code 1: pnpm install
+
+pnpm: Command failed with exit code 1: pnpm install
+    at getFinalError (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:28776:14)
+    at makeError (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:31083:21)
+    at getSyncResult (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32927:10)
+    at spawnSubprocessSync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32887:14)
+    at execaCoreSync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32817:23)
+    at callBoundExeca (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35345:23)
+    at boundExeca (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35322:49)
+    at sync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35477:14)
+    at runPnpmCli (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:211260:5)
+    at runDepsStatusCheck (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:212964:7)
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [nirmal-api](ids: [ 8 ])
+[PM2] [nirmal-api](8) ✓
