@@ -90,12 +90,12 @@ export function Navbar({ lang, setLang, darkMode, setDarkMode }: NavbarProps) {
             </div>
           </Link>
 
-          <nav className="hidden xl:flex items-center gap-1">
+          <nav className="hidden xl:flex items-center gap-0.5 shrink-0">
             {navLinks.slice(0, 7).map((link) => (
               <Link key={link.href} href={link.href}>
                 <span
                   data-testid={`nav-${link.key}`}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                  className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                     location === link.href
                       ? "bg-primary text-primary-foreground"
                       : "text-foreground/70 hover:text-foreground hover:bg-muted"
