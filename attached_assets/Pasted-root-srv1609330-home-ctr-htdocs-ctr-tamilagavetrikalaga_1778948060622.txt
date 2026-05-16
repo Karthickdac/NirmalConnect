@@ -1,0 +1,34 @@
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com# ^C
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com# # Check if there's an existing .env file from the old tkprabhu deployment
+cat /home/tamilagavetrikalagam/htdocs/tkprabhu.tamilagavetrikalagam.com/.env 2>/dev/null || \
+cat /home/tamilagavetrikalagam/htdocs/tkprabhu.tamilagavetrikalagam.com/api-server/.env 2>/dev/null || \
+echo "No .env found — check your database credentials"
+
+# Also check API error logs to confirm the crash reason
+pm2 logs people-connect-api --lines 20 --nostream
+No .env found — check your database credentials
+[TAILING] Tailing last 20 lines for [people-connect-api] process (change the value with --lines option)
+/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/logs/api-out.log last 20 lines:
+/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/logs/api-error.log last 20 lines:
+9|people-c | 2026-05-16 16:06:11: Error: DATABASE_URL must be set. Did you forget to provision a database?
+9|people-c | 2026-05-16 16:06:11:     at file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/lib/db/src/index.ts:8:9
+9|people-c | 2026-05-16 16:06:11:     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+9|people-c | 2026-05-16 16:06:11:     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+9|people-c | 2026-05-16 16:06:11:     at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+9|people-c | 2026-05-16 16:09:17: Error: DATABASE_URL must be set. Did you forget to provision a database?
+9|people-c | 2026-05-16 16:09:17:     at file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/lib/db/src/index.ts:8:9
+9|people-c | 2026-05-16 16:09:17:     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+9|people-c | 2026-05-16 16:09:17:     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+9|people-c | 2026-05-16 16:09:17:     at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+9|people-c | 2026-05-16 16:12:32: Error: DATABASE_URL must be set. Did you forget to provision a database?
+9|people-c | 2026-05-16 16:12:32:     at file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/lib/db/src/index.ts:8:9
+9|people-c | 2026-05-16 16:12:32:     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+9|people-c | 2026-05-16 16:12:32:     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+9|people-c | 2026-05-16 16:12:32:     at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+9|people-c | 2026-05-16 16:12:37: Error: DATABASE_URL must be set. Did you forget to provision a database?
+9|people-c | 2026-05-16 16:12:37:     at file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/lib/db/src/index.ts:8:9
+9|people-c | 2026-05-16 16:12:37:     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+9|people-c | 2026-05-16 16:12:37:     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+9|people-c | 2026-05-16 16:12:37:     at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com# 
