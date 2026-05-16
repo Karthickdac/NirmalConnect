@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Newspaper, Calendar, Activity, Image,
   Users, MessageSquare, HelpCircle, UserCircle, LogOut, Menu, X,
-  ChevronRight, ChevronDown, Settings, Megaphone, FileText, MapPin, ClipboardList, Network, Map as MapIcon, BarChart3, Home as HomeIcon, ShieldAlert, Repeat2,
+  ChevronRight, ChevronDown, Settings, Megaphone, FileText, MapPin, ClipboardList, Network, Map as MapIcon, BarChart3, Home as HomeIcon, ShieldAlert,
 } from "lucide-react";
 import { isAuthenticated, removeToken, getToken } from "@/lib/auth";
 import { useGetMe } from "@workspace/api-client-react";
@@ -23,7 +23,6 @@ import FaqsAdmin from "./admin/FaqsAdmin";
 import AboutAdmin from "./admin/AboutAdmin";
 import HomeAdmin from "./admin/HomeAdmin";
 import SiteSettingsAdmin from "./admin/SiteSettingsAdmin";
-import LeaderSwitchAdmin from "./admin/LeaderSwitchAdmin";
 import AuditLogAdmin from "./admin/AuditLogAdmin";
 import BannersAdmin from "./admin/BannersAdmin";
 import ConstituencyAdmin from "./admin/ConstituencyAdmin";
@@ -108,7 +107,6 @@ const NAV_ITEMS: NavItem[] = [
   { id: "about",          label: "About CMS",            icon: UserCircle,  group: "site", roles: ["super_admin", "admin"] },
   { id: "faqs",           label: "FAQs",                 icon: HelpCircle,  group: "site", roles: ["super_admin", "admin", "pa_staff"] },
   { id: "settings",       label: "Site Settings",        icon: Settings,    group: "site", roles: ["super_admin", "admin"] },
-  { id: "leader-account", label: "Leader Account",       icon: Repeat2,     group: "site", roles: ["super_admin"] },
 
   // System
   { id: "audit",        label: "Audit Log",            icon: ClipboardList,   group: "system", roles: ["super_admin", "admin"] },
@@ -475,7 +473,6 @@ function AdminInner({ lang = "ta" }: AdminProps) {
           {active === "home"         && <HomeAdmin />}
           {active === "about"        && <AboutAdmin />}
           {active === "settings"     && <SiteSettingsAdmin />}
-          {active === "leader-account" && <LeaderSwitchAdmin />}
           {active === "audit"        && <AuditLogAdmin />}
           {active === "voters"       && <VoterRollAdmin />}
           {active === "voters-search" && <VotersAdmin lang={lang} />}

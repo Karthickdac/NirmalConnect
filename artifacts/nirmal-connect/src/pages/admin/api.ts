@@ -61,9 +61,6 @@ export const adminApi = {
   // Site Settings
   getSettings: () => authFetch("/admin/settings"),
   updateSetting: (key: string, value: unknown) => authFetch(`/admin/settings/${key}`, { method: "PUT", body: JSON.stringify(value) }),
-  // Leader account / tenant switcher
-  getLeaderConfigTenants: () => authFetch("/admin/leader-config/tenants"),
-  activateLeaderConfig: (tenant: string) => authFetch("/admin/leader-config/activate", { method: "POST", body: JSON.stringify({ tenant }) }),
   // Banners
   getBanners: () => authFetch("/admin/banners"),
   createBanner: (data: unknown) => authFetch("/admin/banners", { method: "POST", body: JSON.stringify(data) }),
