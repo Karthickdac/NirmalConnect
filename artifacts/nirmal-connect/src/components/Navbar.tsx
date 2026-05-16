@@ -64,10 +64,10 @@ export function Navbar({ lang, setLang, darkMode, setDarkMode }: NavbarProps) {
           <span className="font-medium">
             {lang === "ta" ? lc.partyTa : lc.partyEn}
           </span>
-          <span>
+          <span className="truncate">
             {lang === "ta"
-              ? `${lc.titleTa} – ${lc.constituencyTa} தொகுதி, தமிழ்நாடு`
-              : `${lc.titleEn} – ${lc.constituencyEn} Constituency, Tamil Nadu`}
+              ? `${lc.titleTa} – திருப்பரங்குன்றம் தொகுதி, தமிழ்நாடு`
+              : `${lc.titleEn} – Tirupparankundram Constituency, Tamil Nadu`}
           </span>
         </div>
       </div>
@@ -75,18 +75,16 @@ export function Navbar({ lang, setLang, darkMode, setDarkMode }: NavbarProps) {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-14 md:h-16">
           <Link href="/" data-testid="logo-link">
-            <div className="flex items-center gap-2.5 md:gap-3 cursor-pointer">
-              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-base md:text-lg shadow-sm">
+            <div className="flex items-center gap-2.5 md:gap-3 cursor-pointer min-w-0">
+              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-base md:text-lg shadow-sm shrink-0">
                 {lc.logoInitial}
               </div>
-              <div className="leading-tight">
-                <p className="font-bold text-[13px] md:text-sm text-foreground">
+              <div className="leading-tight min-w-0 max-w-[180px] md:max-w-[220px]">
+                <p className="font-bold text-[13px] md:text-sm text-foreground truncate">
                   {lang === "ta" ? lc.nameTa : lc.nameEn}
                 </p>
-                <p className="text-[10px] md:text-xs text-muted-foreground">
-                  {lang === "ta"
-                    ? `${lc.titleTa}, ${lc.constituencyTa}`
-                    : `${lc.titleEn}, ${lc.constituencyEn}`}
+                <p className="text-[10px] md:text-xs text-muted-foreground line-clamp-1">
+                  {lang === "ta" ? lc.titleTa : lc.titleEn}
                 </p>
               </div>
             </div>
