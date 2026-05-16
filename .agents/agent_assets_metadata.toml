@@ -18,3 +18,9 @@ id = "7kDlm9kf-jOg9JvNaZ6eW"
 uri = "file://nirmal_connect_presentation.zip"
 type = "unspecified"
 title = "Nirmal Connect – Admin Presentation (Automystics Branded)"
+
+[[outputs]]
+id = "Jtpo-QZzbVfb_wb3CmADK"
+uri = "file://people_connect_presentation.zip"
+type = "unspecified"
+title = "People Connect – Admin Presentation (Tamil + English)"

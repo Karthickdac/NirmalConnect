@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+<meta charset="UTF-8">
+<title>People Connect – Admin Presentation</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--red:#c0392b;--red2:#e74c3c;--dark:#0f172a;--dark2:#1e293b;--gold:#f39c12;}
+body{font-family:'Inter','Noto Sans Tamil',sans-serif;background:#0f172a;color:#fff;width:297mm;margin:0 auto;}
+
+/* SLIDE */
+.slide{width:297mm;height:210mm;position:relative;overflow:hidden;page-break-after:always;display:flex;}
+.bg-dark{background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);}
+.bg-red{background:linear-gradient(135deg,#7f0000 0%,#c0392b 60%,#e74c3c 100%);}
+.bg-gradient-r{background:linear-gradient(150deg,#0f172a 0%,#7f0000 55%,#c0392b 100%);}
+.noise::before{content:'';position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;}
+.slide>*{position:relative;z-index:1;}
+.circle-deco{position:absolute;border-radius:50%;pointer-events:none;}
+
+/* POWERED BY STRIP */
+.slide::after{content:'Powered by Automystics Technologies Pvt Ltd · www.Automystics.com';position:absolute;bottom:5px;left:50%;transform:translateX(-50%);font-size:7.5px;letter-spacing:.8px;color:rgba(255,255,255,.18);white-space:nowrap;font-family:'Inter',sans-serif;font-weight:600;text-transform:uppercase;z-index:10;pointer-events:none;}
+
+/* TYPOGRAPHY */
+.mega{font-size:64px;font-weight:900;line-height:.95;letter-spacing:-3px;}
+.hero-title{font-size:48px;font-weight:900;line-height:1;letter-spacing:-2px;}
+.slide-title{font-size:32px;font-weight:900;letter-spacing:-1px;line-height:1.1;}
+.sec-label{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;opacity:.45;margin-bottom:10px;}
+.body-text{font-size:14px;line-height:1.75;opacity:.7;}
+.bi{font-family:'Noto Sans Tamil','Inter',sans-serif;}
+
+/* LAYOUT */
+.split-left{width:46%;padding:14mm 12mm 14mm 18mm;display:flex;flex-direction:column;justify-content:center;}
+.split-right{width:54%;padding:12mm 18mm 12mm 12mm;display:flex;flex-direction:column;justify-content:center;}
+.split-div{width:1px;background:rgba(255,255,255,.07);align-self:stretch;margin:14mm 0;}
+.full-pad{padding:12mm 18mm;width:100%;display:flex;flex-direction:column;}
+
+/* LOGO */
+.logo-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.18);border-radius:100px;padding:6px 16px 6px 8px;font-size:13px;font-weight:700;color:rgba(255,255,255,.9);margin-bottom:18px;}
+.logo-dot{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#c0392b,#e74c3c);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;}
+
+/* KPI */
+.kpi{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:14px 16px;position:relative;overflow:hidden;flex:1;}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--ac,linear-gradient(90deg,#c0392b,#e74c3c));}
+.kn{font-size:30px;font-weight:900;line-height:1;}
+.kl{font-size:9.5px;opacity:.45;margin-top:5px;font-weight:600;letter-spacing:.3px;}
+.kb{position:absolute;top:10px;right:10px;background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.3);color:#4ade80;font-size:8px;font-weight:700;padding:2px 7px;border-radius:100px;}
+.krow{display:flex;gap:10px;margin-bottom:10px;}
+
+/* MOCK */
+.mock-win{background:#1e293b;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.09);box-shadow:0 20px 60px rgba(0,0,0,.5);}
+.mock-bar{background:#0f172a;height:32px;display:flex;align-items:center;gap:6px;padding:0 12px;border-bottom:1px solid rgba(255,255,255,.05);}
+.mock-bar .d{width:9px;height:9px;border-radius:50%;}
+.mock-bar span{color:rgba(255,255,255,.28);font-size:9.5px;margin-left:8px;}
+.mock-row{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid rgba(255,255,255,.04);font-size:10px;}
+.mock-row:last-child{border-bottom:none;}
+
+/* PILLS */
+.pill{display:inline-block;padding:2px 7px;border-radius:100px;font-size:8.5px;font-weight:700;}
+.p-open{background:rgba(251,191,36,.18);color:#fbbf24;border:1px solid rgba(251,191,36,.25);}
+.p-prog{background:rgba(59,130,246,.18);color:#93c5fd;border:1px solid rgba(59,130,246,.25);}
+.p-done{background:rgba(34,197,94,.18);color:#4ade80;border:1px solid rgba(34,197,94,.25);}
+.p-high{background:rgba(239,68,68,.18);color:#fca5a5;border:1px solid rgba(239,68,68,.25);}
+.p-med{background:rgba(251,146,60,.18);color:#fdba74;border:1px solid rgba(251,146,60,.25);}
+
+/* FEATURE ITEM */
+.fi{display:flex;align-items:flex-start;gap:11px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.055);}
+.fi:last-child{border-bottom:none;}
+.fi-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.fi-title{font-size:13px;font-weight:700;margin-bottom:2px;}
+.fi-desc{font-size:11px;opacity:.5;line-height:1.5;}
+
+/* ROLES */
+.rbadge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:9.5px;font-weight:700;}
+.rb-super{background:rgba(192,57,43,.25);color:#fca5a5;border:1px solid rgba(192,57,43,.3);}
+.rb-admin{background:rgba(59,130,246,.2);color:#93c5fd;border:1px solid rgba(59,130,246,.3);}
+.rb-staff{background:rgba(34,197,94,.15);color:#6ee7b7;border:1px solid rgba(34,197,94,.3);}
+.rb-officer{background:rgba(168,85,247,.2);color:#d8b4fe;border:1px solid rgba(168,85,247,.3);}
+
+/* PROGRESS */
+.prog{height:7px;background:rgba(255,255,255,.08);border-radius:100px;overflow:hidden;margin-top:5px;}
+.prog-fill{height:100%;border-radius:100px;}
+
+/* LEADER CARD */
+.lcard{border-radius:14px;padding:16px;position:relative;}
+.lcard-on{background:rgba(192,57,43,.14);border:2px solid rgba(192,57,43,.45);}
+.lcard-off{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);}
+.lcard-badge{position:absolute;top:10px;right:10px;background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;font-size:8px;font-weight:800;padding:2px 9px;border-radius:100px;}
+.lcard-logo{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;margin-bottom:10px;}
+.lcard-btn{width:100%;padding:7px;border-radius:9px;font-size:10.5px;font-weight:700;text-align:center;margin-top:10px;}
+.lbtn-on{background:rgba(255,255,255,.06);color:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.09);}
+.lbtn-off{background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;}
+
+/* STAT PILL */
+.stat-pill{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11);border-radius:12px;padding:12px 18px;text-align:center;margin:3px;}
+.stat-pill .n{font-size:26px;font-weight:900;}
+.stat-pill .l{font-size:9px;opacity:.45;margin-top:3px;font-weight:600;letter-spacing:.4px;}
+
+/* SLIDE NUM */
+.snum{position:absolute;bottom:12mm;right:14mm;font-size:10px;font-weight:700;letter-spacing:2px;opacity:.25;text-transform:uppercase;}
+
+@page{size:A4 landscape;margin:0;}
+@media print{body{width:297mm;background:#0f172a;}.slide{page-break-after:always;break-after:page;}}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ SLIDE 1 — COVER -->
+<div class="slide bg-gradient-r noise">
+  <div class="circle-deco" style="width:520px;height:520px;background:radial-gradient(circle,rgba(192,57,43,.28),transparent 70%);top:-120px;right:-120px;"></div>
+  <div class="circle-deco" style="width:280px;height:280px;background:radial-gradient(circle,rgba(255,255,255,.04),transparent 70%);bottom:-80px;left:220px;"></div>
+
+  <div style="width:55%;padding:16mm 14mm 16mm 18mm;display:flex;flex-direction:column;justify-content:center;">
+    <div class="logo-badge">
+      <div class="logo-dot">P</div>
+      People Connect
+    </div>
+    <div class="mega" style="margin-bottom:14px;">
+      Admin<br>
+      <span style="background:linear-gradient(90deg,#f39c12,#e74c3c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Panel</span>
+    </div>
+    <p class="body-text bi" style="max-width:340px;margin-bottom:20px;">
+      சக்திவாய்ந்த Digital Platform — Grievances, Voters, Content அனைத்தையும் ஒரே Admin Dashboard-ல் நிர்வகிக்கலாம்.
+    </p>
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);border-radius:8px;padding:6px 14px;font-size:11px;opacity:.7;margin-bottom:22px;">
+      ⚡ 20+ Admin Modules &nbsp;·&nbsp; 6 User Roles &nbsp;·&nbsp; Tamil + English
+    </div>
+    <!-- Automystics badge -->
+    <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:9px 16px;max-width:fit-content;">
+      <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#1a1a2e,#0f172a);border:1px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#f39c12;">A</div>
+      <div>
+        <div style="font-size:11.5px;font-weight:800;color:rgba(255,255,255,.85);">Automystics Technologies Pvt Ltd</div>
+        <div style="font-size:9.5px;color:rgba(255,255,255,.38);">www.Automystics.com</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="width:45%;display:flex;align-items:center;justify-content:center;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px;">
+      <div class="stat-pill"><div class="n">20+</div><div class="l">ADMIN MODULES</div></div>
+      <div class="stat-pill"><div class="n">6</div><div class="l">ROLE LEVELS</div></div>
+      <div class="stat-pill"><div class="n">24/7</div><div class="l">GRIEVANCES</div></div>
+      <div class="stat-pill"><div class="n">∞</div><div class="l">VOTER DATABASE</div></div>
+      <div class="stat-pill" style="grid-column:1/-1;"><div class="n" style="font-size:18px;">Tamil + English</div><div class="l">BILINGUAL ADMIN PANEL</div></div>
+    </div>
+  </div>
+  <div class="snum">People Connect · Automystics Technologies · 2025</div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 2 — DASHBOARD -->
+<div class="slide bg-dark noise">
+  <div class="circle-deco" style="width:550px;height:550px;background:radial-gradient(circle,rgba(192,57,43,.1),transparent 70%);top:-180px;right:-150px;"></div>
+  <div class="split-left">
+    <div class="sec-label">01 · Dashboard</div>
+    <div class="slide-title bi" style="margin-bottom:14px;">Admin Dashboard<br><span style="font-size:22px;opacity:.6;font-weight:600;">நிர்வாக வாரியம்</span></div>
+    <p class="body-text bi" style="margin-bottom:20px;">Login செய்தவுடன் முழு Constituency-யின் நிலை ஒரே பார்வையில் — Live Data, Real Numbers.</p>
+    <div class="krow">
+      <div class="kpi" style="--ac:linear-gradient(90deg,#c0392b,#e74c3c)"><div class="kb">Live</div><div class="kn">89</div><div class="kl">TOTAL PROJECTS · மொத்த திட்டங்கள்</div></div>
+      <div class="kpi" style="--ac:linear-gradient(90deg,#2563eb,#3b82f6)"><div class="kn">42</div><div class="kl">NEWS ARTICLES · செய்திகள்</div></div>
+    </div>
+    <div class="krow">
+      <div class="kpi" style="--ac:linear-gradient(90deg,#059669,#10b981)"><div class="kn">45K</div><div class="kl">BENEFICIARIES · பயனர்கள்</div></div>
+      <div class="kpi" style="--ac:linear-gradient(90deg,#d97706,#f59e0b)"><div class="kn">127<span style="font-size:14px">km</span></div><div class="kl">ROADS BUILT · சாலைகள்</div></div>
+    </div>
+    <div class="krow">
+      <div class="kpi" style="--ac:linear-gradient(90deg,#7c3aed,#8b5cf6)"><div class="kn">2,800</div><div class="kl">JOBS CREATED · வேலைவாய்ப்பு</div></div>
+      <div class="kpi" style="--ac:linear-gradient(90deg,#0891b2,#06b6d4)"><div class="kn">21</div><div class="kl">EVENTS THIS MONTH · நிகழ்வுகள்</div></div>
+    </div>
+  </div>
+  <div class="split-div"></div>
+  <div class="split-right">
+    <div class="mock-win">
+      <div class="mock-bar"><div class="d" style="background:#ef4444;"></div><div class="d" style="background:#f59e0b;"></div><div class="d" style="background:#22c55e;"></div><span>People Connect · Admin Dashboard</span></div>
+      <div style="padding:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;">
+        <div style="background:rgba(192,57,43,.14);border:1px solid rgba(192,57,43,.28);border-radius:9px;padding:11px;"><div style="font-size:20px;font-weight:900;">89</div><div style="font-size:8.5px;opacity:.45;margin-top:3px;">Projects</div><div style="background:rgba(34,197,94,.2);color:#4ade80;padding:2px 5px;border-radius:5px;font-size:7.5px;font-weight:700;margin-top:5px;display:inline-block;">67 Completed</div></div>
+        <div style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);border-radius:9px;padding:11px;"><div style="font-size:20px;font-weight:900;">21</div><div style="font-size:8.5px;opacity:.45;margin-top:3px;">Events</div><div style="background:rgba(59,130,246,.2);color:#93c5fd;padding:2px 5px;border-radius:5px;font-size:7.5px;font-weight:700;margin-top:5px;display:inline-block;">This Month</div></div>
+        <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:11px;"><div style="font-size:20px;font-weight:900;">2.8K</div><div style="font-size:8.5px;opacity:.45;margin-top:3px;">Jobs Created</div><div style="background:rgba(245,158,11,.2);color:#fbbf24;padding:2px 5px;border-radius:5px;font-size:7.5px;font-weight:700;margin-top:5px;display:inline-block;">Employment</div></div>
+      </div>
+      <div style="padding:0 12px 12px;display:grid;grid-template-columns:1fr 1fr;gap:7px;">
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px;"><div style="font-size:9px;opacity:.4;margin-bottom:6px;">Grievance Resolution Rate</div><div style="height:6px;background:rgba(255,255,255,.07);border-radius:100px;overflow:hidden;"><div style="width:75%;height:100%;background:linear-gradient(90deg,#c0392b,#e74c3c);border-radius:100px;"></div></div><div style="font-size:8px;opacity:.35;margin-top:4px;">75% Resolved · தீர்க்கப்பட்டவை</div></div>
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px;"><div style="font-size:9px;opacity:.4;margin-bottom:5px;">Monthly Trend · மாத போக்கு</div><div style="display:flex;align-items:flex-end;gap:2px;height:28px;"><div style="flex:1;background:rgba(192,57,43,0.3);border-radius:2px 2px 0 0;height:30%;"></div><div style="flex:1;background:rgba(192,57,43,0.5);border-radius:2px 2px 0 0;height:50%;"></div><div style="flex:1;background:rgba(192,57,43,0.4);border-radius:2px 2px 0 0;height:40%;"></div><div style="flex:1;background:rgba(192,57,43,0.7);border-radius:2px 2px 0 0;height:70%;"></div><div style="flex:1;background:rgba(192,57,43,0.6);border-radius:2px 2px 0 0;height:60%;"></div><div style="flex:1;background:rgba(192,57,43,0.8);border-radius:2px 2px 0 0;height:80%;"></div><div style="flex:1;background:rgba(192,57,43,0.5);border-radius:2px 2px 0 0;height:50%;"></div><div style="flex:1;background:rgba(192,57,43,0.9);border-radius:2px 2px 0 0;height:90%;"></div><div style="flex:1;background:rgba(192,57,43,0.7);border-radius:2px 2px 0 0;height:70%;"></div><div style="flex:1;background:rgba(192,57,43,1.0);border-radius:2px 2px 0 0;height:100%;"></div><div style="flex:1;background:rgba(192,57,43,0.8);border-radius:2px 2px 0 0;height:80%;"></div><div style="flex:1;background:rgba(192,57,43,0.6);border-radius:2px 2px 0 0;height:60%;"></div></div></div>
+      </div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;">
+      <div style="flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px;text-align:center;"><div style="font-size:16px;font-weight:900;color:#c0392b;">43</div><div style="font-size:8.5px;opacity:.4;margin-top:2px;">Water Projects · நீர் திட்டங்கள்</div></div>
+      <div style="flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px;text-align:center;"><div style="font-size:16px;font-weight:900;color:#3b82f6;">18</div><div style="font-size:8.5px;opacity:.4;margin-top:2px;">Schools Upgraded · பள்ளிகள்</div></div>
+      <div style="flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px;text-align:center;"><div style="font-size:16px;font-weight:900;color:#10b981;">6</div><div style="font-size:8.5px;opacity:.4;margin-top:2px;">Health Clinics · சுகாதார மையங்கள்</div></div>
+    </div>
+  </div>
+  <div class="snum">02</div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 3 — GRIEVANCE -->
+<div class="slide bg-dark noise">
+  <div class="circle-deco" style="width:380px;height:380px;background:radial-gradient(circle,rgba(239,68,68,.09),transparent 70%);bottom:-80px;left:-80px;"></div>
+  <div class="split-left">
+    <div class="sec-label">02 · Grievance Management</div>
+    <div class="slide-title bi" style="margin-bottom:14px;">Grievance<br>Management<br><span style="font-size:20px;opacity:.55;font-weight:600;">மக்கள் புகார் மேலாண்மை</span></div>
+    <p class="body-text bi" style="margin-bottom:18px;">மக்கள் புகாரை Receive செய்து, Officer-க்கு Assign செய்து, Status Track செய்து Resolve செய்யும் Complete System.</p>
+    <div class="fi"><div class="fi-icon" style="background:rgba(192,57,43,.18);">📋</div><div><div class="fi-title bi">10+ Grievance Categories · வகைகள்</div><div class="fi-desc bi">Road, Water, Electricity, Education, Health, Pension… அனைத்தும்</div></div></div>
+    <div class="fi"><div class="fi-icon" style="background:rgba(59,130,246,.18);">👮</div><div><div class="fi-title bi">Officer Assignment · அதிகாரி ஒதுக்கீடு</div><div class="fi-desc bi">Bulk Assign — Multiple grievances-ஐ ஒரே நேரத்தில் Officer-க்கு ஒதுக்கலாம்</div></div></div>
+    <div class="fi"><div class="fi-icon" style="background:rgba(34,197,94,.18);">📤</div><div><div class="fi-title bi">CSV Export & Bulk Status Change</div><div class="fi-desc bi">Excel-ல் Export + பல புகாரை ஒரே நேரத்தில் Status மாற்றம்</div></div></div>
+  </div>
+  <div class="split-div"></div>
+  <div class="split-right">
+    <div class="mock-win">
+      <div class="mock-bar"><div class="d" style="background:#ef4444;"></div><div class="d" style="background:#f59e0b;"></div><div class="d" style="background:#22c55e;"></div><span>Grievances · People Connect Admin</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.05);">
+        <span style="font-size:10px;opacity:.5;">All Grievances · அனைத்து புகார்கள்</span>
+        <div style="display:flex;gap:5px;"><span style="background:rgba(255,255,255,.07);padding:4px 9px;border-radius:5px;font-size:8.5px;opacity:.6;">📤 CSV Export</span><span style="background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;padding:4px 9px;border-radius:5px;font-size:8.5px;font-weight:700;">Bulk Status</span></div>
+      </div>
+      <div style="padding:0 6px;">
+        <div class="mock-row" style="font-size:8px;opacity:.3;font-weight:700;text-transform:uppercase;letter-spacing:.5px;"><span style="width:45px;">ID</span><span style="flex:1;">Name · பெயர்</span><span style="width:70px;">Category</span><span style="width:65px;">Status</span><span style="width:55px;">Priority</span><span style="width:75px;">Officer</span></div>
+        <div class="mock-row">
+          <span style="width:45px;color:#c0392b;font-weight:700;font-size:9px;">#1042</span>
+          <span style="flex:1;font-size:9.5px;">முருகேசன் க.</span>
+          <span style="width:70px;opacity:.55;font-size:9px;">Road</span>
+          <span style="width:65px;"><span class='pill p-prog'>In Progress</span></span>
+          <span style="width:55px;"><span class='pill p-high'>Urgent</span></span>
+          <span style="width:75px;opacity:.5;font-size:8.5px;">Ravi Kumar</span>
+        </div><div class="mock-row">
+          <span style="width:45px;color:#c0392b;font-weight:700;font-size:9px;">#1041</span>
+          <span style="flex:1;font-size:9.5px;">Saraswathi</span>
+          <span style="width:70px;opacity:.55;font-size:9px;">Water</span>
+          <span style="width:65px;"><span class='pill p-open'>Open</span></span>
+          <span style="width:55px;"><span class='pill p-med'>Medium</span></span>
+          <span style="width:75px;opacity:.5;font-size:8.5px;">—</span>
+        </div><div class="mock-row">
+          <span style="width:45px;color:#c0392b;font-weight:700;font-size:9px;">#1040</span>
+          <span style="flex:1;font-size:9.5px;">Rajasekar</span>
+          <span style="width:70px;opacity:.55;font-size:9px;">Electricity</span>
+          <span style="width:65px;"><span class='pill p-done'>Resolved</span></span>
+          <span style="width:55px;">—</span>
+          <span style="width:75px;opacity:.5;font-size:8.5px;">Selvi</span>
+        </div><div class="mock-row">
+          <span style="width:45px;color:#c0392b;font-weight:700;font-size:9px;">#1039</span>
+          <span style="flex:1;font-size:9.5px;">Karthik</span>
+          <span style="width:70px;opacity:.55;font-size:9px;">Drainage</span>
+          <span style="width:65px;"><span class='pill p-open'>Open</span></span>
+          <span style="width:55px;"><span class='pill p-high'>Urgent</span></span>
+          <span style="width:75px;opacity:.5;font-size:8.5px;">—</span>
+        </div><div class="mock-row">
+          <span style="width:45px;color:#c0392b;font-weight:700;font-size:9px;">#1038</span>
+          <span style="flex:1;font-size:9.5px;">லக்ஷ்மி</span>
+          <span style="width:70px;opacity:.55;font-size:9px;">Pension</span>
+          <span style="width:65px;"><span class='pill p-done'>Resolved</span></span>
+          <span style="width:55px;">—</span>
+          <span style="width:75px;opacity:.5;font-size:8.5px;">Ravi Kumar</span>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:7px;">
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px;text-align:center;"><div style="font-size:15px;font-weight:900;color:#fbbf24;">38</div><div style="font-size:8px;opacity:.4;margin-top:2px;">Open · திறந்தவை</div></div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px;text-align:center;"><div style="font-size:15px;font-weight:900;color:#93c5fd;">24</div><div style="font-size:8px;opacity:.4;margin-top:2px;">In Progress</div></div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px;text-align:center;"><div style="font-size:15px;font-weight:900;color:#4ade80;">89</div><div style="font-size:8px;opacity:.4;margin-top:2px;">Resolved · தீர்வு</div></div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px;text-align:center;"><div style="font-size:15px;font-weight:900;color:#c0392b;">75%</div><div style="font-size:8px;opacity:.4;margin-top:2px;">Resolution Rate</div></div>
+    </div>
+  </div>
+  <div class="snum">03</div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 4 — VOTER MANAGEMENT -->
+<div class="slide bg-dark noise">
+  <div class="circle-deco" style="width:480px;height:480px;background:radial-gradient(circle,rgba(59,130,246,.09),transparent 70%);top:-140px;right:-100px;"></div>
+  <div class="split-left">
+    <div class="sec-label">03 · Voter Management</div>
+    <div class="slide-title bi" style="margin-bottom:14px;">Voter<br>Management<br><span style="font-size:20px;opacity:.55;font-weight:600;">வாக்காளர் மேலாண்மை</span></div>
+    <p class="body-text bi" style="margin-bottom:18px;">Election Commission PDF-ஐ Upload செய்து முழு Voter List-ஐ Search, Tag, Analyse செய்யலாம்.</p>
+    <div class="fi"><div class="fi-icon" style="background:rgba(192,57,43,.18);">📥</div><div><div class="fi-title bi">PDF Auto-Import · தானியங்கி இறக்குமதி</div><div class="fi-desc bi">Election PDF → AI Extract → Database. Booth-wise automatic organization.</div></div></div>
+    <div class="fi"><div class="fi-icon" style="background:rgba(168,85,247,.18);">🏷️</div><div><div class="fi-title bi">Smart Tags · வாக்காளர் குறிச்சொற்கள்</div><div class="fi-desc bi">TVK, Youth, Senior, Women — Colour-coded tags for easy segmentation</div></div></div>
+    <div class="fi"><div class="fi-icon" style="background:rgba(34,197,94,.18);">📊</div><div><div class="fi-title bi">Analytics & Export · பகுப்பாய்வு</div><div class="fi-desc bi">Gender split, Age bands, Booth-wise count — Excel / Callsheet Export</div></div></div>
+    <div class="fi"><div class="fi-icon" style="background:rgba(245,158,11,.18);">🔄</div><div><div class="fi-title bi">Duplicate Merge · நகல் ஒருங்கிணைப்பு</div><div class="fi-desc bi">Auto-detect & Bulk merge duplicate voter records</div></div></div>
+  </div>
+  <div class="split-div"></div>
+  <div class="split-right">
+    <div class="mock-win">
+      <div class="mock-bar"><div class="d" style="background:#ef4444;"></div><div class="d" style="background:#f59e0b;"></div><div class="d" style="background:#22c55e;"></div><span>Voters · Search & Manage</span></div>
+      <div style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.05);display:flex;gap:6px;align-items:center;"><div style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:7px;padding:6px 10px;font-size:9.5px;color:rgba(255,255,255,.3);">🔍  Search by Name or EPIC No…</div><span style="background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;padding:5px 11px;border-radius:5px;font-size:8.5px;font-weight:700;">Search</span><span style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);padding:5px 10px;border-radius:5px;font-size:8.5px;">📤 Excel</span></div>
+      <div style="padding:0 6px;">
+        <div class="mock-row" style="font-size:8px;opacity:.3;font-weight:700;text-transform:uppercase;letter-spacing:.5px;"><span style="width:105px;">EPIC No.</span><span style="flex:1;">Name · பெயர்</span><span style="width:35px;">Sex</span><span style="width:35px;">Age</span><span style="width:65px;">Booth</span><span style="width:80px;">Tag</span></div>
+        <div class="mock-row">
+          <span style="width:105px;font-family:monospace;font-size:8px;color:#c0392b;">TN/24/001/042</span>
+          <span style="flex:1;font-size:9.5px;">முருகேசன் க.</span>
+          <span style="width:35px;font-size:9px;opacity:.5;">M</span>
+          <span style="width:35px;font-size:9px;opacity:.5;">45</span>
+          <span style="width:65px;font-size:8.5px;opacity:.5;">Booth #3</span>
+          <span style="width:80px;"><span style="background:rgba(192,57,43,.25);color:#fca5a5;padding:1px 6px;border-radius:4px;font-size:8px;font-weight:700;">TVK</span></span>
+        </div><div class="mock-row">
+          <span style="width:105px;font-family:monospace;font-size:8px;color:#c0392b;">TN/24/001/043</span>
+          <span style="flex:1;font-size:9.5px;">Saraswathi P.</span>
+          <span style="width:35px;font-size:9px;opacity:.5;">F</span>
+          <span style="width:35px;font-size:9px;opacity:.5;">38</span>
+          <span style="width:65px;font-size:8.5px;opacity:.5;">Booth #3</span>
+          <span style="width:80px;"><span style="background:rgba(34,197,94,.2);color:#4ade80;padding:1px 6px;border-radius:4px;font-size:8px;font-weight:700;">Youth</span></span>
+        </div><div class="mock-row">
+          <span style="width:105px;font-family:monospace;font-size:8px;color:#c0392b;">TN/24/002/011</span>
+          <span style="flex:1;font-size:9.5px;">Ramasamy N.</span>
+          <span style="width:35px;font-size:9px;opacity:.5;">M</span>
+          <span style="width:35px;font-size:9px;opacity:.5;">62</span>
+          <span style="width:65px;font-size:8.5px;opacity:.5;">Booth #7</span>
+          <span style="width:80px;"><span style="background:rgba(251,191,36,.2);color:#fbbf24;padding:1px 6px;border-radius:4px;font-size:8px;font-weight:700;">Senior</span></span>
+        </div><div class="mock-row">
+          <span style="width:105px;font-family:monospace;font-size:8px;color:#c0392b;">TN/24/003/055</span>
+          <span style="flex:1;font-size:9.5px;">Kamala R.</span>
+          <span style="width:35px;font-size:9px;opacity:.5;">F</span>
+          <span style="width:35px;font-size:9px;opacity:.5;">29</span>
+          <span style="width:65px;font-size:8.5px;opacity:.5;">Booth #12</span>
+          <span style="width:80px;"><span style="background:rgba(168,85,247,.2);color:#d8b4fe;padding:1px 6px;border-radius:4px;font-size:8px;font-weight:700;">Women</span></span>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;">
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:10px;">
+        <div style="font-size:9px;opacity:.4;margin-bottom:6px;">Gender Split · பால் விகிதம்</div>
+        <div style="display:flex;gap:3px;align-items:flex-end;height:30px;">
+          <div style="flex:1;background:linear-gradient(180deg,#3b82f6,#2563eb);border-radius:3px 3px 0 0;height:100%;"></div>
+          <div style="flex:1;background:linear-gradient(180deg,#ec4899,#db2777);border-radius:3px 3px 0 0;height:78%;"></div>
+        </div>
+        <div style="font-size:8px;opacity:.3;margin-top:4px;">Male 52% · Female 48%</div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:10px;">
+        <div style="font-size:9px;opacity:.4;margin-bottom:5px;">Age Bands · வயது</div>
+        <div style="font-size:8px;opacity:.5;margin-bottom:3px;">18-25 &nbsp;<span style="color:#c0392b;font-weight:700;">32%</span></div>
+        <div style="font-size:8px;opacity:.5;margin-bottom:3px;">26-45 &nbsp;<span style="color:#3b82f6;font-weight:700;">41%</span></div>
+        <div style="font-size:8px;opacity:.5;">46+   &nbsp;<span style="color:#f59e0b;font-weight:700;">27%</span></div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:10px;">
+        <div style="font-size:9px;opacity:.4;margin-bottom:6px;">Tags · குறிச்சொற்கள்</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px;">
+          <span style="background:rgba(192,57,43,.25);color:#fca5a5;padding:2px 6px;border-radius:4px;font-size:7.5px;font-weight:700;">TVK</span>
+          <span style="background:rgba(34,197,94,.2);color:#4ade80;padding:2px 6px;border-radius:4px;font-size:7.5px;font-weight:700;">Youth</span>
+          <span style="background:rgba(251,191,36,.2);color:#fbbf24;padding:2px 6px;border-radius:4px;font-size:7.5px;font-weight:700;">Senior</span>
+          <span style="background:rgba(168,85,247,.2);color:#d8b4fe;padding:2px 6px;border-radius:4px;font-size:7.5px;font-weight:700;">Women</span>
+        </div>
+        <div style="font-size:8px;opacity:.3;margin-top:6px;">📱 Phone Coverage: 78%</div>
+      </div>
+    </div>
+  </div>
+  <div class="snum">04</div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 5 — CONTENT MANAGEMENT -->
+<div class="slide bg-dark noise">
+  <div class="circle-deco" style="width:380px;height:380px;background:radial-gradient(circle,rgba(245,158,11,.07),transparent 70%);bottom:-80px;right:-50px;"></div>
+  <div class="split-left">
+    <div class="sec-label">04 · Content Management</div>
+    <div class="slide-title bi" style="margin-bottom:14px;">Content<br>Management<br><span style="font-size:20px;opacity:.55;font-weight:600;">உள்ளடக்க மேலாண்மை</span></div>
+    <p class="body-text bi" style="margin-bottom:16px;">News, Events, Gallery — Admin Panel-ல் இருந்து நேரடியாக Publish செய்யலாம். No technical knowledge needed!</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:11px;display:flex;gap:9px;align-items:flex-start;">
+        <span style="font-size:17px;">📰</span>
+        <div>
+          <div style="font-size:11.5px;font-weight:700;margin-bottom:2px;">News Articles</div>
+          <div style="font-size:9.5px;opacity:.4;">செய்திகள் & அறிவிப்பு</div>
+        </div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:11px;display:flex;gap:9px;align-items:flex-start;">
+        <span style="font-size:17px;">📅</span>
+        <div>
+          <div style="font-size:11.5px;font-weight:700;margin-bottom:2px;">Events</div>
+          <div style="font-size:9.5px;opacity:.4;">நிகழ்வுகள்</div>
+        </div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:11px;display:flex;gap:9px;align-items:flex-start;">
+        <span style="font-size:17px;">🎯</span>
+        <div>
+          <div style="font-size:11.5px;font-weight:700;margin-bottom:2px;">Activities</div>
+          <div style="font-size:9.5px;opacity:.4;">நடவடிக்கைகள்</div>
+        </div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:11px;display:flex;gap:9px;align-items:flex-start;">
+        <span style="font-size:17px;">🖼️</span>
+        <div>
+          <div style="font-size:11.5px;font-weight:700;margin-bottom:2px;">Gallery / Media</div>
+          <div style="font-size:9.5px;opacity:.4;">ஊடக தொகுப்பு</div>
+        </div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:11px;display:flex;gap:9px;align-items:flex-start;">
+        <span style="font-size:17px;">📢</span>
+        <div>
+          <div style="font-size:11.5px;font-weight:700;margin-bottom:2px;">Banners</div>
+          <div style="font-size:9.5px;opacity:.4;">விளம்பர பட்டை</div>
+        </div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:11px;display:flex;gap:9px;align-items:flex-start;">
+        <span style="font-size:17px;">❓</span>
+        <div>
+          <div style="font-size:11.5px;font-weight:700;margin-bottom:2px;">FAQs</div>
+          <div style="font-size:9.5px;opacity:.4;">அடிக்கடி கேட்கப்படும்</div>
+        </div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:11px;display:flex;gap:9px;align-items:flex-start;">
+        <span style="font-size:17px;">🏡</span>
+        <div>
+          <div style="font-size:11.5px;font-weight:700;margin-bottom:2px;">Home Page CMS</div>
+          <div style="font-size:9.5px;opacity:.4;">முகப்பு திருத்தம்</div>
+        </div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:11px;display:flex;gap:9px;align-items:flex-start;">
+        <span style="font-size:17px;">📜</span>
+        <div>
+          <div style="font-size:11.5px;font-weight:700;margin-bottom:2px;">Press Releases</div>
+          <div style="font-size:9.5px;opacity:.4;">அதிகாரப்பூர்வ அறிவிப்பு</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="split-div"></div>
+  <div class="split-right">
+    <div class="mock-win" style="margin-bottom:10px;">
+      <div class="mock-bar"><div class="d" style="background:#ef4444;"></div><div class="d" style="background:#f59e0b;"></div><div class="d" style="background:#22c55e;"></div><span>News Admin · செய்தி வெளியீடு</span></div>
+      <div style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;opacity:.45;">42 Articles Published · வெளியிடப்பட்ட செய்திகள்</span><span style="background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;padding:4px 10px;border-radius:5px;font-size:8.5px;font-weight:700;">+ New Article</span></div>
+      <div class="mock-row">
+        <span style="background:rgba(34,197,94,.2);color:#4ade80;padding:2px 7px;border-radius:4px;font-size:8px;font-weight:700;width:70px;flex-shrink:0;">Welfare</span>
+        <span style="flex:1;font-size:9.5px;">5,000 மக்களுக்கு இலவச மருத்துவ முகாம்</span>
+        <span style="opacity:.3;font-size:8.5px;width:55px;">20 Mar</span>
+        <span style="color:#c0392b;font-size:8.5px;width:35px;">✎ Edit</span>
+      </div><div class="mock-row">
+        <span style="background:rgba(59,130,246,.2);color:#93c5fd;padding:2px 7px;border-radius:4px;font-size:8px;font-weight:700;width:70px;flex-shrink:0;">Development</span>
+        <span style="flex:1;font-size:9.5px;">50 km Road Construction Completed</span>
+        <span style="opacity:.3;font-size:8.5px;width:55px;">15 Apr</span>
+        <span style="color:#c0392b;font-size:8.5px;width:35px;">✎ Edit</span>
+      </div><div class="mock-row">
+        <span style="background:rgba(245,158,11,.2);color:#fbbf24;padding:2px 7px;border-radius:4px;font-size:8px;font-weight:700;width:70px;flex-shrink:0;">Employment</span>
+        <span style="flex:1;font-size:9.5px;">Youth Skill Development Centre Opening</span>
+        <span style="opacity:.3;font-size:8.5px;width:55px;">30 Nov</span>
+        <span style="color:#c0392b;font-size:8.5px;width:35px;">✎ Edit</span>
+      </div><div class="mock-row">
+        <span style="background:rgba(168,85,247,.2);color:#d8b4fe;padding:2px 7px;border-radius:4px;font-size:8px;font-weight:700;width:70px;flex-shrink:0;">Education</span>
+        <span style="flex:1;font-size:9.5px;">15 Schools Infrastructure Upgrade</span>
+        <span style="opacity:.3;font-size:8.5px;width:55px;">25 Jan</span>
+        <span style="color:#c0392b;font-size:8.5px;width:35px;">✎ Edit</span>
+      </div><div class="mock-row">
+        <span style="background:rgba(239,68,68,.2);color:#fca5a5;padding:2px 7px;border-radius:4px;font-size:8px;font-weight:700;width:70px;flex-shrink:0;">Welfare</span>
+        <span style="flex:1;font-size:9.5px;">Clean Drinking Water — 10 Wards</span>
+        <span style="opacity:.3;font-size:8.5px;width:55px;">15 Dec</span>
+        <span style="color:#c0392b;font-size:8.5px;width:35px;">✎ Edit</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:11px;">
+        <div style="font-size:9px;opacity:.4;margin-bottom:7px;">Category Breakdown · வகைகள்</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;"><span style="font-size:9px;opacity:.55;">Welfare</span><span style="font-size:10px;font-weight:700;color:#4ade80;">18</span></div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;"><span style="font-size:9px;opacity:.55;">Development</span><span style="font-size:10px;font-weight:700;color:#93c5fd;">12</span></div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;"><span style="font-size:9px;opacity:.55;">Employment</span><span style="font-size:10px;font-weight:700;color:#fbbf24;">8</span></div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;"><span style="font-size:9px;opacity:.55;">Education</span><span style="font-size:10px;font-weight:700;color:#d8b4fe;">4</span></div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:11px;">
+        <div style="font-size:9px;opacity:.4;margin-bottom:7px;">Image Upload · படம் பதிவேற்றம்</div>
+        <div style="border:1.5px dashed rgba(255,255,255,.14);border-radius:8px;padding:14px;text-align:center;">
+          <div style="font-size:20px;margin-bottom:4px;">📷</div>
+          <div style="font-size:8.5px;opacity:.4;">Drag & Drop / Browse</div>
+          <div style="font-size:7.5px;opacity:.3;margin-top:2px;">JPG · PNG · WebP supported</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="snum">05</div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 6 — LEADER SWITCH (HERO) -->
+<div class="slide bg-gradient-r noise">
+  <div class="circle-deco" style="width:600px;height:600px;background:radial-gradient(circle,rgba(255,255,255,.06),transparent 60%);top:-220px;right:-200px;"></div>
+  <div class="full-pad" style="justify-content:center;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;">
+      <div>
+        <div class="sec-label" style="color:rgba(255,255,255,.5);">05 · Exclusive Feature · தனிச்சிறப்பு வசதி</div>
+        <div class="slide-title bi" style="margin-bottom:8px;">Leader Account Switch<br><span style="font-size:20px;opacity:.6;font-weight:600;">தலைவர் கணக்கு மாற்று</span></div>
+        <p class="body-text bi" style="max-width:380px;">One Platform, Many Ministers — ஒரே Platform-ஐ பல அமைச்சர்களுக்கு White-Label Ready. One Click-ல் முழு Website மாறும்!</p>
+      </div>
+      <div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:12px 20px;text-align:center;backdrop-filter:blur(10px);">
+        <div style="font-size:26px;font-weight:900;color:#f39c12;">White</div>
+        <div style="font-size:26px;font-weight:900;line-height:1;">Label</div>
+        <div style="font-size:9px;opacity:.45;margin-top:3px;">TECHNOLOGY</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;align-items:start;">
+      <div class="lcard lcard-on">
+        <div class="lcard-badge">✓ ACTIVE NOW</div>
+        <div class="lcard-logo" style="background:linear-gradient(135deg,#c0392b,#e74c3c);">N</div>
+        <div style="font-size:13.5px;font-weight:800;margin-bottom:3px;">C.T.R. Nirmal Kumar</div>
+        <div style="font-size:11px;opacity:.55;margin-bottom:2px;font-style:italic;">சி.டி.ஆர். நிர்மல் குமார்</div>
+        <div style="font-size:10.5px;opacity:.5;margin-bottom:8px;">Minister, Tirupparankundram</div>
+        <div style="font-size:9.5px;opacity:.38;margin-bottom:3px;">🌐 People Connect</div>
+        <div style="font-size:9.5px;opacity:.38;">📧 office@peopleconnect.in</div>
+        <div class="lcard-btn lbtn-on">✓ Currently Active · செயலில்</div>
+      </div>
+      <div class="lcard lcard-off">
+        <div class="lcard-logo" style="background:linear-gradient(135deg,#4b5563,#6b7280);">T</div>
+        <div style="font-size:13.5px;font-weight:800;margin-bottom:3px;">Dr. T.K. Prabhu</div>
+        <div style="font-size:11px;opacity:.55;margin-bottom:2px;font-style:italic;">டாக்டர் டி.கே. பிரபு</div>
+        <div style="font-size:10.5px;opacity:.5;margin-bottom:8px;">Minister, Karaikudi</div>
+        <div style="font-size:9.5px;opacity:.38;margin-bottom:3px;">🌐 TK Prabhu Connect</div>
+        <div style="font-size:9.5px;opacity:.38;">📧 office@tkprabhu.in</div>
+        <div class="lcard-btn lbtn-off">🔄 Activate · செயல்படுத்து</div>
+      </div>
+      <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:16px;">
+        <div style="font-size:11px;font-weight:700;opacity:.55;margin-bottom:11px;letter-spacing:.5px;text-transform:uppercase;">What Changes · மாறுவது:</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:10.5px;"><span>🔤</span><span style="opacity:.65;">Navbar Name & Constituency</span></div><div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:10.5px;"><span>🖼️</span><span style="opacity:.65;">Hero Page Details · Hero பக்கம்</span></div><div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:10.5px;"><span>📞</span><span style="opacity:.65;">Contact No. & Email</span></div><div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:10.5px;"><span>📍</span><span style="opacity:.65;">Office Address · முகவரி</span></div><div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:10.5px;"><span>💬</span><span style="opacity:.65;">WhatsApp Button Number</span></div><div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:10.5px;"><span>🌐</span><span style="opacity:.65;">Site Title & Browser Tab</span></div><div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:10.5px;"><span>👤</span><span style="opacity:.65;">About Page Profile · பற்றி</span></div>
+        <div style="margin-top:10px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:7px;padding:7px 11px;font-size:9.5px;color:#4ade80;">
+          ✓ Updates in 3 seconds · 3 வினாடியில் மாறும்
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="snum">06</div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 7 — SECURITY & ROLES -->
+<div class="slide bg-dark noise">
+  <div class="circle-deco" style="width:450px;height:450px;background:radial-gradient(circle,rgba(168,85,247,.08),transparent 70%);bottom:-120px;right:-80px;"></div>
+  <div class="split-left">
+    <div class="sec-label">06 · Security & Access Control</div>
+    <div class="slide-title bi" style="margin-bottom:14px;">User Roles &<br>Permissions<br><span style="font-size:20px;opacity:.55;font-weight:600;">பாதுகாப்பான அணுகல்</span></div>
+    <p class="body-text bi" style="margin-bottom:16px;">6 Different User Roles — ஒவ்வொரு Staff-க்கும் தேவையான Access மட்டும். No accidental edits, full data security.</p>
+    <div style="display:flex;flex-direction:column;gap:7px;">
+      <div style="display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 13px;">
+        <span class="rbadge rb-super">Super Admin</span>
+        <span style="font-size:10.5px;opacity:.55;flex:1;" class="bi">Full Access — Voter DB, Audit Log, Leader Switch, Bulk Delete</span>
+      </div><div style="display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 13px;">
+        <span class="rbadge rb-admin">Admin</span>
+        <span style="font-size:10.5px;opacity:.55;flex:1;" class="bi">Content, Grievances, Volunteers, Settings · அமைப்புகள்</span>
+      </div><div style="display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 13px;">
+        <span class="rbadge rb-staff">PA Staff</span>
+        <span style="font-size:10.5px;opacity:.55;flex:1;" class="bi">News, Events, FAQ, Gallery — Publish செய்யலாம்</span>
+      </div><div style="display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 13px;">
+        <span class="rbadge rb-staff">Media Team</span>
+        <span style="font-size:10.5px;opacity:.55;flex:1;" class="bi">News, Gallery, Press Release — Upload Only</span>
+      </div><div style="display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 13px;">
+        <span class="rbadge rb-officer">Grievance Officer</span>
+        <span style="font-size:10.5px;opacity:.55;flex:1;" class="bi">Assigned Grievances மட்டும் — Own Area Only</span>
+      </div><div style="display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 13px;">
+        <span class="rbadge rb-officer">Constituency Coord.</span>
+        <span style="font-size:10.5px;opacity:.55;flex:1;" class="bi">Voters, Analytics, Ward — ஒருங்கிணைப்பு</span>
+      </div>
+    </div>
+  </div>
+  <div class="split-div"></div>
+  <div class="split-right">
+    <div style="font-size:12.5px;font-weight:800;margin-bottom:10px;opacity:.7;">📋 Audit Log · செயல் பதிவேடு</div>
+    <div class="mock-win" style="margin-bottom:12px;">
+      <div class="mock-bar"><div class="d" style="background:#ef4444;"></div><div class="d" style="background:#f59e0b;"></div><div class="d" style="background:#22c55e;"></div><span>Audit Log · Super Admin Only</span></div>
+      <div style="padding:0 8px;">
+        <div class="mock-row">
+          <span style="background:rgba(192,57,43,.25);color:#fca5a5;padding:2px 8px;border-radius:5px;font-size:8px;font-weight:700;width:80px;flex-shrink:0;">UPDATE</span>
+          <span style="flex:1;font-size:9.5px;opacity:.65;">Leader Config → Nirmal Kumar</span>
+          <span style="font-size:8.5px;opacity:.3;width:70px;">Admin</span>
+          <span style="font-size:8.5px;opacity:.28;width:55px;">15 May 7:39</span>
+        </div><div class="mock-row">
+          <span style="background:rgba(59,130,246,.2);color:#93c5fd;padding:2px 8px;border-radius:5px;font-size:8px;font-weight:700;width:80px;flex-shrink:0;">VOTER_STATS</span>
+          <span style="flex:1;font-size:9.5px;opacity:.65;">Voter Statistics Viewed</span>
+          <span style="font-size:8.5px;opacity:.3;width:70px;">Admin</span>
+          <span style="font-size:8.5px;opacity:.28;width:55px;">14 May 11:05</span>
+        </div><div class="mock-row">
+          <span style="background:rgba(34,197,94,.15);color:#4ade80;padding:2px 8px;border-radius:5px;font-size:8px;font-weight:700;width:80px;flex-shrink:0;">CREATE</span>
+          <span style="flex:1;font-size:9.5px;opacity:.65;">News · Welfare Category</span>
+          <span style="font-size:8.5px;opacity:.3;width:70px;">PA Staff</span>
+          <span style="font-size:8.5px;opacity:.28;width:55px;">13 May 3:20</span>
+        </div><div class="mock-row">
+          <span style="background:rgba(168,85,247,.2);color:#d8b4fe;padding:2px 8px;border-radius:5px;font-size:8px;font-weight:700;width:80px;flex-shrink:0;">VOTER_SEARCH</span>
+          <span style="flex:1;font-size:9.5px;opacity:.65;">EPIC Search — 820 results</span>
+          <span style="font-size:8.5px;opacity:.3;width:70px;">Admin</span>
+          <span style="font-size:8.5px;opacity:.28;width:55px;">12 May 9:15</span>
+        </div><div class="mock-row">
+          <span style="background:rgba(245,158,11,.2);color:#fbbf24;padding:2px 8px;border-radius:5px;font-size:8px;font-weight:700;width:80px;flex-shrink:0;">UPDATE</span>
+          <span style="flex:1;font-size:9.5px;opacity:.65;">Grievance #1042 → In Progress</span>
+          <span style="font-size:8.5px;opacity:.3;width:70px;">Officer</span>
+          <span style="font-size:8.5px;opacity:.28;width:55px;">11 May 2:30</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:10px;display:flex;gap:8px;align-items:flex-start;">
+        <span style="font-size:16px;">🔐</span>
+        <div>
+          <div style="font-size:11px;font-weight:700;margin-bottom:2px;">JWT Auth</div>
+          <div style="font-size:9px;opacity:.4;">பாதுகாப்பான Login</div>
+        </div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:10px;display:flex;gap:8px;align-items:flex-start;">
+        <span style="font-size:16px;">📋</span>
+        <div>
+          <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Full Audit Trail</div>
+          <div style="font-size:9px;opacity:.4;">முழு செயல் பதிவு</div>
+        </div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:10px;display:flex;gap:8px;align-items:flex-start;">
+        <span style="font-size:16px;">🛡️</span>
+        <div>
+          <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Role-based Access</div>
+          <div style="font-size:9px;opacity:.4;">நிலை அடிப்படை</div>
+        </div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:10px;display:flex;gap:8px;align-items:flex-start;">
+        <span style="font-size:16px;">🔒</span>
+        <div>
+          <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Session Timeout</div>
+          <div style="font-size:9px;opacity:.4;">நேர வரம்பு</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="snum">07</div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 8 — ALL MODULES -->
+<div class="slide bg-dark noise">
+  <div class="full-pad">
+    <div class="sec-label" style="margin-bottom:8px;">07 · Complete Platform Overview · முழு தளம்</div>
+    <div class="slide-title bi" style="margin-bottom:18px;">20+ Admin Modules · <span style="font-size:22px;opacity:.6;font-weight:600;">20+ நிர்வாக பகுதிகள்</span></div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:9px;">
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">📊</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Dashboard</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">நிர்வாக வாரியம்</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">📋</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Grievances</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">மக்கள் புகார்</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">👮</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Officer Assign</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">அதிகாரி ஒதுக்கீடு</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">🗺️</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Constituency Map</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">தொகுதி வரைபடம்</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">📈</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Analytics</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">பகுப்பாய்வு</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">🗳️</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Voter Search</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">வாக்காளர் தேடல்</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">📥</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Voter Roll PDF</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">PDF இறக்குமதி</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">🏷️</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Voter Tags</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">குறிச்சொற்கள்</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">📤</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Voter Export</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">Excel ஏற்றுமதி</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">📰</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">News</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">செய்திகள்</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">📅</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Events</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">நிகழ்வுகள்</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">🎯</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Activities</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">நடவடிக்கைகள்</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">🖼️</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Gallery</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">ஊடக தொகுப்பு</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">📢</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Banners</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">விளம்பரம்</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">📜</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Press Release</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">அதிகாரப்பூர்வ</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">🏡</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Home CMS</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">முகப்பு திருத்தம்</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">👤</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">About CMS</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">பற்றி திருத்தம்</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">❓</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">FAQs</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">கேள்வி பதில்</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">🔄</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Leader Switch</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">தலைவர் மாற்று</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">⚙️</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Site Settings</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">தள அமைப்பு</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">🏛️</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Constituency</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">தொகுதி படிநிலை</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">👥</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Volunteers</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">தன்னார்வலர்</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">🔐</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Audit Log</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">செயல் பதிவு</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">🌐</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Ward Admin</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">வார்டு நிர்வாகம்</div>
+      </div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:12px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:5px;">📊</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Hierarchy</div>
+        <div style="font-size:9px;opacity:.38;" class="bi">Zone→Ward→Booth</div>
+      </div>
+    </div>
+  </div>
+  <div class="snum">08</div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 9 — CLOSING -->
+<div class="slide bg-gradient-r noise">
+  <div class="circle-deco" style="width:650px;height:650px;background:radial-gradient(circle,rgba(255,255,255,.06),transparent 60%);top:-250px;right:-250px;"></div>
+  <div class="circle-deco" style="width:350px;height:350px;background:radial-gradient(circle,rgba(0,0,0,.25),transparent 70%);bottom:-130px;left:-80px;"></div>
+  <div class="full-pad" style="justify-content:center;align-items:center;text-align:center;">
+    <div style="font-size:52px;margin-bottom:18px;">⚡</div>
+    <div class="hero-title bi" style="margin-bottom:14px;">
+      உங்கள் தொகுதிக்கும்<br>
+      <span style="background:linear-gradient(90deg,#f39c12,#e74c3c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">People Connect!</span>
+    </div>
+    <p class="body-text bi" style="max-width:500px;margin:0 auto 30px;">
+      Ready in 1 Day · ஒரே நாளில் Ready — Your Minister's Name, Your Constituency.<br>Grievance System, Voter Database, 20+ Admin Modules — அனைத்தும் தயார்.
+    </p>
+    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:30px;">
+      <div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:12px 20px;text-align:center;backdrop-filter:blur(10px);"><div style="font-size:9.5px;opacity:.38;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">Technology Partner</div><div style="font-size:14px;font-weight:700;color:rgba(255,255,255,.88);">Automystics Technologies Pvt Ltd</div></div><div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:12px 20px;text-align:center;backdrop-filter:blur(10px);"><div style="font-size:9.5px;opacity:.38;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">Website</div><div style="font-size:14px;font-weight:700;color:rgba(255,255,255,.88);">www.Automystics.com</div></div><div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:12px 20px;text-align:center;backdrop-filter:blur(10px);"><div style="font-size:9.5px;opacity:.38;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">Platform</div><div style="font-size:14px;font-weight:700;color:rgba(255,255,255,.88);">People Connect</div></div><div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:12px 20px;text-align:center;backdrop-filter:blur(10px);"><div style="font-size:9.5px;opacity:.38;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">Built For</div><div style="font-size:14px;font-weight:700;color:rgba(255,255,255,.88);">TVK Ministers & Constituencies</div></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:100px;padding:7px 18px;font-size:11.5px;font-weight:700;">✓ White-Label Ready</div><div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:100px;padding:7px 18px;font-size:11.5px;font-weight:700;">✓ 20+ Admin Modules</div><div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:100px;padding:7px 18px;font-size:11.5px;font-weight:700;">✓ 6 Role Levels</div><div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:100px;padding:7px 18px;font-size:11.5px;font-weight:700;">✓ Tamil + English</div><div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:100px;padding:7px 18px;font-size:11.5px;font-weight:700;">✓ 24/7 Grievances</div><div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:100px;padding:7px 18px;font-size:11.5px;font-weight:700;">✓ Full Voter Database</div>
+    </div>
+    <div style="position:absolute;bottom:14mm;left:0;right:0;text-align:center;font-size:9px;opacity:.3;letter-spacing:.8px;font-family:'Inter';">
+      © 2025 AUTOMYSTICS TECHNOLOGIES PVT LTD · WWW.AUTOMYSTICS.COM · CONFIDENTIAL
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
