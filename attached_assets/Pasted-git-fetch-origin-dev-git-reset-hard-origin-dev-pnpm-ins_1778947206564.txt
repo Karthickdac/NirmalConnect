@@ -1,0 +1,73 @@
+git fetch origin dev
+git reset --hard origin/dev
+pnpm install --frozen-lockfile
+pnpm --filter @workspace/api-server run build
+pnpm --filter @workspace/nirmal-connect run build
+pm2 restart nirmal-api
+remote: Enumerating objects: 1989, done.
+remote: Counting objects: 100% (1989/1989), done.
+remote: Compressing objects: 100% (655/655), done.
+remote: Total 1989 (delta 1315), reused 1963 (delta 1289), pack-reused 0 (from 0)
+Receiving objects: 100% (1989/1989), 35.51 MiB | 35.82 MiB/s, done.
+Resolving deltas: 100% (1315/1315), done.
+From https://github.com/Karthickdac/NirmalConnect
+ * branch            dev        -> FETCH_HEAD
+ * [new branch]      dev        -> origin/dev
+HEAD is now at a655eb4 Add deployment scripts for VPS server setup
+Scope: all 9 workspace projects
+Lockfile is up to date, resolution step is skipped
+Packages: +759
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 759, reused 759, downloaded 0, added 759, done
+
+devDependencies:
++ prettier 3.8.1
++ tsx 4.21.0
++ typescript 5.9.3
+
+. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+│ Use pnpm instead
+└─ Failed in 39ms at /home/ctr/htdocs/ctr.tamilagavetrikalagam.com
+[ELIFECYCLE] Command failed with exit code 1.
+Scope: all 9 workspace projects
+Lockfile is up to date, resolution step is skipped
+Already up to date
+. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+│ Use pnpm instead
+└─ Failed in 34ms at /home/ctr/htdocs/ctr.tamilagavetrikalagam.com
+[ELIFECYCLE] Command failed with exit code 1.
+[ERROR] Command failed with exit code 1: pnpm install
+
+pnpm: Command failed with exit code 1: pnpm install
+    at getFinalError (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:28776:14)
+    at makeError (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:31083:21)
+    at getSyncResult (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32927:10)
+    at spawnSubprocessSync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32887:14)
+    at execaCoreSync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32817:23)
+    at callBoundExeca (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35345:23)
+    at boundExeca (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35322:49)
+    at sync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35477:14)
+    at runPnpmCli (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:211260:5)
+    at runDepsStatusCheck (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:212964:7)
+Scope: all 9 workspace projects
+Lockfile is up to date, resolution step is skipped
+Already up to date
+. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+│ Use pnpm instead
+└─ Failed in 35ms at /home/ctr/htdocs/ctr.tamilagavetrikalagam.com
+[ELIFECYCLE] Command failed with exit code 1.
+[ERROR] Command failed with exit code 1: pnpm install
+
+pnpm: Command failed with exit code 1: pnpm install
+    at getFinalError (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:28776:14)
+    at makeError (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:31083:21)
+    at getSyncResult (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32927:10)
+    at spawnSubprocessSync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32887:14)
+    at execaCoreSync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:32817:23)
+    at callBoundExeca (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35345:23)
+    at boundExeca (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35322:49)
+    at sync (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:35477:14)
+    at runPnpmCli (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:211260:5)
+    at runDepsStatusCheck (file:///usr/lib/node_modules/pnpm/dist/pnpm.mjs:212964:7)
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [nirmal-api](ids: [ 8 ])
