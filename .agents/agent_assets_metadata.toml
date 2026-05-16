@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "OSvNjlPaZ0dc6FSAGpNqX"
+uri = "file://nirmal_connect_brochure.zip"
+type = "unspecified"
+title = "Nirmal Connect – Tamil Client Brochure (HTML)"
