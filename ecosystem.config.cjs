@@ -9,7 +9,7 @@ module.exports = {
       script: "./artifacts/api-server/dist/index.mjs",
       interpreter: "node",
       interpreter_args: "--enable-source-maps",
-      cwd: "/home/tamilagavetrikalagam/htdocs/ctr.tamilagavetrikalagam.com",
+      cwd: "/home/ctr/htdocs/ctr.tamilagavetrikalagam.com",
       env: {
         NODE_ENV: "production",
         PORT: "8080",

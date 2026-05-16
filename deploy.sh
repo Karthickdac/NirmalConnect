@@ -7,7 +7,7 @@
 
 set -e
 
-DEPLOY_DIR="/home/tamilagavetrikalagam/htdocs/ctr.tamilagavetrikalagam.com"
+DEPLOY_DIR="/home/ctr/htdocs/ctr.tamilagavetrikalagam.com"
 
 echo ""
 echo "╔══════════════════════════════════════════════╗"

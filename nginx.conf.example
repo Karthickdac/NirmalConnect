@@ -11,7 +11,7 @@ server {
     # Redirect HTTP → HTTPS (uncomment after SSL is set up)
     # return 301 https://$host$request_uri;
 
-    root /home/tamilagavetrikalagam/htdocs/ctr.tamilagavetrikalagam.com/artifacts/nirmal-connect/dist;
+    root /home/ctr/htdocs/ctr.tamilagavetrikalagam.com/artifacts/nirmal-connect/dist;
     index index.html;
 
     # Gzip compression
@@ -53,7 +53,7 @@ server {
 #     ssl_certificate_key /etc/letsencrypt/live/ctr.tamilagavetrikalagam.com/privkey.pem;
 #     include /etc/letsencrypt/options-ssl-nginx.conf;
 #
-#     root /home/tamilagavetrikalagam/htdocs/ctr.tamilagavetrikalagam.com/artifacts/nirmal-connect/dist;
+#     root /home/ctr/htdocs/ctr.tamilagavetrikalagam.com/artifacts/nirmal-connect/dist;
 #     index index.html;
 #
 #     location /api/ {
