@@ -155,8 +155,8 @@ const TENANT_CONFIGS: Record<string, object> = {
   nirmal: {
     nameEn: "C.T.R. Nirmal Kumar",
     nameTa: "சி.டி.ஆர். நிர்மல் குமார்",
-    titleEn: "Minister of Energy Resources and Law & MLA, Tirupparankundram",
-    titleTa: "சக்தி வளங்கள் மற்றும் சட்ட அமைச்சர் & திருப்பரங்குன்றம் சட்டமன்ற உறுப்பினர்",
+    titleEn: "Minister of Energy Resources and Law",
+    titleTa: "சக்தி வளங்கள் மற்றும் சட்ட அமைச்சர்",
     constituencyEn: "Tirupparankundram",
     constituencyTa: "திருப்பரங்குன்றம்",
     partyEn: "Tamilaga Vettri Kazhagam (TVK)",
