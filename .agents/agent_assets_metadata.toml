@@ -24,3 +24,9 @@ id = "Jtpo-QZzbVfb_wb3CmADK"
 uri = "file://people_connect_presentation.zip"
 type = "unspecified"
 title = "People Connect – Admin Presentation (Tamil + English)"
+
+[[outputs]]
+id = "Vvc9uSi-JBnpqsauGL6gJ"
+uri = "file://people_connect_website_presentation.zip"
+type = "unspecified"
+title = "People Connect – Website Presentation (Tamil + English)"
