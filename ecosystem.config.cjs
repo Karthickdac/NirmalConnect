@@ -12,7 +12,7 @@ module.exports = {
       cwd: "/home/ctr/htdocs/ctr.tamilagavetrikalagam.com",
       env: {
         NODE_ENV: "production",
-        PORT: "8080",
+        PORT: "2500",
       },
       // Auto-restart on crash
       autorestart: true,

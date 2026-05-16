@@ -1,0 +1,129 @@
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com# # 1. Start the API process
+cd /home/ctr/htdocs/ctr.tamilagavetrikalagam.com
+pm2 start ecosystem.config.cjs
+pm2 save
+
+# 2. Add the /api/ proxy to the Nginx config
+cat >> /etc/nginx/sites-enabled/ctr.tamilagavetrikalagam.com.conf << 'EOF'
+# (This is a patch — merge into your server{} block if needed)
+EOF
+
+# Show the current Nginx config so we can add the proxy block
+cat /etc/nginx/sites-enabled/ctr.tamilagavetrikalagam.com.conf
+[PM2] Applying action restartProcessId on app [people-connect-api](ids: [ 9 ])
+[PM2] [people-connect-api](9) ✓
+┌────┬───────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name                  │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼───────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 6  │ automystics-api       │ default     │ 0.0.0   │ fork    │ 2713226  │ 20m    │ 22   │ online    │ 0%       │ 118.1mb  │ root     │ disabled │
+│ 2  │ fitro360              │ default     │ 1.0.0   │ fork    │ 2713206  │ 20m    │ 10   │ online    │ 0%       │ 112.3mb  │ root     │ disabled │
+│ 3  │ kalvicore-api         │ default     │ 0.0.0   │ fork    │ 2713208  │ 20m    │ 4    │ online    │ 0%       │ 100.4mb  │ root     │ disabled │
+│ 7  │ mystics-api           │ default     │ 0.0.0   │ fork    │ 2713243  │ 20m    │ 47   │ online    │ 0%       │ 317.3mb  │ root     │ disabled │
+│ 9  │ people-connect-api    │ default     │ 0.0.0   │ fork    │ 2761409  │ 0s     │ 2    │ online    │ 0%       │ 21.0mb   │ root     │ disabled │
+└────┴───────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+server {
+    listen 80;
+    server_name ctr.tamilagavetrikalagam.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name ctr.tamilagavetrikalagam.com;
+
+    ssl_certificate /etc/nginx/ssl-certificates/ctr.tamilagavetrikalagam.com.crt;
+    ssl_certificate_key /etc/nginx/ssl-certificates/ctr.tamilagavetrikalagam.com.key;
+
+    root /home/ctr/htdocs/ctr.tamilagavetrikalagam.com/artifacts/nirmal-connect/dist/public;
+    index index.html;
+
+    location /api/ {
+        proxy_pass http://localhost:2500;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /uploads/ {
+        proxy_pass http://localhost:2500;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+# (This is a patch — merge into your server{} block if needed)
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com# # 1. Start the API process
+cd /home/ctr/htdocs/ctr.tamilagavetrikalagam.com
+pm2 start ecosystem.config.cjs
+pm2 save
+
+# 2. Add the /api/ proxy to the Nginx config
+cat >> /etc/nginx/sites-enabled/ctr.tamilagavetrikalagam.com.conf << 'EOF'
+# (This is a patch — merge into your server{} block if needed)
+EOF
+
+# Show the current Nginx config so we can add the proxy block
+cat /etc/nginx/sites-enabled/ctr.tamilagavetrikalagam.com.conf
+[PM2] Applying action restartProcessId on app [people-connect-api](ids: [ 9 ])
+[PM2] [people-connect-api](9) ✓
+┌────┬───────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name                  │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼───────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 6  │ automystics-api       │ default     │ 0.0.0   │ fork    │ 2713226  │ 20m    │ 22   │ online    │ 0%       │ 118.1mb  │ root     │ disabled │
+│ 2  │ fitro360              │ default     │ 1.0.0   │ fork    │ 2713206  │ 20m    │ 10   │ online    │ 0%       │ 112.3mb  │ root     │ disabled │
+│ 3  │ kalvicore-api         │ default     │ 0.0.0   │ fork    │ 2713208  │ 20m    │ 4    │ online    │ 0%       │ 100.4mb  │ root     │ disabled │
+│ 7  │ mystics-api           │ default     │ 0.0.0   │ fork    │ 2713243  │ 20m    │ 47   │ online    │ 0%       │ 317.3mb  │ root     │ disabled │
+│ 9  │ people-connect-api    │ default     │ 0.0.0   │ fork    │ 2761616  │ 0s     │ 3    │ online    │ 0%       │ 21.5mb   │ root     │ disabled │
+└────┴───────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+server {
+    listen 80;
+    server_name ctr.tamilagavetrikalagam.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name ctr.tamilagavetrikalagam.com;
+
+    ssl_certificate /etc/nginx/ssl-certificates/ctr.tamilagavetrikalagam.com.crt;
+    ssl_certificate_key /etc/nginx/ssl-certificates/ctr.tamilagavetrikalagam.com.key;
+
+    root /home/ctr/htdocs/ctr.tamilagavetrikalagam.com/artifacts/nirmal-connect/dist/public;
+    index index.html;
+
+    location /api/ {
+        proxy_pass http://localhost:2500;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /uploads/ {
+        proxy_pass http://localhost:2500;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+# (This is a patch — merge into your server{} block if needed)
+# (This is a patch — merge into your server{} block if needed)
