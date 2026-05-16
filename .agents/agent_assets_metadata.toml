@@ -12,3 +12,9 @@ id = "ug5Mv7IfTfbEVcSrEnWMe"
 uri = "file://nirmal_connect_admin_guide.zip"
 type = "unspecified"
 title = "Nirmal Connect – Admin Feature Guide (Tamil)"
+
+[[outputs]]
+id = "7kDlm9kf-jOg9JvNaZ6eW"
+uri = "file://nirmal_connect_presentation.zip"
+type = "unspecified"
+title = "Nirmal Connect – Admin Presentation (Automystics Branded)"
