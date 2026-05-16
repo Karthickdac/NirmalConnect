@@ -1,0 +1,37 @@
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com# # Check if PostgreSQL is installed and running
+pg_isready 2>/dev/null && echo "PostgreSQL is running locally" || echo "No local PostgreSQL"
+
+# List existing databases
+sudo -u postgres psql -c "\l" 2>/dev/null || echo "Cannot list databases"
+
+# Check if old tkprabhu app had a database config anywhere else
+grep -r "DATABASE_URL\|postgres\|postgresql" /home/tamilagavetrikalagam/htdocs/tkprabhu.tamilagavetrikalagam.com/ 2>/dev/null | grep -v "node_modules\|\.git" | head -10
+/var/run/postgresql:5432 - accepting connections
+PostgreSQL is running locally
+                                                              List of databases
+     Name      |    Owner    | Encoding | Locale Provider |   Collate   |    Ctype    | ICU Locale | ICU Rules |      Access privileges      
+---------------+-------------+----------+-----------------+-------------+-------------+------------+-----------+-----------------------------
+ automystics   | postgres    | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |            |           | =Tc/postgres               +
+               |             |          |                 |             |             |            |           | postgres=CTc/postgres
+ fitro360      | automystics | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |            |           | =Tc/automystics            +
+               |             |          |                 |             |             |            |           | automystics=CTc/automystics
+ kalvicore     | kalvicore   | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |            |           | =Tc/kalvicore              +
+               |             |          |                 |             |             |            |           | kalvicore=CTc/kalvicore
+ kuralai       | kuralai     | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |            |           | =Tc/kuralai                +
+               |             |          |                 |             |             |            |           | kuralai=CTc/kuralai
+ mysticshr     | mysticshr   | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |            |           | =Tc/mysticshr              +
+               |             |          |                 |             |             |            |           | mysticshr=CTc/mysticshr
+ mysticsinv    | automystics | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |            |           | =Tc/automystics            +
+               |             |          |                 |             |             |            |           | automystics=CTc/automystics
+ nirmalconnect | ctr         | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |            |           | =Tc/ctr                    +
+               |             |          |                 |             |             |            |           | ctr=CTc/ctr
+ postgres      | postgres    | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |            |           | 
+ solarnexus    | solarnexus  | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |            |           | =Tc/solarnexus             +
+               |             |          |                 |             |             |            |           | solarnexus=CTc/solarnexus
+ template0     | postgres    | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |            |           | =c/postgres                +
+               |             |          |                 |             |             |            |           | postgres=CTc/postgres
+ template1     | postgres    | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |            |           | =c/postgres                +
+               |             |          |                 |             |             |            |           | postgres=CTc/postgres
+(11 rows)
+
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com# 
