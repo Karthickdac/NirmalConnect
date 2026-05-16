@@ -1,0 +1,32 @@
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+[TAILING] Tailing last 20 lines for [people-connect-api] process (change the value with --lines option)
+/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/logs/api-error.log last 20 lines:
+12|people- | 2026-05-16 16:06:11: Error: DATABASE_URL must be set. Did you forget to provision a database?
+12|people- | 2026-05-16 16:06:11:     at file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/lib/db/src/index.ts:8:9
+12|people- | 2026-05-16 16:06:11:     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+12|people- | 2026-05-16 16:06:11:     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+12|people- | 2026-05-16 16:06:11:     at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+12|people- | 2026-05-16 16:09:17: Error: DATABASE_URL must be set. Did you forget to provision a database?
+12|people- | 2026-05-16 16:09:17:     at file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/lib/db/src/index.ts:8:9
+12|people- | 2026-05-16 16:09:17:     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+12|people- | 2026-05-16 16:09:17:     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+12|people- | 2026-05-16 16:09:17:     at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+12|people- | 2026-05-16 16:12:32: Error: DATABASE_URL must be set. Did you forget to provision a database?
+12|people- | 2026-05-16 16:12:32:     at file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/lib/db/src/index.ts:8:9
+12|people- | 2026-05-16 16:12:32:     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+12|people- | 2026-05-16 16:12:32:     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+12|people- | 2026-05-16 16:12:32:     at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+12|people- | 2026-05-16 16:12:37: Error: DATABASE_URL must be set. Did you forget to provision a database?
+12|people- | 2026-05-16 16:12:37:     at file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/lib/db/src/index.ts:8:9
+12|people- | 2026-05-16 16:12:37:     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+12|people- | 2026-05-16 16:12:37:     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+12|people- | 2026-05-16 16:12:37:     at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+
+/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/logs/api-out.log last 20 lines:
+12|people- | 2026-05-16 16:18:46: {"level":30,"time":1778948326868,"pid":2776880,"hostname":"srv1609330","port":2500,"msg":"Server listening"}
+
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com# cd /home/ctr/htdocs/ctr.tamilagavetrikalagam.com
+DATABASE_URL="postgresql://ctr:Ctr@2024@localhost:5432/nirmalconnect" \
+  pnpm --filter @workspace/db run db:push
+[ERR_PNPM_RECURSIVE_RUN_NO_SCRIPT] None of the selected packages has a "db:push" script
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com# 
