@@ -1,0 +1,23 @@
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com# # Check where PM2 is actually running the process from
+pm2 show nirmal-api
+
+# Check if the new dist files exist
+ls /home/ctr/htdocs/ctr.tamilagavetrikalagam.com/artifacts/nirmal-connect/dist/
+
+# Check where Nginx is serving from
+grep -r "root" /etc/nginx/sites-enabled/ 2>/dev/null || grep -r "root" /etc/nginx/conf.d/ 2>/dev/null
+[PM2][WARN] nirmal-api doesn't exist
+public
+/etc/nginx/sites-enabled/mysticsinv.automystics.tech.conf:  root /home/automystics-mysticsinv/htdocs/mysticsinv.automystics.tech/MysticsInventory/artifacts/inventory/dist/public;
+/etc/nginx/sites-enabled/solarnexus.automystics.tech.conf:  root /home/automystics-solarnexus/htdocs/solarnexus.automystics.tech/app/artifacts/trb246-dashboard/dist/public;
+/etc/nginx/sites-enabled/tkprabhu.tamilagavetrikalagam.com.conf:  root /home/tamilagavetrikalagam/htdocs/tkprabhu.tamilagavetrikalagam.com;
+/etc/nginx/sites-enabled/www.automystics.com.conf:  root /home/automystics/htdocs/www.automystics.com;
+/etc/nginx/sites-enabled/kuralai.automystics.tech.conf.bak.1778000544:  root /home/automystics-kuralai/htdocs/kuralai.automystics.tech;
+/etc/nginx/sites-enabled/www.fitro360.com.conf:  root /home/fitro360/htdocs/www.fitro360.com;
+/etc/nginx/sites-enabled/mysticshr.automystics.tech.conf:  root /home/automystics-mysticshr/htdocs/mysticshr.automystics.tech;
+/etc/nginx/sites-enabled/kuralai.automystics.tech.conf.bak.1777997518:  root /home/automystics-kuralai/htdocs/kuralai.automystics.tech;
+/etc/nginx/sites-enabled/kalvicore.automystics.tech.conf:  root /home/automystics-kalvicore/htdocs/kalvicore.automystics.tech;
+/etc/nginx/sites-enabled/kalvicore.automystics.tech.conf:    root /home/automystics-kalvicore/htdocs/kalvicore.automystics.tech/artifacts/college-cms/dist/public;
+/etc/nginx/sites-enabled/kuralai.automystics.tech.conf:  root /home/automystics-kuralai/htdocs/kuralai.automystics.tech;
+/etc/nginx/sites-enabled/ctr.tamilagavetrikalagam.com.conf:    root /home/ctr/htdocs/ctr.tamilagavetrikalagam.com/NirmalConnect/artifacts/nirmal-connect/dist/public;
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com# 
