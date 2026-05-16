@@ -1,0 +1,76 @@
+## Nginx config for People Connect
+## Domain: tkprabhu.tamilagavetrikalagam.com
+## Copy to: /etc/nginx/sites-available/people-connect
+## Then: ln -s /etc/nginx/sites-available/people-connect /etc/nginx/sites-enabled/
+## Then: nginx -t && systemctl reload nginx
+
+server {
+    listen 80;
+    server_name tkprabhu.tamilagavetrikalagam.com www.tkprabhu.tamilagavetrikalagam.com;
+
+    # Redirect HTTP → HTTPS (uncomment after SSL is set up)
+    # return 301 https://$host$request_uri;
+
+    root /home/tamilagavetrikalagam/htdocs/tkprabhu.tamilagavetrikalagam.com/artifacts/nirmal-connect/dist;
+    index index.html;
+
+    # Gzip compression
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
+
+    # API — proxy to Node.js backend
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 60s;
+    }
+
+    # Static assets — long cache
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # SPA fallback — all routes go to index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+# HTTPS (uncomment after running: certbot --nginx -d tkprabhu.tamilagavetrikalagam.com)
+# server {
+#     listen 443 ssl http2;
+#     server_name tkprabhu.tamilagavetrikalagam.com www.tkprabhu.tamilagavetrikalagam.com;
+#     ssl_certificate /etc/letsencrypt/live/tkprabhu.tamilagavetrikalagam.com/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/tkprabhu.tamilagavetrikalagam.com/privkey.pem;
+#     include /etc/letsencrypt/options-ssl-nginx.conf;
+#
+#     root /home/tamilagavetrikalagam/htdocs/tkprabhu.tamilagavetrikalagam.com/artifacts/nirmal-connect/dist;
+#     index index.html;
+#
+#     location /api/ {
+#         proxy_pass http://127.0.0.1:8080;
+#         proxy_http_version 1.1;
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-Proto https;
+#     }
+#
+#     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
+#         expires 1y;
+#         add_header Cache-Control "public, immutable";
+#         try_files $uri =404;
+#     }
+#
+#     location / {
+#         try_files $uri $uri/ /index.html;
+#     }
+# }
