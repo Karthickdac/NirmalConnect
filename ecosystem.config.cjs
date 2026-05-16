@@ -13,12 +13,13 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: "2500",
+        DATABASE_URL: "postgresql://ctr:Ctr@2024@localhost:5432/nirmalconnect",
+        JWT_SECRET: "NirmalConnect@JWT#2024!SecretKey",
+        SESSION_SECRET: "NirmalConnect@Session#2024!SecretKey",
       },
-      // Auto-restart on crash
       autorestart: true,
       watch: false,
       max_memory_restart: "512M",
-      // Logging
       out_file: "./logs/api-out.log",
       error_file: "./logs/api-error.log",
       log_date_format: "YYYY-MM-DD HH:mm:ss",

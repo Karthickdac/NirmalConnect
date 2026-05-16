@@ -1,0 +1,34 @@
+[TAILING] Tailing last 20 lines for [people-connect-api] process (change the value with --lines option)
+/root/.pm2/logs/people-connect-api-out.log last 20 lines:
+/root/.pm2/logs/people-connect-api-error.log last 20 lines:
+11|people- | Error: JWT_SECRET environment variable is required in production
+11|people- |     at resolveJwtSecret (file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/artifacts/api-server/src/lib/auth.ts:9:11)
+11|people- |     at file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/artifacts/api-server/src/lib/auth.ts:17:20
+11|people- |     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+11|people- |     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+11|people- |     at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+11|people- | Error: JWT_SECRET environment variable is required in production
+11|people- |     at resolveJwtSecret (file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/artifacts/api-server/src/lib/auth.ts:9:11)
+11|people- |     at file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/artifacts/api-server/src/lib/auth.ts:17:20
+11|people- |     at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+11|people- |     at processTicksAndRejections (node:internal/process/task_queues:103:5)
+11|people- |     at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com# cd /home/ctr/htdocs/ctr.tamilagavetrikalagam.com
+DATABASE_URL="postgresql://ctr:Ctr%402024@localhost:5432/nirmalconnect" \
+  node -e "import('./lib/db/dist/seed.js').then(m => m.seed ? m.seed() : m.default()).catch(console.error)"
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/lib/db/dist/seed.js' imported from /home/ctr/htdocs/ctr.tamilagavetrikalagam.com/[eval]
+    at finalizeResolution (node:internal/modules/esm/resolve:275:11)
+    at moduleResolve (node:internal/modules/esm/resolve:861:10)
+    at defaultResolve (node:internal/modules/esm/resolve:985:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:731:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:708:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:310:38)
+    at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:664:36)
+    at TracingChannel.tracePromise (node:diagnostics_channel:350:14)
+    at ModuleLoader.import (node:internal/modules/esm/loader:663:21)
+    at importModuleDynamically (node:internal/process/execution:381:33) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///home/ctr/htdocs/ctr.tamilagavetrikalagam.com/lib/db/dist/seed.js'
+}
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com# 
