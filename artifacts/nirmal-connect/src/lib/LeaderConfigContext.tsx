@@ -29,7 +29,7 @@ export const DEFAULT_LEADER_CONFIG: LeaderConfig = {
   nameEn: "C.T.R. Nirmal Kumar",
   nameTa: "சி.டி.ஆர். நிர்மல் குமார்",
   titleEn: "Minister of Energy Resources and Law",
-  titleTa: "சக்தி வளங்கள் மற்றும் சட்ட அமைச்சர்",
+  titleTa: "மின்சக்தி மற்றும் சட்டத்துறை அமைச்சர்",
   constituencyEn: "Tirupparankundram",
   constituencyTa: "திருப்பரங்குன்றம்",
   partyEn: "Tamilaga Vettri Kazhagam (TVK)",
