@@ -13,7 +13,7 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: "2500",
-        DATABASE_URL: "postgresql://ctr:Ctr@2024@localhost:5432/nirmalconnect",
+        DATABASE_URL: "postgresql://ctr:CtrNirmal2024@localhost:5432/nirmalconnect",
         JWT_SECRET: "NirmalConnect@JWT#2024!SecretKey",
         SESSION_SECRET: "NirmalConnect@Session#2024!SecretKey",
       },

@@ -1,0 +1,49 @@
+root@srv1609330:/home/ctr/htdocs/ctr.tamilagavetrikalagam.com# cd /home/ctr/htdocs/ctr.tamilagavetrikalagam.com/lib/db
+
+# First confirm schema push worked (tables exist)
+DATABASE_URL="postgresql://ctr:Ctr@2024@localhost:5432/nirmalconnect" \
+  ../../node_modules/.bin/drizzle-kit push --config ./drizzle.config.ts
+
+# Then seed using local tsx binary
+DATABASE_URL="postgresql://ctr:Ctr@2024@localhost:5432/nirmalconnect" \
+  ../../node_modules/.bin/tsx src/seed.ts
+-bash: ../../node_modules/.bin/drizzle-kit: No such file or directory
+Seeding database for tenant: nirmal
+Seed error: DrizzleQueryError: Failed query: insert into "users" ("id", "email", "name", "password_hash", "role", "is_active", "created_at", "updated_at") values (default, $1, $2, $3, $4, $5, default, default) on conflict do nothing
+params: admin@nirmalconnect.in,Admin User,$2b$12$0i8kIrH177hLNnPGBRjw.u/fALaWHz305mrZhVUxW15NHYQ3eWNJS,super_admin,true
+    at NodePgPreparedQuery.queryWithCache (/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.18.0_pg@8.20.0/node_modules/src/pg-core/session.ts:73:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async seed (/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/lib/db/src/seed.ts:209:3) {
+  query: 'insert into "users" ("id", "email", "name", "password_hash", "role", "is_active", "created_at", "updated_at") values (default, $1, $2, $3, $4, $5, default, default) on conflict do nothing',
+  params: [
+    'admin@nirmalconnect.in',
+    'Admin User',
+    '$2b$12$0i8kIrH177hLNnPGBRjw.u/fALaWHz305mrZhVUxW15NHYQ3eWNJS',
+    'super_admin',
+    'true'
+  ],
+  cause: error: password authentication failed for user "ctr"
+      at /home/ctr/htdocs/ctr.tamilagavetrikalagam.com/node_modules/.pnpm/pg-pool@3.13.0_pg@8.20.0/node_modules/pg-pool/index.js:45:11
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at async <anonymous> (/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.18.0_pg@8.20.0/node_modules/src/node-postgres/session.ts:149:14)
+      at async NodePgPreparedQuery.queryWithCache (/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.18.0_pg@8.20.0/node_modules/src/pg-core/session.ts:71:12)
+      at async seed (/home/ctr/htdocs/ctr.tamilagavetrikalagam.com/lib/db/src/seed.ts:209:3) {
+    length: 99,
+    severity: 'FATAL',
+    code: '28P01',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'auth.c',
+    line: '331',
+    routine: 'auth_failed'
+  }
+}
