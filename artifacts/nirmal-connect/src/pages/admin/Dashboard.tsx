@@ -52,19 +52,35 @@ export default function Dashboard() {
 
   const { kpi, grievancesByCategory, grievancesByStatus, monthlyTrend, recentAuditLog } = data;
 
-  const kpiCards = [
-    { label: "Total Grievances", value: kpi.totalGrievances, icon: MessageSquare, color: "text-primary", bg: "bg-primary/10" },
-    { label: "Open Grievances", value: kpi.openGrievances, icon: Clock, color: "text-amber-500", bg: "bg-amber-50" },
-    { label: "Resolved", value: kpi.resolvedGrievances, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50" },
-    { label: "Resolution Rate", value: `${kpi.resolutionRate}%`, icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Avg Resolution", value: `${kpi.avgResolutionHours}h`, icon: Clock, color: "text-teal-600", bg: "bg-teal-50" },
-    { label: "Volunteers", value: kpi.totalVolunteers, icon: Users, color: "text-purple-600", bg: "bg-purple-50" },
-    { label: "Pending Volunteers", value: kpi.pendingVolunteers, icon: Users, color: "text-orange-600", bg: "bg-orange-50" },
-    { label: "News Articles", value: kpi.totalNews, icon: Newspaper, color: "text-cyan-600", bg: "bg-cyan-50" },
-    { label: "Events This Month", value: kpi.eventsThisMonth, icon: Calendar, color: "text-rose-600", bg: "bg-rose-50" },
-    { label: "Gallery Items", value: kpi.totalGallery, icon: Image, color: "text-teal-600", bg: "bg-teal-50" },
-    { label: "Activities", value: kpi.totalActivities, icon: Activity, color: "text-indigo-600", bg: "bg-indigo-50" },
+  const kpiCards: Array<{
+    label: string;
+    value: number | string;
+    icon: typeof MessageSquare;
+    color: string;
+    bg: string;
+    tab: string;
+    hash?: string;
+  }> = [
+    { label: "Total Grievances", value: kpi.totalGrievances, icon: MessageSquare, color: "text-primary", bg: "bg-primary/10", tab: "grievances" },
+    { label: "Open Grievances", value: kpi.openGrievances, icon: Clock, color: "text-amber-500", bg: "bg-amber-50", tab: "grievances" },
+    { label: "Resolved", value: kpi.resolvedGrievances, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50", tab: "grievances" },
+    { label: "Resolution Rate", value: `${kpi.resolutionRate}%`, icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50", tab: "grievances" },
+    { label: "Avg Resolution", value: `${kpi.avgResolutionHours}h`, icon: Clock, color: "text-teal-600", bg: "bg-teal-50", tab: "grievances" },
+    { label: "Volunteers", value: kpi.totalVolunteers, icon: Users, color: "text-purple-600", bg: "bg-purple-50", tab: "volunteers" },
+    { label: "Pending Volunteers", value: kpi.pendingVolunteers, icon: Users, color: "text-orange-600", bg: "bg-orange-50", tab: "volunteers" },
+    { label: "News Articles", value: kpi.totalNews, icon: Newspaper, color: "text-cyan-600", bg: "bg-cyan-50", tab: "news" },
+    { label: "Events This Month", value: kpi.eventsThisMonth, icon: Calendar, color: "text-rose-600", bg: "bg-rose-50", tab: "events" },
+    { label: "Gallery Items", value: kpi.totalGallery, icon: Image, color: "text-teal-600", bg: "bg-teal-50", tab: "gallery" },
+    { label: "Activities", value: kpi.totalActivities, icon: Activity, color: "text-indigo-600", bg: "bg-indigo-50", tab: "activities" },
   ];
+
+  const goTo = (tab: string) => {
+    if (window.location.hash === `#${tab}`) {
+      // same hash → hashchange won't fire; nudge it
+      window.location.hash = "";
+    }
+    window.location.hash = `#${tab}`;
+  };
 
   const formatMonth = (m: string) => {
     const [year, month] = m.split("-");
@@ -82,15 +98,23 @@ export default function Dashboard() {
       {/* KPI Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {kpiCards.map((k) => (
-          <Card key={k.label} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className={`w-8 h-8 rounded-lg ${k.bg} flex items-center justify-center mb-2`}>
-                <k.icon className={`w-4 h-4 ${k.color}`} />
-              </div>
-              <p className="text-2xl font-bold text-gray-900">{k.value}</p>
-              <p className="text-xs text-muted-foreground leading-tight mt-0.5">{k.label}</p>
-            </CardContent>
-          </Card>
+          <button
+            key={k.label}
+            type="button"
+            onClick={() => goTo(k.tab)}
+            className="text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl"
+            aria-label={`Open ${k.label}`}
+          >
+            <Card className="hover:shadow-md hover:-translate-y-0.5 hover:border-primary/40 transition-all cursor-pointer h-full">
+              <CardContent className="p-4">
+                <div className={`w-8 h-8 rounded-lg ${k.bg} flex items-center justify-center mb-2`}>
+                  <k.icon className={`w-4 h-4 ${k.color}`} />
+                </div>
+                <p className="text-2xl font-bold text-gray-900">{k.value}</p>
+                <p className="text-xs text-muted-foreground leading-tight mt-0.5">{k.label}</p>
+              </CardContent>
+            </Card>
+          </button>
         ))}
       </div>
 
