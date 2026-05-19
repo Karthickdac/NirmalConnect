@@ -28,6 +28,7 @@ import {
 import type { GrievanceListItem } from "@workspace/api-client-react";
 import { useWards } from "@/lib/useWards";
 import ConstituencyCombobox from "@/components/ConstituencyCombobox";
+import GpsPreview from "@/components/GpsPreview";
 
 interface GrievanceOfficerProps { lang: Language; token: string; userRole?: string }
 
@@ -45,6 +46,8 @@ interface StaffGrievanceDetail {
   constituency: string;
   complaintScope: string | null;
   district: string | null;
+  latitude: number | null;
+  longitude: number | null;
   priority: string;
   status: string;
   anonymous: boolean;
@@ -771,6 +774,11 @@ export default function GrievanceOfficer({ lang, token, userRole = "" }: Grievan
                 <p className="text-xs text-muted-foreground mb-1">{lang === "ta" ? "விவரம்" : "Description"}</p>
                 <p className="text-sm bg-muted/40 rounded-lg p-3">{detail.description}</p>
               </div>
+
+              {/* GPS pin */}
+              {detail.latitude != null && detail.longitude != null && (
+                <GpsPreview lat={detail.latitude} lng={detail.longitude} lang={lang} />
+              )}
 
               {/* Attachments */}
               {detail.attachments.length > 0 && (
