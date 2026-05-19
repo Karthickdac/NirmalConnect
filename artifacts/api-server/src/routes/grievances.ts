@@ -39,9 +39,9 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowed = /jpeg|jpg|png|gif|pdf|doc|docx/;
+    const allowed = /jpeg|jpg|png|gif|webp|pdf|doc|docx|mp4|mov|avi|webm|mkv|mp3|wav|ogg|m4a|aac/;
     cb(null, allowed.test(path.extname(file.originalname).toLowerCase()));
   },
 });
@@ -77,6 +77,9 @@ const SubmitBody = z.object({
   // Optional citizen-supplied GPS coords (pin-drop or "use my location").
   latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
   longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
+  // Statewide / ministerial complaint support
+  complaintScope: z.enum(["constituency", "statewide"]).optional().nullable(),
+  district: z.string().optional().nullable(),
 }).refine(
   (d) => (d.latitude == null) === (d.longitude == null),
   { message: "latitude and longitude must be supplied together", path: ["longitude"] },
@@ -99,7 +102,7 @@ const AssignBody = z.object({
 });
 
 // POST /api/grievances/submit — public
-router.post("/grievances/submit", upload.array("attachments", 3), async (req, res) => {
+router.post("/grievances/submit", upload.array("attachments", 5), async (req, res) => {
   try {
     const body = SubmitBody.safeParse(req.body);
     if (!body.success) {
@@ -158,6 +161,8 @@ router.post("/grievances/submit", upload.array("attachments", 3), async (req, re
       latitude: body.data.latitude ?? null,
       longitude: body.data.longitude ?? null,
       constituency: body.data.constituency ?? "Tirupparankundram",
+      complaintScope: body.data.complaintScope ?? "constituency",
+      district: body.data.district ?? null,
       anonymous: body.data.anonymous ?? false,
       priority: "Medium",
       status: "Submitted",
@@ -308,6 +313,7 @@ router.get("/grievances", requireStaff, async (req: AuthRequest, res) => {
     if (req.query.priority) conditions.push(eq(grievancesTable.priority, String(req.query.priority)));
     if (req.query.ward) conditions.push(eq(grievancesTable.ward, String(req.query.ward)));
     if (req.query.constituency) conditions.push(eq(grievancesTable.constituency, String(req.query.constituency)));
+    if (req.query.complaintScope) conditions.push(eq(grievancesTable.complaintScope, String(req.query.complaintScope) as "constituency" | "statewide"));
     // Inbox scoping rules:
     //   * `mine=1`            → always restrict to caller's own assignments
     //   * caller is grievance_officer (no broader admin role) and neither

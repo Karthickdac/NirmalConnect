@@ -14,6 +14,7 @@ import {
   ChevronLeft, ChevronRight, RefreshCw, Loader2, CheckCircle,
   Clock, AlertTriangle, MessageSquare, Filter, X, Paperclip, Users,
   ListChecks, CalendarRange, FileDown, FileText, Inbox, UserCheck, UserX, Search,
+  MapPin, Building2, FileVideo, FileAudio, FileImage, FileIcon, ExternalLink,
 } from "lucide-react";
 import type { Language } from "@/lib/i18n";
 import {
@@ -41,6 +42,8 @@ interface StaffGrievanceDetail {
   address: string | null;
   ward: string | null;
   constituency: string;
+  complaintScope: string | null;
+  district: string | null;
   priority: string;
   status: string;
   anonymous: boolean;
@@ -131,6 +134,7 @@ export default function GrievanceOfficer({ lang, token, userRole = "" }: Grievan
   const [filterPriority, setFilterPriority] = useState("");
   const [filterWard, setFilterWard] = useState("");
   const [filterConstituency, setFilterConstituency] = useState("");
+  const [filterScope, setFilterScope] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
   // "Mine" toggle: when on, list is restricted to grievances assigned to the current officer.
@@ -173,6 +177,7 @@ export default function GrievanceOfficer({ lang, token, userRole = "" }: Grievan
     ...(filterPriority && { priority: filterPriority }),
     ...(filterWard && { ward: filterWard }),
     ...(filterConstituency && { constituency: filterConstituency }),
+    ...(filterScope && { complaintScope: filterScope }),
     ...(filterDateFrom && { dateFrom: filterDateFrom }),
     ...(filterDateTo && { dateTo: filterDateTo }),
     ...(mineOnly ? { mine: "1" } : (isOfficer ? { all: "1" } : {})),
@@ -299,9 +304,21 @@ export default function GrievanceOfficer({ lang, token, userRole = "" }: Grievan
 
   function clearFilters() {
     setFilterStatus(""); setFilterCategory(""); setFilterPriority("");
-    setFilterWard(""); setFilterConstituency(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(1);
+    setFilterWard(""); setFilterConstituency(""); setFilterScope(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(1);
   }
-  const hasFilters = filterStatus || filterCategory || filterPriority || filterWard || filterConstituency || filterDateFrom || filterDateTo;
+
+  function attachmentIcon(fileType: string, fileName: string) {
+    const t = fileType.toLowerCase();
+    const n = fileName.toLowerCase();
+    if (t.startsWith("video/") || /\.(mp4|mov|avi|webm|mkv)$/.test(n))
+      return <FileVideo className="w-3 h-3 text-purple-500 shrink-0" />;
+    if (t.startsWith("audio/") || /\.(mp3|wav|ogg|m4a|aac)$/.test(n))
+      return <FileAudio className="w-3 h-3 text-blue-500 shrink-0" />;
+    if (t.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|svg)$/.test(n))
+      return <FileImage className="w-3 h-3 text-green-500 shrink-0" />;
+    return <FileIcon className="w-3 h-3 text-orange-500 shrink-0" />;
+  }
+  const hasFilters = filterStatus || filterCategory || filterPriority || filterWard || filterConstituency || filterScope || filterDateFrom || filterDateTo;
 
   async function exportCSV() {
     const res = await fetch("/api/admin/grievances/export", {
@@ -490,6 +507,20 @@ export default function GrievanceOfficer({ lang, token, userRole = "" }: Grievan
               value={filterConstituency}
               onChange={(e) => { setFilterConstituency(e.target.value); setPage(1); }}
             />
+            <Select value={filterScope || "all"} onValueChange={(v) => { setFilterScope(v === "all" ? "" : v); setPage(1); }}>
+              <SelectTrigger className="w-44 h-8 text-sm">
+                <SelectValue placeholder={lang === "ta" ? "புகார் வகை" : "Complaint Scope"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{lang === "ta" ? "அனைத்தும்" : "All scopes"}</SelectItem>
+                <SelectItem value="constituency">
+                  <span className="flex items-center gap-1.5"><MapPin className="w-3 h-3 text-primary" />{lang === "ta" ? "தொகுதி புகார்" : "Constituency"}</span>
+                </SelectItem>
+                <SelectItem value="statewide">
+                  <span className="flex items-center gap-1.5"><Building2 className="w-3 h-3 text-orange-500" />{lang === "ta" ? "அமைச்சர் அலுவலகம்" : "Ministerial / Statewide"}</span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
             {hasFilters && (
               <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 gap-1 text-muted-foreground">
                 <X className="w-3.5 h-3.5" />
@@ -604,7 +635,7 @@ export default function GrievanceOfficer({ lang, token, userRole = "" }: Grievan
                         onChange={toggleSelectAll}
                       />
                     </th>
-                    {["Ticket", "Category", "Ward", "Priority", "Status", "Filed", ""].map((h) => (
+                    {["Ticket", "Category", "Scope / Ward", "Priority", "Status", "Filed", ""].map((h) => (
                       <th key={h} className="text-left px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
@@ -622,7 +653,19 @@ export default function GrievanceOfficer({ lang, token, userRole = "" }: Grievan
                       </td>
                       <td className="px-4 py-3 font-mono text-primary font-semibold text-xs">{item.ticketNo}</td>
                       <td className="px-4 py-3">{item.category}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{item.ward || "–"}</td>
+                      <td className="px-4 py-3">
+                        {(item as StaffGrievanceDetail).complaintScope === "statewide" ? (
+                          <span className="flex items-center gap-1 text-xs text-orange-600 font-medium">
+                            <Building2 className="w-3 h-3" />
+                            {(item as StaffGrievanceDetail).district || (lang === "ta" ? "அமைச்சர்" : "Statewide")}
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <MapPin className="w-3 h-3" />
+                            {item.ward || "–"}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PRIORITY_COLORS[item.priority] ?? "bg-muted"}`}>
                           {item.priority}
@@ -703,6 +746,22 @@ export default function GrievanceOfficer({ lang, token, userRole = "" }: Grievan
                     <p className="font-medium">{value}</p>
                   </div>
                 ))}
+                {/* Scope row */}
+                <div>
+                  <p className="text-xs text-muted-foreground">{lang === "ta" ? "புகார் வகை" : "Complaint Scope"}</p>
+                  <p className="font-medium flex items-center gap-1.5">
+                    {detail.complaintScope === "statewide"
+                      ? <><Building2 className="w-3.5 h-3.5 text-orange-500" />{lang === "ta" ? "அமைச்சர் அலுவலகம்" : "Ministerial / Statewide"}</>
+                      : <><MapPin className="w-3.5 h-3.5 text-primary" />{lang === "ta" ? "தொகுதி புகார்" : "Constituency"}</>
+                    }
+                  </p>
+                </div>
+                {detail.complaintScope === "statewide" && detail.district && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">{lang === "ta" ? "மாவட்டம்" : "District"}</p>
+                    <p className="font-medium">{detail.district}</p>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -716,20 +775,53 @@ export default function GrievanceOfficer({ lang, token, userRole = "" }: Grievan
                   <h4 className="text-sm font-semibold flex items-center gap-2">
                     <Paperclip className="w-4 h-4" />
                     {lang === "ta" ? "இணைப்புகள்" : "Attachments"}
+                    <span className="text-xs font-normal text-muted-foreground">({detail.attachments.length})</span>
                   </h4>
                   <div className="flex flex-wrap gap-2">
-                    {detail.attachments.map((a) => (
-                      <a
-                        key={a.id}
-                        href={a.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 border rounded-lg hover:bg-muted/40 transition-colors"
-                      >
-                        <Paperclip className="w-3 h-3" />
-                        {a.fileName}
-                      </a>
-                    ))}
+                    {detail.attachments.map((a) => {
+                      const isImage = a.fileType.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp)$/i.test(a.fileName);
+                      const isVideo = a.fileType.startsWith("video/") || /\.(mp4|mov|avi|webm|mkv)$/i.test(a.fileName);
+                      const isAudio = a.fileType.startsWith("audio/") || /\.(mp3|wav|ogg|m4a|aac)$/i.test(a.fileName);
+                      return (
+                        <div key={a.id} className="flex flex-col gap-1 max-w-[180px]">
+                          {isImage && (
+                            <a href={a.fileUrl} target="_blank" rel="noopener noreferrer">
+                              <img
+                                src={a.fileUrl}
+                                alt={a.fileName}
+                                className="w-full h-24 object-cover rounded-lg border hover:opacity-80 transition-opacity"
+                              />
+                            </a>
+                          )}
+                          {isVideo && (
+                            <video
+                              src={a.fileUrl}
+                              controls
+                              className="w-full rounded-lg border"
+                              style={{ maxHeight: 120 }}
+                            />
+                          )}
+                          {isAudio && (
+                            <audio src={a.fileUrl} controls className="w-full" />
+                          )}
+                          <a
+                            href={a.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 border rounded-lg hover:bg-muted/40 transition-colors truncate"
+                          >
+                            {attachmentIcon(a.fileType, a.fileName)}
+                            <span className="truncate">{a.fileName}</span>
+                            <ExternalLink className="w-3 h-3 shrink-0 text-muted-foreground" />
+                          </a>
+                          {a.fileSize && (
+                            <span className="text-xs text-muted-foreground text-center">
+                              {(a.fileSize / 1024 / 1024).toFixed(1)} MB
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
