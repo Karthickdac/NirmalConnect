@@ -369,6 +369,309 @@ export default function GrievanceOfficer({ lang, token, userRole = "" }: Grievan
     doc.save(`grievances-${new Date().toISOString().slice(0, 10)}.pdf`);
   }
 
+  // Build a comprehensive per-grievance PDF report:
+  // header, citizen info, location + embedded OSM static map,
+  // full description, attached photos, status timeline, remarks.
+  async function exportDetailPDF(d: StaffGrievanceDetail) {
+    const { default: jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    const M = 14;            // page margin
+    const PW = 210;          // page width A4
+    const PH = 297;          // page height A4
+    const CW = PW - 2 * M;   // content width
+    let y = 0;
+
+    const STATUS_RGB: Record<string, [number, number, number]> = {
+      Submitted: [37, 99, 235],
+      "Under Review": [202, 138, 4],
+      Assigned: [147, 51, 234],
+      "In Progress": [234, 88, 12],
+      Resolved: [22, 163, 74],
+      Closed: [107, 114, 128],
+    };
+    const PRIORITY_RGB: Record<string, [number, number, number]> = {
+      Low: [107, 114, 128], Medium: [37, 99, 235],
+      High: [234, 88, 12], Urgent: [220, 38, 38],
+    };
+
+    const drawHeader = () => {
+      doc.setFillColor(201, 24, 30); // primary red
+      doc.rect(0, 0, PW, 22, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text("Nirmal Connect — Grievance Report", M, 9);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.text("Tirupparankundram Constituency · Office of C.T.R. Nirmal Kumar", M, 14.5);
+      doc.setFontSize(7);
+      doc.text("Confidential — Official Use Only", M, 18.5);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text(d.ticketNo, PW - M, 10, { align: "right" });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.text(`Generated ${new Date().toLocaleString("en-IN")}`, PW - M, 15, { align: "right" });
+      doc.setTextColor(0, 0, 0);
+    };
+
+    const drawFooter = (page: number, total: number) => {
+      doc.setFontSize(7.5);
+      doc.setTextColor(120, 120, 120);
+      doc.text(`${d.ticketNo} · Page ${page} of ${total}`, PW / 2, PH - 6, { align: "center" });
+      doc.setTextColor(0, 0, 0);
+    };
+
+    const ensureSpace = (needed: number) => {
+      if (y + needed > PH - 14) {
+        doc.addPage();
+        drawHeader();
+        y = 28;
+      }
+    };
+
+    const pill = (x: number, yy: number, text: string, rgb: [number, number, number]) => {
+      doc.setFontSize(8);
+      const w = doc.getTextWidth(text) + 5;
+      doc.setFillColor(...rgb);
+      doc.roundedRect(x, yy - 4, w, 5.5, 1.5, 1.5, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.text(text, x + 2.5, yy);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont("helvetica", "normal");
+      return w;
+    };
+
+    const sectionHeading = (title: string) => {
+      ensureSpace(10);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.setTextColor(201, 24, 30);
+      doc.text(title, M, y);
+      doc.setDrawColor(230, 230, 230);
+      doc.line(M, y + 1.5, PW - M, y + 1.5);
+      doc.setTextColor(0, 0, 0);
+      y += 6;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+    };
+
+    // Fetch an image URL into a data URL. Sends Authorization header
+    // automatically for our same-origin /api paths.
+    const fetchDataUrl = async (url: string): Promise<string | null> => {
+      try {
+        const isApi = url.startsWith("/api/");
+        const r = await fetch(url, isApi ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+        if (!r.ok) return null;
+        const blob = await r.blob();
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error("read failed"));
+          reader.readAsDataURL(blob);
+        });
+      } catch { return null; }
+    };
+
+    // PAGE 1
+    drawHeader();
+    y = 28;
+
+    // Status pills row
+    {
+      let x = M;
+      x += pill(x, y, d.status, STATUS_RGB[d.status] ?? [107, 114, 128]) + 3;
+      x += pill(x, y, d.priority, PRIORITY_RGB[d.priority] ?? [107, 114, 128]) + 3;
+      pill(x, y, d.category, [55, 65, 81]);
+      y += 8;
+    }
+
+    // Citizen + meta grid
+    sectionHeading("Petitioner & Filing Details");
+    autoTable(doc, {
+      startY: y,
+      theme: "plain",
+      styles: { fontSize: 9, cellPadding: 1.5, valign: "top" },
+      columnStyles: {
+        0: { fontStyle: "bold", textColor: [80, 80, 80], cellWidth: 32 },
+        1: { cellWidth: 60 },
+        2: { fontStyle: "bold", textColor: [80, 80, 80], cellWidth: 32 },
+        3: { cellWidth: "auto" },
+      },
+      body: [
+        ["Name", d.anonymous ? "Anonymous" : d.name, "Phone", d.anonymous ? "***" : d.phone],
+        ["Email", d.email ?? "—", "Filed", new Date(d.createdAt).toLocaleString("en-IN")],
+        ["Last update", new Date(d.updatedAt).toLocaleString("en-IN"),
+         "Resolved", d.resolvedAt ? new Date(d.resolvedAt).toLocaleString("en-IN") : "—"],
+        ["Scope",
+         d.complaintScope === "statewide" ? "Ministerial / Statewide" : "Constituency",
+         "District", d.district ?? "—"],
+        ["Constituency", d.constituency, "Ward", d.ward ?? "—"],
+        ["Address", d.address ?? "—", "Linked voter", d.voter ? `${d.voter.fullName} (EPIC ${d.voter.epicNumber})` : "—"],
+      ],
+    });
+    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4;
+
+    // Description
+    sectionHeading("Grievance Description");
+    const descLines = doc.splitTextToSize(d.description || "—", CW);
+    ensureSpace(descLines.length * 4.2 + 2);
+    doc.setFontSize(9.5);
+    doc.text(descLines, M, y);
+    y += descLines.length * 4.2 + 4;
+
+    // GPS + static map
+    if (d.latitude != null && d.longitude != null) {
+      sectionHeading("GPS Location");
+      doc.setFontSize(9);
+      doc.text(`Coordinates: ${d.latitude.toFixed(5)}, ${d.longitude.toFixed(5)}`, M, y);
+      y += 5;
+
+      const mapH = 78;
+      ensureSpace(mapH + 10);
+      const mapData = await fetchDataUrl(
+        `/api/admin/static-map?lat=${d.latitude}&lng=${d.longitude}&zoom=16&w=900&h=420`,
+      );
+      if (mapData) {
+        try {
+          doc.addImage(mapData, "PNG", M, y, CW, mapH);
+          doc.setDrawColor(200, 200, 200);
+          doc.rect(M, y, CW, mapH);
+          y += mapH + 3;
+        } catch {
+          doc.setFont("helvetica", "italic");
+          doc.text("(Map image could not be embedded)", M, y);
+          doc.setFont("helvetica", "normal");
+          y += 5;
+        }
+      } else {
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(120, 120, 120);
+        doc.text("(Map preview unavailable — see link below)", M, y);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont("helvetica", "normal");
+        y += 5;
+      }
+      const gmaps = `https://www.google.com/maps?q=${d.latitude},${d.longitude}`;
+      doc.setTextColor(37, 99, 235);
+      doc.textWithLink(`Open in Google Maps: ${gmaps}`, M, y, { url: gmaps });
+      doc.setTextColor(0, 0, 0);
+      y += 6;
+    }
+
+    // Attachments: embed images, list other files
+    const imgAtts = d.attachments.filter(a =>
+      a.fileType.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp)$/i.test(a.fileName));
+    const otherAtts = d.attachments.filter(a => !imgAtts.includes(a));
+
+    if (imgAtts.length > 0) {
+      sectionHeading(`Attached Photos (${imgAtts.length})`);
+      const gap = 4;
+      const imgW = (CW - gap) / 2;
+      const imgH = 55;
+      let col = 0;
+      for (const a of imgAtts) {
+        if (col === 0) ensureSpace(imgH + 8);
+        const data = await fetchDataUrl(a.fileUrl);
+        const x = M + col * (imgW + gap);
+        if (data) {
+          try {
+            const fmt = /^data:image\/png/i.test(data) ? "PNG" :
+                        /^data:image\/webp/i.test(data) ? "WEBP" : "JPEG";
+            doc.addImage(data, fmt, x, y, imgW, imgH);
+            doc.setDrawColor(220, 220, 220);
+            doc.rect(x, y, imgW, imgH);
+          } catch {
+            doc.setDrawColor(220, 220, 220);
+            doc.rect(x, y, imgW, imgH);
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 150);
+            doc.text("(image unavailable)", x + 2, y + imgH / 2);
+            doc.setTextColor(0, 0, 0);
+          }
+        } else {
+          doc.setDrawColor(220, 220, 220);
+          doc.rect(x, y, imgW, imgH);
+          doc.setFontSize(8);
+          doc.setTextColor(150, 150, 150);
+          doc.text("(image could not load)", x + 2, y + imgH / 2);
+          doc.setTextColor(0, 0, 0);
+        }
+        doc.setFontSize(7);
+        const cap = a.fileName.length > 42 ? a.fileName.slice(0, 39) + "…" : a.fileName;
+        doc.text(cap, x, y + imgH + 3);
+        col = (col + 1) % 2;
+        if (col === 0) y += imgH + 7;
+      }
+      if (col !== 0) y += imgH + 7;
+    }
+
+    if (otherAtts.length > 0) {
+      sectionHeading(`Other Attachments (${otherAtts.length})`);
+      for (const a of otherAtts) {
+        ensureSpace(5);
+        doc.setFontSize(9);
+        doc.text(`• ${a.fileName}`, M, y);
+        doc.setTextColor(37, 99, 235);
+        doc.setFontSize(8);
+        doc.textWithLink("[open]", PW - M - 12, y, { url: new URL(a.fileUrl, window.location.origin).href });
+        doc.setTextColor(0, 0, 0);
+        y += 5;
+      }
+    }
+
+    // Status timeline
+    if (d.statusLog.length > 0) {
+      sectionHeading(`Status Timeline (${d.statusLog.length})`);
+      autoTable(doc, {
+        startY: y,
+        head: [["When", "Changed by", "From", "To", "Note"]],
+        body: d.statusLog.map(l => [
+          new Date(l.createdAt).toLocaleString("en-IN"),
+          l.changedByName,
+          l.fromStatus ?? "—",
+          l.toStatus,
+          l.note ?? "",
+        ]),
+        styles: { fontSize: 8, cellPadding: 1.6 },
+        headStyles: { fillColor: [201, 24, 30] },
+        columnStyles: { 0: { cellWidth: 36 }, 1: { cellWidth: 36 }, 2: { cellWidth: 24 }, 3: { cellWidth: 24 } },
+        margin: { left: M, right: M },
+      });
+      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4;
+    }
+
+    // Remarks
+    if (d.remarks.length > 0) {
+      sectionHeading(`Remarks (${d.remarks.length})`);
+      autoTable(doc, {
+        startY: y,
+        head: [["When", "Author", "Visibility", "Remark"]],
+        body: d.remarks.map(r => [
+          new Date(r.createdAt).toLocaleString("en-IN"),
+          r.authorName,
+          r.isPublic ? "Public" : "Internal",
+          r.remark,
+        ]),
+        styles: { fontSize: 8, cellPadding: 1.6 },
+        headStyles: { fillColor: [201, 24, 30] },
+        columnStyles: { 0: { cellWidth: 36 }, 1: { cellWidth: 32 }, 2: { cellWidth: 20 } },
+        margin: { left: M, right: M },
+      });
+    }
+
+    // Footer page numbers
+    const total = doc.getNumberOfPages();
+    for (let i = 1; i <= total; i++) {
+      doc.setPage(i);
+      drawFooter(i, total);
+    }
+
+    doc.save(`grievance-${d.ticketNo}.pdf`);
+  }
+
   function toggleSelect(id: number) {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -726,7 +1029,20 @@ export default function GrievanceOfficer({ lang, token, userRole = "" }: Grievan
       <Dialog open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-mono">{selected?.ticketNo}</DialogTitle>
+            <div className="flex items-center justify-between gap-3 pr-6">
+              <DialogTitle className="font-mono">{selected?.ticketNo}</DialogTitle>
+              {detail && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-8"
+                  onClick={() => exportDetailPDF(detail)}
+                >
+                  <FileDown className="w-3.5 h-3.5" />
+                  {lang === "ta" ? "PDF பதிவிறக்கம்" : "Download PDF"}
+                </Button>
+              )}
+            </div>
           </DialogHeader>
 
           {detailLoading ? (

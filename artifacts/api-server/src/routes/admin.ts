@@ -1099,6 +1099,38 @@ router.post("/admin/grievances/bulk-assign", requireRole("super_admin", "admin",
 });
 
 // ──────────────────────────────────────────────────────────
+// STATIC MAP PROXY — used by per-grievance PDF report
+// Proxies OpenStreetMap static-map tiles so the browser can embed
+// them in a client-side PDF without CORS issues.
+// ──────────────────────────────────────────────────────────
+router.get("/admin/static-map", async (req, res) => {
+  const lat = parseFloat(String(req.query.lat ?? ""));
+  const lng = parseFloat(String(req.query.lng ?? ""));
+  const zoom = Math.min(19, Math.max(1, parseInt(String(req.query.zoom ?? "16"))));
+  const w = Math.min(1024, Math.max(100, parseInt(String(req.query.w ?? "640"))));
+  const h = Math.min(1024, Math.max(100, parseInt(String(req.query.h ?? "320"))));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    res.status(400).json({ error: "lat/lng required" });
+    return;
+  }
+  const url =
+    `https://staticmap.openstreetmap.de/staticmap.php` +
+    `?center=${lat},${lng}&zoom=${zoom}&size=${w}x${h}` +
+    `&maptype=mapnik&markers=${lat},${lng},red-pushpin`;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) { res.status(502).json({ error: "upstream " + r.status }); return; }
+    const buf = Buffer.from(await r.arrayBuffer());
+    res.setHeader("Content-Type", r.headers.get("content-type") || "image/png");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.send(buf);
+  } catch (err) {
+    console.error("[admin] static-map proxy:", err);
+    res.status(502).json({ error: "Map service unavailable" });
+  }
+});
+
+// ──────────────────────────────────────────────────────────
 // GRIEVANCES CSV EXPORT
 // ──────────────────────────────────────────────────────────
 router.get("/admin/grievances/export", async (_req, res) => {
