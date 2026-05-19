@@ -27,6 +27,7 @@ import {
 } from "@workspace/api-client-react";
 import type { GrievanceListItem } from "@workspace/api-client-react";
 import { useWards } from "@/lib/useWards";
+import ConstituencyCombobox from "@/components/ConstituencyCombobox";
 
 interface GrievanceOfficerProps { lang: Language; token: string; userRole?: string }
 
@@ -501,12 +502,14 @@ export default function GrievanceOfficer({ lang, token, userRole = "" }: Grievan
                 ))}
               </SelectContent>
             </Select>
-            <Input
-              className="w-40 h-8 text-sm"
-              placeholder={lang === "ta" ? "தொகுதி" : "Constituency"}
-              value={filterConstituency}
-              onChange={(e) => { setFilterConstituency(e.target.value); setPage(1); }}
-            />
+            <div className="w-52">
+              <ConstituencyCombobox
+                value={filterConstituency}
+                onChange={(v) => { setFilterConstituency(v); setPage(1); }}
+                lang={lang}
+                className="h-8 text-sm"
+              />
+            </div>
             <Select value={filterScope || "all"} onValueChange={(v) => { setFilterScope(v === "all" ? "" : v); setPage(1); }}>
               <SelectTrigger className="w-44 h-8 text-sm">
                 <SelectValue placeholder={lang === "ta" ? "புகார் வகை" : "Complaint Scope"} />

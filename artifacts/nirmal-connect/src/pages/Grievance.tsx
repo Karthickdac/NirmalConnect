@@ -17,19 +17,27 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import {
   CheckCircle, Search, FileText, Phone, MessageSquare,
   Copy, AlertCircle, TrendingUp, Clock, CheckCheck, Loader2,
-  Paperclip, X,
+  Paperclip, X, MapPin, Building2, FileVideo, FileAudio, FileImage, FileIcon as FileIconLucide,
 } from "lucide-react";
 import type { Language } from "@/lib/i18n";
 import { submitGrievance, trackGrievance, getGrievanceHeatmap } from "@workspace/api-client-react";
 import type { GrievanceTrackResponse } from "@workspace/api-client-react";
 import { useWards } from "@/lib/useWards";
 import GpsPicker, { type GpsValue } from "@/components/GpsPicker";
+import ConstituencyCombobox from "@/components/ConstituencyCombobox";
+import { TN_DISTRICTS } from "@/lib/tnConstituencies";
 
 interface GrievanceProps { lang: Language; }
 
 /** Submit grievance as multipart/form-data when files are attached. */
 async function submitGrievanceWithFiles(
-  data: { name: string; phone: string; category: string; description: string; address?: string | null; ward?: string | null; anonymous?: boolean; areaId?: number | null; pollingStationId?: number | null; latitude?: number | null; longitude?: number | null },
+  data: {
+    name: string; phone: string; category: string; description: string;
+    address?: string | null; ward?: string | null; anonymous?: boolean;
+    areaId?: number | null; pollingStationId?: number | null;
+    latitude?: number | null; longitude?: number | null;
+    complaintScope?: string; district?: string | null; constituency?: string | null;
+  },
   files: File[]
 ): Promise<{ ticketNo: string }> {
   const fd = new globalThis.FormData();
@@ -46,6 +54,9 @@ async function submitGrievanceWithFiles(
     fd.append("longitude", String(data.longitude));
   }
   fd.append("anonymous", String(data.anonymous ?? false));
+  if (data.complaintScope) fd.append("complaintScope", data.complaintScope);
+  if (data.district) fd.append("district", data.district);
+  if (data.constituency) fd.append("constituency", data.constituency);
   files.forEach((f) => fd.append("attachments", f));
   const res = await fetch("/api/grievances/submit", { method: "POST", body: fd });
   if (!res.ok) {
@@ -100,8 +111,23 @@ const schema = z.object({
   areaId: z.number().int().positive().optional(),
   pollingStationId: z.number().int().positive().optional(),
   anonymous: z.boolean().optional(),
+  complaintScope: z.enum(["constituency", "statewide"]).default("constituency"),
+  district: z.string().optional(),
+  constituencyName: z.string().optional(),
 });
 type FormData = z.infer<typeof schema>;
+
+function fileIcon(file: File) {
+  const t = file.type.toLowerCase();
+  const n = file.name.toLowerCase();
+  if (t.startsWith("video/") || /\.(mp4|mov|avi|webm|mkv)$/.test(n))
+    return <FileVideo className="w-3 h-3 text-purple-500 shrink-0" />;
+  if (t.startsWith("audio/") || /\.(mp3|wav|ogg|m4a|aac)$/.test(n))
+    return <FileAudio className="w-3 h-3 text-blue-500 shrink-0" />;
+  if (t.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|svg)$/.test(n))
+    return <FileImage className="w-3 h-3 text-green-500 shrink-0" />;
+  return <FileIconLucide className="w-3 h-3 text-orange-500 shrink-0" />;
+}
 
 interface AreaOption { id: number; name: string; nameTa?: string | null }
 interface BoothOption { id: number; boothNo: string; name: string }
@@ -209,12 +235,14 @@ export default function Grievance({ lang }: GrievanceProps) {
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", phone: "", category: "", description: "", address: "", ward: "", anonymous: false },
+    defaultValues: { name: "", phone: "", category: "", description: "", address: "", ward: "", anonymous: false, complaintScope: "constituency", district: "", constituencyName: "" },
   });
 
   // Resolve currently-chosen ward id from its name (the form stores ward as
   // a string for backwards compat) so we can drive the cascading queries.
   const watchedWard = form.watch("ward");
+  const watchedScope = form.watch("complaintScope");
+  const watchedDistrict = form.watch("district");
   const selectedWardId = wardList.find((w) => w.name === watchedWard)?.id ?? null;
 
   const { data: areaOptions = [] } = useQuery({
@@ -232,23 +260,27 @@ export default function Grievance({ lang }: GrievanceProps) {
 
   const submitMutation = useMutation({
     mutationFn: (data: FormData) => {
+      const isStatewide = data.complaintScope === "statewide";
       const payload = {
         name: data.name,
         phone: data.phone,
         category: data.category,
         description: data.description,
         address: data.address || null,
-        ward: data.ward || null,
-        areaId: data.areaId ?? null,
-        pollingStationId: data.pollingStationId ?? null,
+        ward: isStatewide ? null : (data.ward || null),
+        areaId: isStatewide ? null : (data.areaId ?? null),
+        pollingStationId: isStatewide ? null : (data.pollingStationId ?? null),
         latitude: gps?.lat ?? null,
         longitude: gps?.lng ?? null,
         anonymous: data.anonymous ?? false,
+        complaintScope: data.complaintScope ?? "constituency",
+        district: isStatewide ? (data.district || null) : null,
+        constituency: isStatewide ? (data.constituencyName || null) : "Tirupparankundram",
       };
       if (attachedFiles.length > 0) {
         return submitGrievanceWithFiles(payload, attachedFiles);
       }
-      return submitGrievance(payload);
+      return submitGrievance({ ...payload, ward: payload.ward ?? undefined, constituency: payload.constituency ?? undefined });
     },
     onSuccess: (result) => {
       setTicketNo(result.ticketNo);
@@ -369,6 +401,63 @@ export default function Grievance({ lang }: GrievanceProps) {
               <CardContent>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+
+                    {/* Complaint Scope Toggle */}
+                    <FormField control={form.control} name="complaintScope" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{lang === "ta" ? "புகார் வகை" : "Complaint Type"} *</FormLabel>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              field.onChange("constituency");
+                              form.setValue("district", "");
+                              form.setValue("constituencyName", "");
+                            }}
+                            className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${
+                              field.value === "constituency"
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:border-primary/40"
+                            }`}
+                          >
+                            <MapPin className={`w-4 h-4 shrink-0 ${field.value === "constituency" ? "text-primary" : "text-muted-foreground"}`} />
+                            <div>
+                              <p className={`text-sm font-semibold ${field.value === "constituency" ? "text-primary" : ""}`}>
+                                {lang === "ta" ? "தொகுதி புகார்" : "Constituency"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {lang === "ta" ? "திருப்பரங்குன்றம்" : "Tirupparankundram"}
+                              </p>
+                            </div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              field.onChange("statewide");
+                              form.setValue("ward", "");
+                              form.setValue("areaId", undefined);
+                              form.setValue("pollingStationId", undefined);
+                            }}
+                            className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${
+                              field.value === "statewide"
+                                ? "border-orange-500 bg-orange-50 dark:bg-orange-950/20"
+                                : "border-border hover:border-orange-300"
+                            }`}
+                          >
+                            <Building2 className={`w-4 h-4 shrink-0 ${field.value === "statewide" ? "text-orange-500" : "text-muted-foreground"}`} />
+                            <div>
+                              <p className={`text-sm font-semibold ${field.value === "statewide" ? "text-orange-600" : ""}`}>
+                                {lang === "ta" ? "அமைச்சர் அலுவலகம்" : "Ministerial"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {lang === "ta" ? "தமிழ்நாடு முழுவதும்" : "Statewide / TN"}
+                              </p>
+                            </div>
+                          </button>
+                        </div>
+                      </FormItem>
+                    )} />
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField control={form.control} name="name" render={({ field }) => (
                         <FormItem>
@@ -407,6 +496,8 @@ export default function Grievance({ lang }: GrievanceProps) {
                       </FormItem>
                     )} />
 
+                    {/* Constituency scope: ward / area / booth pickers */}
+                    {watchedScope !== "statewide" && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField control={form.control} name="ward" render={({ field }) => (
                         <FormItem>
@@ -448,9 +539,54 @@ export default function Grievance({ lang }: GrievanceProps) {
                         </FormItem>
                       )} />
                     </div>
+                    )}
 
-                    {/* Cascading area + polling-station — only when a ward is chosen */}
-                    {selectedWardId && (areaOptions.length > 0 || boothOptions.length > 0) && (
+                    {/* Statewide scope: district dropdown + constituency typeahead */}
+                    {watchedScope === "statewide" && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField control={form.control} name="district" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{lang === "ta" ? "மாவட்டம்" : "District"}</FormLabel>
+                          <Select
+                            onValueChange={(v) => {
+                              field.onChange(v);
+                              form.setValue("constituencyName", "");
+                            }}
+                            value={field.value || ""}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder={lang === "ta" ? "மாவட்டம் தேர்வு" : "Select district"} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {TN_DISTRICTS.map((d) => (
+                                <SelectItem key={d} value={d}>{d}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={form.control} name="constituencyName" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{lang === "ta" ? "சட்டமன்றத் தொகுதி" : "Constituency"}</FormLabel>
+                          <FormControl>
+                            <ConstituencyCombobox
+                              value={field.value ?? ""}
+                              onChange={field.onChange}
+                              lang={lang}
+                              filterByDistrict={watchedDistrict || undefined}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                    </div>
+                    )}
+
+                    {/* Cascading area + polling-station — only when a ward is chosen (constituency scope) */}
+                    {watchedScope !== "statewide" && selectedWardId && (areaOptions.length > 0 || boothOptions.length > 0) && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {areaOptions.length > 0 && (
                           <FormField control={form.control} name="areaId" render={({ field }) => (
