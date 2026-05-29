@@ -225,7 +225,7 @@ export function HomeView({
                 <span className="inline-block bg-yellow-400 text-yellow-900 text-[10px] font-bold px-3 py-0.5 rounded-full mb-2 tracking-wide uppercase">
                   {tx("Chief Minister · Tamil Nadu", "முதலமைச்சர் · தமிழ்நாடு")}
                 </span>
-                <p className="text-white font-bold text-base leading-tight">{tx("C. Joseph Vijay", "சி. ஜோசப் விஜய்")}</p>
+                <p className="text-white font-bold text-base leading-tight">{tx("C. Joseph Vijay", "C. ஜோசப் விஜய்")}</p>
                 <p className="text-white/70 text-xs mt-0.5">{tx("President, TVK", "தமிழக வெற்றி கழகம் தலைவர்")}</p>
               </div>
             </div>
@@ -243,7 +243,7 @@ export function HomeView({
                     <span className="text-yellow-300 text-[8px] font-bold">{tx("CM", "முதலமைச்சர்")}</span>
                   </div>
                 </div>
-                <p className="text-white/90 text-[10px] font-medium">{tx("C. Joseph Vijay", "சி. ஜோசப் விஜய்")}</p>
+                <p className="text-white/90 text-[10px] font-medium">{tx("C. Joseph Vijay", "C. ஜோசப் விஜய்")}</p>
               </div>
               <div className="flex flex-col items-center gap-1.5">
                 <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-[3px] border-white/40 shadow-xl">
