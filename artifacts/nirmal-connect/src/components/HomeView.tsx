@@ -10,6 +10,7 @@ import type { Language } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
 import { format } from "date-fns";
 import leaderPhoto from "@assets/image_1778085777744.png";
+import cmVijayPhoto from "@assets/image_1780073593488.png";
 import { type LeaderConfig, DEFAULT_LEADER_CONFIG } from "@/lib/LeaderConfigContext";
 
 export function createDefaultHomeHero(lc: LeaderConfig): HomeHeroConfig {
@@ -300,6 +301,50 @@ export function HomeView({
                   <div className="text-xs text-white/70">{tx("News Items", "செய்திகள்")}</div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CM Joseph Vijay Banner */}
+      <section className="bg-gradient-to-r from-yellow-50 via-white to-yellow-50 border-y border-yellow-200 py-5">
+        <div className={`${embedded ? "w-full" : "max-w-7xl mx-auto"} px-4`}>
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+            <div className="flex-shrink-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-4 border-primary shadow-lg">
+                <img
+                  src={cmVijayPhoto}
+                  alt="Chief Minister C. Joseph Vijay"
+                  className="w-full h-full object-cover object-top"
+                />
+              </div>
+            </div>
+            <div className="flex-1 text-center sm:text-left">
+              <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
+                <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                  {tx("Chief Minister", "முதலமைச்சர்")}
+                </span>
+                <span className="bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                  {tx("Tamil Nadu", "தமிழ்நாடு")}
+                </span>
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
+                {tx("C. Joseph Vijay", "சி. ஜோசப் விஜய்")}
+              </h3>
+              <p className="text-sm text-gray-600 mt-0.5">
+                {tx(
+                  "President, Tamilaga Vettri Kazhagam (TVK) · Chief Minister of Tamil Nadu",
+                  "தமிழக வெற்றி கழகம் (TVK) தலைவர் · தமிழ்நாடு முதலமைச்சர்"
+                )}
+              </p>
+            </div>
+            <div className="hidden md:block flex-shrink-0 text-right">
+              <p className="text-xs text-gray-500 italic">
+                {tx(
+                  '"Together we build a new Tamil Nadu"',
+                  '"இணைந்து புதிய தமிழ்நாடு கட்டுவோம்"'
+                )}
+              </p>
             </div>
           </div>
         </div>
