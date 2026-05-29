@@ -238,7 +238,7 @@ export function HomeView({
                   </span>
                 </div>
                 <p className="text-white text-[10px] font-semibold mt-1 text-center leading-tight">
-                  {tx("CTR Nirmal Kumar", "சி.டி.ஆர். நிர்மல்")}
+                  {tx("C.T.R. Nirmal Kumar", "C.T.R. நிர்மல்")}
                 </p>
               </div>
             </div>

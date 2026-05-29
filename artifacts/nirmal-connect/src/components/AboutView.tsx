@@ -120,7 +120,7 @@ export function AboutView({ config, lang, embedded = false }: AboutViewProps) {
         title={t("About the Leader", "தலைவரைப் பற்றி")}
         subtitle={t(
           "Learn about Hon. C.T.R. Nirmal Kumar, MLA of Tirupparankundram",
-          "சி.டி.ஆர். நிர்மல் குமார் அவர்களின் அரசியல் வாழ்க்கை"
+          "C.T.R. நிர்மல் குமார் அவர்களின் அரசியல் வாழ்க்கை"
         )}
       />
 
