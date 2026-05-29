@@ -234,25 +234,31 @@ export function HomeView({
           {/* ── CENTER: text content ── */}
           <div className="text-white text-center flex flex-col justify-center py-8 lg:py-12">
 
-            {/* Mobile portraits — side by side */}
-            <div className="lg:hidden flex justify-center gap-4 mb-6">
-              <div className="flex flex-col items-center gap-1.5">
-                <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-[3px] border-yellow-400 shadow-xl">
+            {/* Mobile portraits — tall portrait cards side by side */}
+            <div className="lg:hidden flex justify-center gap-3 mb-6">
+              {/* CM Vijay */}
+              <div className="flex flex-col items-center gap-1.5 flex-1 max-w-[160px]">
+                <div className="relative w-full rounded-2xl overflow-hidden border-[3px] border-yellow-400 shadow-2xl" style={{aspectRatio:"3/4"}}>
                   <img src={cmVijayPhoto} alt="CM Vijay" className="w-full h-full object-cover object-top" />
-                  <div className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 text-center">
-                    <span className="text-yellow-300 text-[8px] font-bold">{tx("CM", "முதலமைச்சர்")}</span>
+                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent pt-8 pb-2 px-2 text-center">
+                    <span className="inline-block bg-yellow-400 text-yellow-900 text-[9px] font-bold px-2 py-0.5 rounded-full mb-1 leading-none">
+                      {tx("CM", "முதலமைச்சர்")}
+                    </span>
+                    <p className="text-white text-[10px] font-semibold leading-tight">{tx("C. Joseph Vijay", "C. ஜோசப் விஜய்")}</p>
                   </div>
                 </div>
-                <p className="text-white/90 text-[10px] font-medium">{tx("C. Joseph Vijay", "C. ஜோசப் விஜய்")}</p>
               </div>
-              <div className="flex flex-col items-center gap-1.5">
-                <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-[3px] border-white/40 shadow-xl">
-                  <img src={photoSrc} alt="MLA Nirmal Kumar" className="w-full h-full object-cover" />
-                  <div className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 text-center">
-                    <span className="text-white/90 text-[8px] font-bold">MLA</span>
+              {/* MLA Nirmal Kumar */}
+              <div className="flex flex-col items-center gap-1.5 flex-1 max-w-[160px]">
+                <div className="relative w-full rounded-2xl overflow-hidden border-[3px] border-white/50 shadow-2xl" style={{aspectRatio:"3/4"}}>
+                  <img src={photoSrc} alt="MLA Nirmal Kumar" className="w-full h-full object-cover object-top" />
+                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent pt-8 pb-2 px-2 text-center">
+                    <span className="inline-block bg-white/20 text-white text-[9px] font-bold px-2 py-0.5 rounded-full mb-1 leading-none border border-white/40">
+                      {tx("MLA · Minister", "சட்டமன்ற உறுப்பினர்")}
+                    </span>
+                    <p className="text-white text-[10px] font-semibold leading-tight">{tx("C.T.R. Nirmal Kumar", "C.T.R. நிர்மல் குமார்")}</p>
                   </div>
                 </div>
-                <p className="text-white/90 text-[10px] font-medium">{tx("C.T.R. Nirmal", "C.T.R. நிர்மல்")}</p>
               </div>
             </div>
 
