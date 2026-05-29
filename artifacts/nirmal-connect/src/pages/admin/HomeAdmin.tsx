@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Save, RefreshCw, Eye, EyeOff, AlertCircle } from "lucide-react";
+import ImageUploader from "@/components/ImageUploader";
 import { adminApi } from "./api";
 import {
   HomeView,
@@ -204,8 +205,12 @@ export default function HomeAdmin() {
                 <Textarea value={config.descriptionTa} onChange={(e) => set("descriptionTa", e.target.value)} rows={2} className="mt-1 text-sm" />
               </div>
               <div>
-                <Label className="text-xs">Leader Photo URL</Label>
-                <Input value={config.photoUrl} onChange={(e) => set("photoUrl", e.target.value)} placeholder="https://… or /uploads/…" className={`mt-1 text-sm ${errClass("photoUrl")}`} />
+                <ImageUploader
+                  label="CTR Leader Photo"
+                  value={config.photoUrl}
+                  onChange={(url) => set("photoUrl", url)}
+                  placeholder="https://… or /uploads/…"
+                />
                 {errMsg("photoUrl")}
               </div>
             </CardContent>
