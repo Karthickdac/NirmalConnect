@@ -1,0 +1,22 @@
+root@srv1286649:/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com# ls artifacts/nirmal-connect/dist/
+pm2 restart nirmal-connect-api
+curl -s -o /dev/null -w "HTTP status: %{http_code}\n" http://localhost:5005
+public
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [nirmal-connect-api](ids: [ 22 ])
+[PM2] [nirmal-connect-api](22) ✓
+┌────┬─────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name                    │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼─────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 21 │ dge-erp                 │ default     │ 0.0.0   │ fork    │ 715773   │ 6D     │ 0    │ online    │ 0%       │ 166.5mb  │ root     │ disabled │
+│ 1  │ dynamic-green-energy    │ default     │ 1.0.0   │ cluster │ 711980   │ 6D     │ 2    │ online    │ 0%       │ 77.4mb   │ root     │ disabled │
+│ 2  │ dynamic-green-energy    │ default     │ 1.0.0   │ cluster │ 712003   │ 6D     │ 2    │ online    │ 0%       │ 78.2mb   │ root     │ disabled │
+│ 4  │ fish-market-pro         │ default     │ 1.0.0   │ cluster │ 712023   │ 6D     │ 2    │ online    │ 0%       │ 109.4mb  │ root     │ disabled │
+│ 3  │ fitro360                │ default     │ 0.39.7  │ fork    │ 712011   │ 6D     │ 2    │ online    │ 0%       │ 62.8mb   │ root     │ disabled │
+│ 7  │ kuralai                 │ default     │ 1.0.0   │ fork    │ 712057   │ 6D     │ 2    │ online    │ 0%       │ 129.7mb  │ root     │ disabled │
+│ 5  │ kyro360                 │ default     │ 1.0.0   │ cluster │ 712033   │ 6D     │ 2    │ online    │ 0%       │ 110.2mb  │ root     │ disabled │
+│ 6  │ kyro360                 │ default     │ 1.0.0   │ cluster │ 712051   │ 6D     │ 2    │ online    │ 0%       │ 97.1mb   │ root     │ disabled │
+│ 22 │ nirmal-connect-api      │ default     │ 0.0.0   │ fork    │ 901620   │ 0s     │ 162  │ online    │ 0%       │ 22.9mb   │ root     │ disabled │
+└────┴─────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+HTTP status: 000
+root@srv1286649:/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com# 
