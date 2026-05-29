@@ -211,16 +211,35 @@ export function HomeView({
 
         <div className={`relative ${embedded ? "w-full" : "max-w-7xl mx-auto"} w-full px-4 py-8 md:py-20 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 items-center`}>
           <div className="text-white text-center lg:text-left">
-            {/* Mobile-only portrait — keeps the leader visible above the fold
-                on phones (desktop shows the richer card on the right). */}
-            <div className="lg:hidden flex justify-center mb-5">
-              <div className="relative">
-                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-yellow-400 shadow-2xl ring-4 ring-yellow-400/20">
-                  <img src={photoSrc} alt={tx(config.headline, config.headlineTa)} className="w-full h-full object-cover" />
+            {/* Mobile-only: both leaders above the fold */}
+            <div className="lg:hidden flex justify-center gap-5 mb-5">
+              {/* CM Vijay */}
+              <div className="flex flex-col items-center gap-1">
+                <div className="relative">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-4 border-yellow-400 shadow-2xl">
+                    <img src={cmVijayPhoto} alt="Chief Minister C. Joseph Vijay" className="w-full h-full object-cover object-top" />
+                  </div>
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-[9px] font-bold px-2 py-0.5 rounded-full shadow whitespace-nowrap">
+                    {tx("CM", "முதலமைச்சர்")}
+                  </span>
                 </div>
-                <span className="absolute -bottom-1 -right-1 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
-                  Minister
-                </span>
+                <p className="text-white text-[10px] font-semibold mt-1 text-center leading-tight">
+                  {tx("C. Joseph Vijay", "சி. ஜோசப் விஜய்")}
+                </p>
+              </div>
+              {/* MLA Nirmal Kumar */}
+              <div className="flex flex-col items-center gap-1">
+                <div className="relative">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-4 border-yellow-400/60 shadow-2xl">
+                    <img src={photoSrc} alt={tx(config.headline, config.headlineTa)} className="w-full h-full object-cover" />
+                  </div>
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-white/20 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow whitespace-nowrap">
+                    MLA
+                  </span>
+                </div>
+                <p className="text-white text-[10px] font-semibold mt-1 text-center leading-tight">
+                  {tx("CTR Nirmal Kumar", "சி.டி.ஆர். நிர்மல்")}
+                </p>
               </div>
             </div>
 
@@ -280,71 +299,62 @@ export function HomeView({
             </div>
           </div>
 
+          {/* Desktop: Dual-leaders card */}
           <div className={`${embedded ? "flex" : "hidden lg:flex"} justify-center`}>
-            <div className="glass-card rounded-2xl p-6 md:p-8 max-w-sm w-full text-center text-white">
-              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-4 border-yellow-400 mx-auto mb-4 shadow-2xl">
-                <img src={photoSrc} alt={tx(config.headline, config.headlineTa)} className="w-full h-full object-cover" />
-              </div>
-              <div className="text-4xl md:text-5xl font-bold text-yellow-400 mb-2">
-                {summary?.totalVolunteers?.toLocaleString() ?? "—"}+
-              </div>
-              <p className="text-white/80 text-sm">
-                {tx("Volunteers & Supporters", "தன்னார்வலர்கள்")}
-              </p>
-              <div className="mt-4 md:mt-6 grid grid-cols-2 gap-3">
-                <div className="bg-white/10 rounded-lg p-3">
-                  <div className="font-bold text-lg">{summary?.totalEvents ?? "—"}</div>
-                  <div className="text-xs text-white/70">{tx("Events", "நிகழ்வுகள்")}</div>
-                </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <div className="font-bold text-lg">{summary?.totalNews ?? "—"}</div>
-                  <div className="text-xs text-white/70">{tx("News Items", "செய்திகள்")}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+            <div className="glass-card rounded-2xl p-5 max-w-sm w-full text-white">
 
-      {/* CM Joseph Vijay Banner */}
-      <section className="bg-gradient-to-r from-yellow-50 via-white to-yellow-50 border-y border-yellow-200 py-5">
-        <div className={`${embedded ? "w-full" : "max-w-7xl mx-auto"} px-4`}>
-          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-            <div className="flex-shrink-0">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-4 border-primary shadow-lg">
-                <img
-                  src={cmVijayPhoto}
-                  alt="Chief Minister C. Joseph Vijay"
-                  className="w-full h-full object-cover object-top"
-                />
+              {/* CM Vijay — primary featured leader */}
+              <div className="text-center mb-4">
+                <div className="relative inline-block mb-3">
+                  <div className="w-36 h-36 md:w-44 md:h-44 rounded-2xl overflow-hidden border-4 border-yellow-400 shadow-2xl mx-auto">
+                    <img
+                      src={cmVijayPhoto}
+                      alt="Chief Minister C. Joseph Vijay"
+                      className="w-full h-full object-cover object-top"
+                    />
+                  </div>
+                  <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-3 py-0.5 rounded-full shadow whitespace-nowrap">
+                    {tx("Chief Minister of Tamil Nadu", "தமிழ்நாடு முதலமைச்சர்")}
+                  </span>
+                </div>
+                <p className="text-base font-bold text-white mt-3 leading-tight">
+                  {tx("C. Joseph Vijay", "சி. ஜோசப் விஜய்")}
+                </p>
+                <p className="text-yellow-300 text-xs mt-0.5">
+                  {tx("President, TVK", "தமிழக வெற்றி கழகம் தலைவர்")}
+                </p>
               </div>
-            </div>
-            <div className="flex-1 text-center sm:text-left">
-              <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
-                <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
-                  {tx("Chief Minister", "முதலமைச்சர்")}
-                </span>
-                <span className="bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
-                  {tx("Tamil Nadu", "தமிழ்நாடு")}
-                </span>
+
+              <div className="border-t border-white/20 my-3" />
+
+              {/* MLA Nirmal Kumar — local representative */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-yellow-400 flex-shrink-0 shadow-lg">
+                  <img src={photoSrc} alt={tx(config.headline, config.headlineTa)} className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <p className="font-bold text-sm leading-tight">{tx(config.headline, config.headlineTa)}</p>
+                  <p className="text-yellow-300 text-xs leading-snug mt-0.5">
+                    {tx("MLA, Tirupparankundram", "MLA, திருப்பரங்குன்றம்")}
+                  </p>
+                </div>
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
-                {tx("C. Joseph Vijay", "சி. ஜோசப் விஜய்")}
-              </h3>
-              <p className="text-sm text-gray-600 mt-0.5">
-                {tx(
-                  "President, Tamilaga Vettri Kazhagam (TVK) · Chief Minister of Tamil Nadu",
-                  "தமிழக வெற்றி கழகம் (TVK) தலைவர் · தமிழ்நாடு முதலமைச்சர்"
-                )}
-              </p>
-            </div>
-            <div className="hidden md:block flex-shrink-0 text-right">
-              <p className="text-xs text-gray-500 italic">
-                {tx(
-                  '"Together we build a new Tamil Nadu"',
-                  '"இணைந்து புதிய தமிழ்நாடு கட்டுவோம்"'
-                )}
-              </p>
+
+              {/* Stats strip */}
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="bg-white/10 rounded-lg py-2 px-1">
+                  <div className="font-bold text-base text-yellow-400">{summary?.totalVolunteers?.toLocaleString() ?? "—"}+</div>
+                  <div className="text-[10px] text-white/70">{tx("Volunteers", "தன்னார்வலர்கள்")}</div>
+                </div>
+                <div className="bg-white/10 rounded-lg py-2 px-1">
+                  <div className="font-bold text-base text-yellow-400">{summary?.totalEvents ?? "—"}</div>
+                  <div className="text-[10px] text-white/70">{tx("Events", "நிகழ்வுகள்")}</div>
+                </div>
+                <div className="bg-white/10 rounded-lg py-2 px-1">
+                  <div className="font-bold text-base text-yellow-400">{summary?.totalNews ?? "—"}</div>
+                  <div className="text-[10px] text-white/70">{tx("News", "செய்திகள்")}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
