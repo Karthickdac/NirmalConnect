@@ -1,0 +1,25 @@
+[TAILING] Tailing last 20 lines for [nirmal-connect-api] process (change the value with --lines option)
+/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/logs/api-out.log last 20 lines:
+/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/logs/api-error.log last 20 lines:
+22|nirmal- | 2026-05-29 18:06:53:     at <anonymous> (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/api-server/src/app.ts:109:7)
+22|nirmal- | 2026-05-29 18:06:53:     at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+22|nirmal- | 2026-05-29 18:06:53:     at async ModuleLoader.import (node:internal/modules/esm/loader:606:24) {
+22|nirmal- | 2026-05-29 18:06:53:   originalPath: '*'
+22|nirmal- | 2026-05-29 18:06:53: }
+22|nirmal- | 2026-05-29 18:06:56: PathError [TypeError]: Missing parameter name at index 1: *; visit https://git.new/pathToRegexpError for info
+22|nirmal- | 2026-05-29 18:06:56:     at name (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/path-to-regexp@8.3.0/node_modules/path-to-regexp/src/index.ts:225:13)
+22|nirmal- | 2026-05-29 18:06:56:     at parse (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/path-to-regexp@8.3.0/node_modules/path-to-regexp/src/index.ts:242:62)
+22|nirmal- | 2026-05-29 18:06:56:     at pathToRegexp (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/path-to-regexp@8.3.0/node_modules/path-to-regexp/src/index.ts:480:54)
+22|nirmal- | 2026-05-29 18:06:56:     at Object.match (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/path-to-regexp@8.3.0/node_modules/path-to-regexp/src/index.ts:438:28)
+22|nirmal- | 2026-05-29 18:06:56:     at matcher (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/router@2.2.0/node_modules/router/lib/layer.js:86:23)
+22|nirmal- | 2026-05-29 18:06:56:     at new Layer (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/router@2.2.0/node_modules/router/lib/layer.js:93:62)
+22|nirmal- | 2026-05-29 18:06:56:     at Function.route (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/router@2.2.0/node_modules/router/index.js:428:17)
+22|nirmal- | 2026-05-29 18:06:56:     at Function.route (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/express@5.2.1/node_modules/express/lib/application.js:257:22)
+22|nirmal- | 2026-05-29 18:06:56:     at Function.app2.<computed> (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/express@5.2.1/node_modules/express/lib/application.js:478:22)
+22|nirmal- | 2026-05-29 18:06:56:     at <anonymous> (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/api-server/src/app.ts:109:7)
+22|nirmal- | 2026-05-29 18:06:56:     at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+22|nirmal- | 2026-05-29 18:06:56:     at async ModuleLoader.import (node:internal/modules/esm/loader:606:24) {
+22|nirmal- | 2026-05-29 18:06:56:   originalPath: '*'
+22|nirmal- | 2026-05-29 18:06:56: }
+
+root@srv1286649:/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com# 
