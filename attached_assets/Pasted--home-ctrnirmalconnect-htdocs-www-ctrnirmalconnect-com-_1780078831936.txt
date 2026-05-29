@@ -1,0 +1,90 @@
+/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/logs/api-out.log last 10 lines:
+22|nirmal- | xpires_at\" <= $1) limit $2\nparams: 2026-05-29T18:19:04.812Z,200\n    at NodePgPreparedQuery.queryWithCache (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.18.0_pg@8.20.0/node_modules/src/pg-core/session.ts:73:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async <anonymous> (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.18.0_pg@8.20.0/node_modules/src/node-postgres/session.ts:154:19)\n    at async <anonymous> (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/api-server/src/lib/voterExportSweeper.ts:52:25)\ncaused by: error: relation \"voter_exports\" does not exist\n    at <anonymous> (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/pg-pool@3.13.0_pg@8.20.0/node_modules/pg-pool/index.js:45:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async <anonymous> (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.18.0_pg@8.20.0/node_modules/src/node-postgres/session.ts:161:13)\n    at async NodePgPreparedQuery.queryWithCache (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.18.0_pg@8.20.0/node_modules/src/pg-core/session.ts:71:12)\n    at async <anonymous> (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.18.0_pg@8.20.0/node_modules/src/node-postgres/session.ts:154:19)\n    at async <anonymous> (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/api-server/src/lib/voterExportSweeper.ts:52:25)","query":"select \"id\", \"storage_key\" from \"voter_exports\" where (\"voter_exports\".\"storage_key\" is not null and \"voter_exports\".\"expires_at\" <= $1) limit $2","params":["2026-05-29T18:19:04.812Z",200]},"msg":"[voter-export-sweeper] pass crashed"}
+
+97:app.use("/media", mediaStatic);
+98:app.use("/api/media", mediaStatic);
+100:app.use("/api", router);
+108:  app.use(express.static(frontendDist, { dotfiles: "deny" }));
+109:  app.use((_req, res) => {
+root@srv1286649:/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com# # 3. Build frontend
+pnpm --filter @workspace/nirmal-connect run build 2>&1 | tail -20
+
+# 4. Rebuild API
+pnpm --filter @workspace/api-server run build 2>&1 | tail -10
+
+# 5. Restart
+pm2 restart nirmal-connect-api
+sleep 3
+pm2 logs nirmal-connect-api --lines 15 --nostream
+curl -s -o /dev/null -w "HTTP status: %{http_code}\n" http://localhost:5005
+[plugin vite:reporter] 
+(!) /home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/jspdf-autotable@5.0.7_jspdf@4.2.1/node_modules/jspdf-autotable/dist/jspdf.plugin.autotable.mjs is dynamically imported by /home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/nirmal-connect/src/pages/GrievanceOfficer.tsx, /home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/nirmal-connect/src/pages/GrievanceOfficer.tsx but also statically imported by /home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/nirmal-connect/src/lib/analyticsExport.ts, dynamic import will not move module into another chunk.
+
+computing gzip size...
+dist/public/index.html                                   0.91 kB │ gzip:   0.45 kB
+dist/public/assets/image_1778085777744-oJvcw3_L.png    512.09 kB
+dist/public/assets/image_1780074852655-Cj7MeEMf.png  1,358.21 kB
+dist/public/assets/ConstituencyMap-k-SYLBed.css          1.65 kB │ gzip:   0.42 kB
+dist/public/assets/index-7OneVbmh.css                  179.45 kB │ gzip:  31.84 kB
+dist/public/assets/BoothMapPicker-C0gwOFum.js            1.64 kB │ gzip:   0.85 kB
+dist/public/assets/purify.es-DfZ_cBTv.js                24.11 kB │ gzip:   9.06 kB
+dist/public/assets/ConstituencyMap-CXrDiurr.js          50.97 kB │ gzip:  14.70 kB
+dist/public/assets/index.es-qYN4WgYH.js                158.79 kB │ gzip:  53.02 kB
+dist/public/assets/index-czuz0iM2.js                 2,627.72 kB │ gzip: 751.77 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 16.54s
+  dist/pino-file.mjs                 142.1kb
+  dist/pino-pretty.mjs               114.6kb
+  dist/thread-stream-worker.mjs        7.3kb
+  dist/index.mjs.map                   8.5mb
+  dist/pino-worker.mjs.map           256.9kb
+  dist/pino-file.mjs.map             229.1kb
+  dist/pino-pretty.mjs.map           203.9kb
+  dist/thread-stream-worker.mjs.map   12.0kb
+
+⚡ Done in 787ms
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [nirmal-connect-api](ids: [ 22 ])
+[PM2] [nirmal-connect-api](22) ✓
+┌────┬─────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name                    │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼─────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 21 │ dge-erp                 │ default     │ 0.0.0   │ fork    │ 715773   │ 6D     │ 0    │ online    │ 0%       │ 166.6mb  │ root     │ disabled │
+│ 1  │ dynamic-green-energy    │ default     │ 1.0.0   │ cluster │ 711980   │ 6D     │ 2    │ online    │ 0%       │ 77.5mb   │ root     │ disabled │
+│ 2  │ dynamic-green-energy    │ default     │ 1.0.0   │ cluster │ 712003   │ 6D     │ 2    │ online    │ 0%       │ 78.2mb   │ root     │ disabled │
+│ 4  │ fish-market-pro         │ default     │ 1.0.0   │ cluster │ 712023   │ 6D     │ 2    │ online    │ 0%       │ 109.4mb  │ root     │ disabled │
+│ 3  │ fitro360                │ default     │ 0.39.7  │ fork    │ 712011   │ 6D     │ 2    │ online    │ 0%       │ 62.9mb   │ root     │ disabled │
+│ 7  │ kuralai                 │ default     │ 1.0.0   │ fork    │ 712057   │ 6D     │ 2    │ online    │ 0%       │ 130.4mb  │ root     │ disabled │
+│ 5  │ kyro360                 │ default     │ 1.0.0   │ cluster │ 712033   │ 6D     │ 2    │ online    │ 0%       │ 110.5mb  │ root     │ disabled │
+│ 6  │ kyro360                 │ default     │ 1.0.0   │ cluster │ 712051   │ 6D     │ 2    │ online    │ 0%       │ 97.3mb   │ root     │ disabled │
+│ 22 │ nirmal-connect-api      │ default     │ 0.0.0   │ fork    │ 901757   │ 0s     │ 163  │ online    │ 0%       │ 25.4mb   │ root     │ disabled │
+└────┴─────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+[TAILING] Tailing last 15 lines for [nirmal-connect-api] process (change the value with --lines option)
+/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/logs/api-error.log last 15 lines:
+22|nirmal- | 2026-05-29 18:06:56:   originalPath: '*'
+22|nirmal- | 2026-05-29 18:06:56: }
+22|nirmal- | 2026-05-29 18:09:16: Error: ENOENT: no such file or directory, stat '/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/nirmal-connect/dist/index.html'
+22|nirmal- | 2026-05-29 18:09:16: Error: ENOENT: no such file or directory, stat '/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/nirmal-connect/dist/index.html'
+22|nirmal- | 2026-05-29 18:09:23: Error: ENOENT: no such file or directory, stat '/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/nirmal-connect/dist/index.html'
+22|nirmal- | 2026-05-29 18:10:19: Error: ENOENT: no such file or directory, stat '/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/nirmal-connect/dist/index.html'
+22|nirmal- | 2026-05-29 18:10:19: Error: ENOENT: no such file or directory, stat '/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/nirmal-connect/dist/index.html'
+22|nirmal- | 2026-05-29 18:10:43: Error: ENOENT: no such file or directory, stat '/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/nirmal-connect/dist/index.html'
+22|nirmal- | 2026-05-29 18:10:48: Error: ENOENT: no such file or directory, stat '/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/nirmal-connect/dist/index.html'
+22|nirmal- | 2026-05-29 18:15:03: Error: ENOENT: no such file or directory, stat '/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/nirmal-connect/dist/index.html'
+22|nirmal- | 2026-05-29 18:15:08: Error: ENOENT: no such file or directory, stat '/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/nirmal-connect/dist/index.html'
+22|nirmal- | 2026-05-29 18:15:25: Error: ENOENT: no such file or directory, stat '/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/nirmal-connect/dist/index.html'
+22|nirmal- | 2026-05-29 18:15:53: Error: ENOENT: no such file or directory, stat '/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/nirmal-connect/dist/index.html'
+22|nirmal- | 2026-05-29 18:17:22: Error: ENOENT: no such file or directory, stat '/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/nirmal-connect/dist/index.html'
+22|nirmal- | 2026-05-29 18:17:54: Error: ENOENT: no such file or directory, stat '/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/nirmal-connect/dist/index.html'
+
+/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/logs/api-out.log last 15 lines:
+22|nirmal- | :17:54: {"level":30,"time":1780078674874,"pid":901519,"hostname":"srv1286649","req":{"id":4,"method":"GET","url":"/"},"res":{"statusCode":404},"responseTime":1,"msg":"request completed"}
+22|nirmal- | 2026-05-29 18:18:04: {"level":30,"time":1780078684811,"pid":901620,"hostname":"srv1286649","port":5005,"msg":"Server listening"}
+22|nirmal- | 2026-05-29 18:19:04: {"level":50,"time":1780078744858,"pid":901620,"hostname":"srv1286649","err":{"type":"_DrizzleQueryError","message":"Failed query: select \"id\", \"storage_key\" from \"voter_exports\" where (\"voter_exports\".\"storage_key\" is not null and \"voter_exports\".\"expires_at\" <= $1) limit $2\nparams: 2026-05-29T18:19:04.812Z,200: relation \"voter_exports\" does not exist","stack":"Error: Failed query: select \"id\", \"storage_key\" from \"voter_exports\" where (\"voter_exports\".\"storage_key\" is not null and \"voter_exports\".\"expires_at\" <= $1) limit $2\nparams: 2026-05-29T18:19:04.812Z,200\n    at NodePgPreparedQuery.queryWithCache (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.18.0_pg@8.20.0/node_modules/src/pg-core/session.ts:73:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async <anonymous> (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.18.0_pg@8.20.0/node_modules/src/node-postgres/session.ts:154:19)\n    at async <anonymous> (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/api-server/src/lib/voterExportSweeper.ts:52:25)\ncaused by: error: relation \"voter_exports\" does not exist\n    at <anonymous> (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/pg-pool@3.13.0_pg@8.20.0/node_modules/pg-pool/index.js:45:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async <anonymous> (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.18.0_pg@8.20.0/node_modules/src/node-postgres/session.ts:161:13)\n    at async NodePgPreparedQuery.queryWithCache (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.18.0_pg@8.20.0/node_modules/src/pg-core/session.ts:71:12)\n    at async <anonymous> (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.18.0_pg@8.20.0/node_modules/src/node-postgres/session.ts:154:19)\n    at async <anonymous> (/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com/artifacts/api-server/src/lib/voterExportSweeper.ts:52:25)","query":"select \"id\", \"storage_key\" from \"voter_exports\" where (\"voter_exports\".\"storage_key\" is not null and \"voter_exports\".\"expires_at\" <= $1) limit $2","params":["2026-05-29T18:19:04.812Z",200]},"msg":"[voter-export-sweeper] pass crashed"}
+22|nirmal- | 2026-05-29 18:20:09: {"level":30,"time":1780078809612,"pid":901757,"hostname":"srv1286649","port":5005,"msg":"Server listening"}
+
+HTTP status: 404

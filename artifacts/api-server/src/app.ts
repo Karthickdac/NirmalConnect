@@ -104,7 +104,7 @@ app.use("/api", router);
 // directly so everything runs on a single port (5005) behind CloudPanel's
 // reverse proxy. The SPA fallback (index.html) must come AFTER all API routes.
 if (process.env.NODE_ENV === "production") {
-  const frontendDist = path.resolve(process.cwd(), "artifacts/nirmal-connect/dist");
+  const frontendDist = path.resolve(process.cwd(), "artifacts/nirmal-connect/dist/public");
   app.use(express.static(frontendDist, { dotfiles: "deny" }));
   app.use((_req: Request, res: Response) => {
     res.sendFile(path.join(frontendDist, "index.html"));
