@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://www.ctrnirmalconnect.com/sitemap.xml
+
+# Allow all major crawlers
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+# Block access to API internals
+Disallow: /api/admin/
+Disallow: /api/auth/

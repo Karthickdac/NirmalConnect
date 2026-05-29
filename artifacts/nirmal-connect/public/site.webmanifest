@@ -1,0 +1,23 @@
+{
+  "name": "Nirmal Connect – C.T.R. Nirmal Kumar",
+  "short_name": "Nirmal Connect",
+  "description": "Official website of MLA C.T.R. Nirmal Kumar, Tirupparankundram constituency & Minister of Energy Resources and Law, Tamil Nadu.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#cc0000",
+  "lang": "ta",
+  "icons": [
+    {
+      "src": "/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
