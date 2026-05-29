@@ -23,7 +23,7 @@ git pull origin dev
 
 # ── 2. Install dependencies ───────────────────────
 echo "▶ Installing dependencies..."
-pnpm install --frozen-lockfile
+pnpm install --frozen-lockfile --ignore-scripts
 
 # ── 3. Build shared packages ──────────────────────
 echo "▶ Building shared packages..."
