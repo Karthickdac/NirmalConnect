@@ -1,21 +1,21 @@
-// PM2 Ecosystem Config — People Connect
+// PM2 Ecosystem Config — Nirmal Connect
 // Usage: pm2 start ecosystem.config.cjs
 // Then:  pm2 save && pm2 startup
 
 module.exports = {
   apps: [
     {
-      name: "people-connect-api",
+      name: "nirmal-connect-api",
       script: "./artifacts/api-server/dist/index.mjs",
       interpreter: "node",
       interpreter_args: "--enable-source-maps",
-      cwd: "/home/ctr/htdocs/ctr.tamilagavetrikalagam.com",
+      cwd: "/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com",
       env: {
         NODE_ENV: "production",
-        PORT: "2500",
-        DATABASE_URL: "postgresql://ctr:CtrNirmal2024@localhost:5432/nirmalconnect",
-        JWT_SECRET: "NirmalConnect@JWT#2024!SecretKey",
-        SESSION_SECRET: "NirmalConnect@Session#2024!SecretKey",
+        PORT: "5005",
+        DATABASE_URL: "postgresql://ctrnirmal:CHANGE_PASSWORD@localhost:5432/nirmalconnect",
+        JWT_SECRET: "CHANGE_THIS_JWT_SECRET",
+        SESSION_SECRET: "CHANGE_THIS_SESSION_SECRET",
       },
       autorestart: true,
       watch: false,

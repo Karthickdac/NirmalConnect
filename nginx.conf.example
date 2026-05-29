@@ -1,76 +1,51 @@
-## Nginx config for People Connect
-## Domain: ctr.tamilagavetrikalagam.com
-## Copy to: /etc/nginx/sites-available/people-connect
-## Then: ln -s /etc/nginx/sites-available/people-connect /etc/nginx/sites-enabled/
-## Then: nginx -t && systemctl reload nginx
+## Nginx config for Nirmal Connect — CloudPanel VPS
+## Domain : www.ctrnirmalconnect.com
+## App port: 5005 (Node.js / PM2)
+##
+## In CloudPanel:
+##   1. Create a new site → type: Node.js
+##   2. Domain: www.ctrnirmalconnect.com
+##   3. Node.js port: 5005
+##   CloudPanel auto-generates the reverse proxy; add the
+##   extra tuning blocks below via "Vhost" editor in CloudPanel.
+##
+## ── CloudPanel Vhost additions (paste inside the server {} block) ─────────
 
 server {
     listen 80;
-    server_name ctr.tamilagavetrikalagam.com www.ctr.tamilagavetrikalagam.com;
+    server_name ctrnirmalconnect.com www.ctrnirmalconnect.com;
 
-    # Redirect HTTP → HTTPS (uncomment after SSL is set up)
-    # return 301 https://$host$request_uri;
+    # Redirect HTTP → HTTPS
+    return 301 https://$host$request_uri;
+}
 
-    root /home/ctr/htdocs/ctr.tamilagavetrikalagam.com/artifacts/nirmal-connect/dist;
-    index index.html;
+server {
+    listen 443 ssl http2;
+    server_name ctrnirmalconnect.com www.ctrnirmalconnect.com;
+
+    ssl_certificate     /etc/letsencrypt/live/www.ctrnirmalconnect.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/www.ctrnirmalconnect.com/privkey.pem;
 
     # Gzip compression
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
 
-    # API — proxy to Node.js backend
-    location /api/ {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-        proxy_read_timeout 60s;
-    }
+    # Max upload size (for voter roll PDFs, gallery images, etc.)
+    client_max_body_size 50M;
 
-    # Static assets — long cache
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-        try_files $uri =404;
-    }
-
-    # SPA fallback — all routes go to index.html
+    # ── Proxy everything to the Node.js app on port 5005 ──────────────────
+    # Express serves BOTH the API (/api/*) AND the React frontend (all other
+    # routes) from a single process — no separate static-file location needed.
     location / {
-        try_files $uri $uri/ /index.html;
+        proxy_pass         http://127.0.0.1:5005;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade           $http_upgrade;
+        proxy_set_header   Connection        'upgrade';
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 120s;
     }
 }
-
-# HTTPS (uncomment after running: certbot --nginx -d ctr.tamilagavetrikalagam.com)
-# server {
-#     listen 443 ssl http2;
-#     server_name ctr.tamilagavetrikalagam.com www.ctr.tamilagavetrikalagam.com;
-#     ssl_certificate /etc/letsencrypt/live/ctr.tamilagavetrikalagam.com/fullchain.pem;
-#     ssl_certificate_key /etc/letsencrypt/live/ctr.tamilagavetrikalagam.com/privkey.pem;
-#     include /etc/letsencrypt/options-ssl-nginx.conf;
-#
-#     root /home/ctr/htdocs/ctr.tamilagavetrikalagam.com/artifacts/nirmal-connect/dist;
-#     index index.html;
-#
-#     location /api/ {
-#         proxy_pass http://127.0.0.1:8080;
-#         proxy_http_version 1.1;
-#         proxy_set_header Host $host;
-#         proxy_set_header X-Real-IP $remote_addr;
-#         proxy_set_header X-Forwarded-Proto https;
-#     }
-#
-#     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
-#         expires 1y;
-#         add_header Cache-Control "public, immutable";
-#         try_files $uri =404;
-#     }
-#
-#     location / {
-#         try_files $uri $uri/ /index.html;
-#     }
-# }

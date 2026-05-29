@@ -99,4 +99,16 @@ app.use("/api/media", mediaStatic);
 
 app.use("/api", router);
 
+// ── Production: serve the built React frontend ────────────────────────────
+// In production (CloudPanel VPS), Express serves the Vite-built frontend
+// directly so everything runs on a single port (5005) behind CloudPanel's
+// reverse proxy. The SPA fallback (index.html) must come AFTER all API routes.
+if (process.env.NODE_ENV === "production") {
+  const frontendDist = path.resolve(process.cwd(), "artifacts/nirmal-connect/dist");
+  app.use(express.static(frontendDist, { dotfiles: "deny" }));
+  app.get("*", (_req: Request, res: Response) => {
+    res.sendFile(path.join(frontendDist, "index.html"));
+  });
+}
+
 export default app;

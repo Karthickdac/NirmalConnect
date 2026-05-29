@@ -1,22 +1,21 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────
-# People Connect — VPS Deploy Script
+# Nirmal Connect — VPS Deploy Script
 # Usage: bash deploy.sh
-# Run this from: /home/tamilagavetrikalagam/htdocs/tkprabhu.tamilagavetrikalagam.com
+# Run from: /home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com
 # ─────────────────────────────────────────────────────────────
 
 set -e
 
-DEPLOY_DIR="/home/ctr/htdocs/ctr.tamilagavetrikalagam.com"
+DEPLOY_DIR="/home/ctrnirmalconnect/htdocs/www.ctrnirmalconnect.com"
 
 echo ""
 echo "╔══════════════════════════════════════════════╗"
-echo "║       People Connect — Deploying...          ║"
+echo "║       Nirmal Connect — Deploying...          ║"
 echo "╚══════════════════════════════════════════════╝"
 echo ""
 
 cd "$DEPLOY_DIR"
-
 
 # ── 1. Pull latest changes ────────────────────────
 echo "▶ Pulling latest changes..."
@@ -44,10 +43,13 @@ pnpm --filter @workspace/nirmal-connect run build
 echo "▶ Running database migrations..."
 pnpm --filter @workspace/db run migrate 2>/dev/null || true
 
-# ── 7. Restart PM2 processes ──────────────────────
+# ── 7. Create logs directory ──────────────────────
+mkdir -p "$DEPLOY_DIR/logs"
+
+# ── 8. Restart PM2 process ────────────────────────
 echo "▶ Restarting services..."
-if pm2 list | grep -q "people-connect-api"; then
-  pm2 restart people-connect-api
+if pm2 list | grep -q "nirmal-connect-api"; then
+  pm2 restart nirmal-connect-api
 else
   pm2 start ecosystem.config.cjs
 fi
@@ -56,6 +58,6 @@ pm2 save
 
 echo ""
 echo "✅ Deployment complete!"
-echo "   API:      http://localhost:8080"
-echo "   Frontend: served via Nginx from dist/"
+echo "   App running on port 5005"
+echo "   Site: https://www.ctrnirmalconnect.com"
 echo ""
