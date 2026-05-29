@@ -19,7 +19,7 @@ cd "$DEPLOY_DIR"
 
 # ── 1. Pull latest changes ────────────────────────
 echo "▶ Pulling latest changes..."
-git pull origin main
+git pull origin dev
 
 # ── 2. Install dependencies ───────────────────────
 echo "▶ Installing dependencies..."
