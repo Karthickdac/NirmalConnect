@@ -10,7 +10,7 @@ import type { Language } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
 import { format } from "date-fns";
 import leaderPhoto from "@assets/image_1778085777744.png";
-import cmVijayPhoto from "@assets/image_1780073593488.png";
+import cmVijayPhoto from "@assets/image_1780074852655.png";
 import { type LeaderConfig, DEFAULT_LEADER_CONFIG } from "@/lib/LeaderConfigContext";
 
 export function createDefaultHomeHero(lc: LeaderConfig): HomeHeroConfig {
