@@ -307,7 +307,7 @@ export function HomeView({
 
           {/* ── RIGHT: MLA Nirmal Kumar tall portrait (desktop only) ── */}
           <div className="hidden lg:flex flex-col justify-end h-full pb-0">
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/20 h-[60vh] max-h-[460px]">
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/20 h-[72vh] max-h-[560px]">
               <img
                 src={photoSrc}
                 alt={tx(config.headline, config.headlineTa)}
