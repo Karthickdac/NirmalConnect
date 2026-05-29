@@ -202,163 +202,149 @@ export function HomeView({
 
   return (
     <div>
-      {/* Hero Section */}
-      <section className={`relative ${heroMinH} flex items-center overflow-hidden tvk-hero-gradient`}>
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-10 w-72 h-72 rounded-full bg-yellow-400 blur-3xl" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 rounded-full bg-red-400 blur-3xl" />
+      {/* ── HERO — Three-column portrait layout ── */}
+      <section className={`relative ${heroMinH} flex items-stretch overflow-hidden tvk-hero-gradient`}>
+        {/* Ambient glow */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-1/4 w-96 h-96 rounded-full bg-yellow-400/10 blur-3xl" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full bg-red-900/40 blur-3xl" />
         </div>
 
-        <div className={`relative ${embedded ? "w-full" : "max-w-7xl mx-auto"} w-full px-4 py-8 md:py-20 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 items-center`}>
-          <div className="text-white text-center lg:text-left">
-            {/* Mobile-only: both leaders above the fold */}
-            <div className="lg:hidden flex justify-center gap-5 mb-5">
-              {/* CM Vijay */}
-              <div className="flex flex-col items-center gap-1">
-                <div className="relative">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-4 border-yellow-400 shadow-2xl">
-                    <img src={cmVijayPhoto} alt="Chief Minister C. Joseph Vijay" className="w-full h-full object-cover object-top" />
-                  </div>
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-[9px] font-bold px-2 py-0.5 rounded-full shadow whitespace-nowrap">
-                    {tx("CM", "முதலமைச்சர்")}
-                  </span>
-                </div>
-                <p className="text-white text-[10px] font-semibold mt-1 text-center leading-tight">
-                  {tx("C. Joseph Vijay", "சி. ஜோசப் விஜய்")}
-                </p>
+        <div className={`relative ${embedded ? "w-full" : "max-w-7xl mx-auto"} w-full px-4 py-6 flex flex-col lg:grid lg:grid-cols-[1fr_1.3fr_1fr] gap-4 lg:gap-6 items-end`}>
+
+          {/* ── LEFT: CM Vijay tall portrait (desktop only) ── */}
+          <div className="hidden lg:flex flex-col justify-end h-full pb-0">
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-yellow-400/30 h-[72vh] max-h-[560px]">
+              <img
+                src={cmVijayPhoto}
+                alt="Chief Minister C. Joseph Vijay"
+                className="w-full h-full object-cover object-top"
+              />
+              {/* Bottom name overlay */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent pt-16 pb-5 px-4 text-center">
+                <span className="inline-block bg-yellow-400 text-yellow-900 text-[10px] font-bold px-3 py-0.5 rounded-full mb-2 tracking-wide uppercase">
+                  {tx("Chief Minister · Tamil Nadu", "முதலமைச்சர் · தமிழ்நாடு")}
+                </span>
+                <p className="text-white font-bold text-base leading-tight">{tx("C. Joseph Vijay", "சி. ஜோசப் விஜய்")}</p>
+                <p className="text-white/70 text-xs mt-0.5">{tx("President, TVK", "தமிழக வெற்றி கழகம் தலைவர்")}</p>
               </div>
-              {/* MLA Nirmal Kumar */}
-              <div className="flex flex-col items-center gap-1">
-                <div className="relative">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-4 border-yellow-400/60 shadow-2xl">
-                    <img src={photoSrc} alt={tx(config.headline, config.headlineTa)} className="w-full h-full object-cover" />
+            </div>
+          </div>
+
+          {/* ── CENTER: text content ── */}
+          <div className="text-white text-center flex flex-col justify-center py-8 lg:py-12">
+
+            {/* Mobile portraits — side by side */}
+            <div className="lg:hidden flex justify-center gap-4 mb-6">
+              <div className="flex flex-col items-center gap-1.5">
+                <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-[3px] border-yellow-400 shadow-xl">
+                  <img src={cmVijayPhoto} alt="CM Vijay" className="w-full h-full object-cover object-top" />
+                  <div className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 text-center">
+                    <span className="text-yellow-300 text-[8px] font-bold">{tx("CM", "முதலமைச்சர்")}</span>
                   </div>
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-white/20 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow whitespace-nowrap">
-                    MLA
-                  </span>
                 </div>
-                <p className="text-white text-[10px] font-semibold mt-1 text-center leading-tight">
-                  {tx("C.T.R. Nirmal Kumar", "C.T.R. நிர்மல்")}
-                </p>
+                <p className="text-white/90 text-[10px] font-medium">{tx("C. Joseph Vijay", "சி. ஜோசப் விஜய்")}</p>
+              </div>
+              <div className="flex flex-col items-center gap-1.5">
+                <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-[3px] border-white/40 shadow-xl">
+                  <img src={photoSrc} alt="MLA Nirmal Kumar" className="w-full h-full object-cover" />
+                  <div className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 text-center">
+                    <span className="text-white/90 text-[8px] font-bold">MLA</span>
+                  </div>
+                </div>
+                <p className="text-white/90 text-[10px] font-medium">{tx("C.T.R. Nirmal", "C.T.R. நிர்மல்")}</p>
               </div>
             </div>
 
-            <Badge className="mb-3 md:mb-4 bg-yellow-400/20 text-yellow-300 border-yellow-400/30 text-[11px] md:text-xs font-medium px-3 py-1">
-              {tx(config.badge, config.badgeTa)}
-            </Badge>
-            <h1 className="text-[28px] sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.15] mb-3 md:mb-4">
+            {/* TVK badge */}
+            <div className="mb-4">
+              <Badge className="bg-yellow-400/20 text-yellow-300 border-yellow-400/40 text-xs font-semibold px-4 py-1 tracking-wide">
+                {tx(config.badge, config.badgeTa)}
+              </Badge>
+            </div>
+
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-3">
               {tx(config.headline, config.headlineTa)}
             </h1>
-            <p className="text-base sm:text-lg md:text-2xl text-yellow-300 font-semibold mb-3 md:mb-6 leading-snug">
+            <p className="text-yellow-300 font-semibold text-sm sm:text-base md:text-lg mb-3 leading-snug">
               {tx(config.subheadline, config.subheadlineTa)}
             </p>
-            <p className="text-white/80 text-sm md:text-lg max-w-lg mx-auto lg:mx-0 mb-6 md:mb-8 leading-relaxed">
+            <p className="text-white/75 text-sm md:text-base max-w-md mx-auto mb-7 leading-relaxed">
               {tx(config.description, config.descriptionTa)}
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 sm:flex-wrap sm:justify-center lg:justify-start">
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
               <Link href={config.primaryCtaHref || "/grievance"}>
-                <Button data-testid="hero-grievance-btn" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white h-12 px-6 text-base font-semibold shadow-lg">
+                <Button data-testid="hero-grievance-btn" className="w-full sm:w-auto bg-yellow-400 hover:bg-yellow-300 text-yellow-900 h-12 px-7 text-sm font-bold shadow-lg">
                   {tx(config.primaryCtaLabel, config.primaryCtaLabelTa)}
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </Link>
               <Link href={config.secondaryCtaHref || "/volunteer"}>
-                <Button data-testid="hero-volunteer-btn" variant="outline" className="w-full sm:w-auto border-white/40 text-white hover:bg-white/10 h-12 px-6 text-base">
+                <Button data-testid="hero-volunteer-btn" variant="outline" className="w-full sm:w-auto border-white/40 text-white hover:bg-white/10 h-12 px-7 text-sm">
                   {tx(config.secondaryCtaLabel, config.secondaryCtaLabelTa)}
                 </Button>
               </Link>
             </div>
 
-            {/* Mobile-only quick stats strip — reuses the desktop card data
-                in a horizontal layout so phones aren't bare below the CTAs. */}
-            <div className="lg:hidden mt-7 grid grid-cols-3 gap-2 text-center">
-              <div className="glass-card rounded-xl py-3 px-1">
-                <div className="text-xl font-bold text-yellow-400 leading-none">
-                  {summary?.totalVolunteers?.toLocaleString() ?? "—"}
-                </div>
-                <div className="text-[10px] text-white/75 mt-1 leading-tight">
-                  {tx("Volunteers", "தன்னார்வலர்கள்")}
-                </div>
+            {/* Stats strip */}
+            <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto w-full">
+              <div className="glass-card rounded-xl py-3 px-2 text-center">
+                <div className="text-lg font-bold text-yellow-400">{summary?.totalVolunteers?.toLocaleString() ?? "—"}+</div>
+                <div className="text-[10px] text-white/70 mt-0.5 leading-tight">{tx("Volunteers", "தன்னார்வலர்கள்")}</div>
               </div>
-              <div className="glass-card rounded-xl py-3 px-1">
-                <div className="text-xl font-bold text-yellow-400 leading-none">
-                  {summary?.totalEvents?.toLocaleString() ?? "—"}
-                </div>
-                <div className="text-[10px] text-white/75 mt-1 leading-tight">
-                  {tx("Events", "நிகழ்வுகள்")}
-                </div>
+              <div className="glass-card rounded-xl py-3 px-2 text-center">
+                <div className="text-lg font-bold text-yellow-400">{summary?.totalEvents ?? "—"}</div>
+                <div className="text-[10px] text-white/70 mt-0.5 leading-tight">{tx("Events", "நிகழ்வுகள்")}</div>
               </div>
-              <div className="glass-card rounded-xl py-3 px-1">
-                <div className="text-xl font-bold text-yellow-400 leading-none">
-                  {summary?.totalNews?.toLocaleString() ?? "—"}
-                </div>
-                <div className="text-[10px] text-white/75 mt-1 leading-tight">
-                  {tx("News", "செய்திகள்")}
-                </div>
+              <div className="glass-card rounded-xl py-3 px-2 text-center">
+                <div className="text-lg font-bold text-yellow-400">{summary?.totalNews ?? "—"}</div>
+                <div className="text-[10px] text-white/70 mt-0.5 leading-tight">{tx("News", "செய்திகள்")}</div>
               </div>
             </div>
           </div>
 
-          {/* Desktop: Dual-leaders card */}
-          <div className={`${embedded ? "flex" : "hidden lg:flex"} justify-center`}>
-            <div className="glass-card rounded-2xl p-5 max-w-sm w-full text-white">
-
-              {/* CM Vijay — primary featured leader */}
-              <div className="text-center mb-4">
-                <div className="relative inline-block mb-3">
-                  <div className="w-36 h-36 md:w-44 md:h-44 rounded-2xl overflow-hidden border-4 border-yellow-400 shadow-2xl mx-auto">
-                    <img
-                      src={cmVijayPhoto}
-                      alt="Chief Minister C. Joseph Vijay"
-                      className="w-full h-full object-cover object-top"
-                    />
-                  </div>
-                  <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-3 py-0.5 rounded-full shadow whitespace-nowrap">
-                    {tx("Chief Minister of Tamil Nadu", "தமிழ்நாடு முதலமைச்சர்")}
-                  </span>
-                </div>
-                <p className="text-base font-bold text-white mt-3 leading-tight">
-                  {tx("C. Joseph Vijay", "சி. ஜோசப் விஜய்")}
-                </p>
-                <p className="text-yellow-300 text-xs mt-0.5">
-                  {tx("President, TVK", "தமிழக வெற்றி கழகம் தலைவர்")}
-                </p>
-              </div>
-
-              <div className="border-t border-white/20 my-3" />
-
-              {/* MLA Nirmal Kumar — local representative */}
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-yellow-400 flex-shrink-0 shadow-lg">
-                  <img src={photoSrc} alt={tx(config.headline, config.headlineTa)} className="w-full h-full object-cover" />
-                </div>
-                <div>
-                  <p className="font-bold text-sm leading-tight">{tx(config.headline, config.headlineTa)}</p>
-                  <p className="text-yellow-300 text-xs leading-snug mt-0.5">
-                    {tx("MLA, Tirupparankundram", "MLA, திருப்பரங்குன்றம்")}
-                  </p>
-                </div>
-              </div>
-
-              {/* Stats strip */}
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="bg-white/10 rounded-lg py-2 px-1">
-                  <div className="font-bold text-base text-yellow-400">{summary?.totalVolunteers?.toLocaleString() ?? "—"}+</div>
-                  <div className="text-[10px] text-white/70">{tx("Volunteers", "தன்னார்வலர்கள்")}</div>
-                </div>
-                <div className="bg-white/10 rounded-lg py-2 px-1">
-                  <div className="font-bold text-base text-yellow-400">{summary?.totalEvents ?? "—"}</div>
-                  <div className="text-[10px] text-white/70">{tx("Events", "நிகழ்வுகள்")}</div>
-                </div>
-                <div className="bg-white/10 rounded-lg py-2 px-1">
-                  <div className="font-bold text-base text-yellow-400">{summary?.totalNews ?? "—"}</div>
-                  <div className="text-[10px] text-white/70">{tx("News", "செய்திகள்")}</div>
-                </div>
+          {/* ── RIGHT: MLA Nirmal Kumar tall portrait (desktop only) ── */}
+          <div className="hidden lg:flex flex-col justify-end h-full pb-0">
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/20 h-[60vh] max-h-[460px]">
+              <img
+                src={photoSrc}
+                alt={tx(config.headline, config.headlineTa)}
+                className="w-full h-full object-cover object-top"
+              />
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent pt-12 pb-5 px-4 text-center">
+                <span className="inline-block bg-primary/90 text-white text-[10px] font-bold px-3 py-0.5 rounded-full mb-2 tracking-wide uppercase border border-white/20">
+                  {tx("MLA · Tirupparankundram", "சட்டமன்ற உறுப்பினர் · திருப்பரங்குன்றம்")}
+                </span>
+                <p className="text-white font-bold text-base leading-tight">{tx(config.headline, config.headlineTa)}</p>
+                <p className="text-white/70 text-xs mt-0.5">{tx(config.subheadline, config.subheadlineTa)}</p>
               </div>
             </div>
           </div>
+
         </div>
       </section>
+
+      {/* ── CONSTITUENCY STATS BAR ── */}
+      {stats && (
+        <div className="bg-gray-900 text-white border-b border-gray-800">
+          <div className={`${embedded ? "w-full" : "max-w-7xl mx-auto"} px-4 py-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-white/10`}>
+            {[
+              { label: tx("Roads (km)", "சாலை (கி.மீ)"), value: stats.roadsBuiltKm },
+              { label: tx("Water Projects", "நீர் திட்டங்கள்"), value: stats.waterProjectsCompleted },
+              { label: tx("Schools Upgraded", "மேம்படுத்திய பள்ளிகள்"), value: stats.schoolsUpgraded },
+              { label: tx("Jobs Created", "உருவாக்கிய வேலைகள்"), value: stats.jobsCreated },
+              { label: tx("Beneficiaries", "பயனாளிகள்"), value: stats.beneficiariesServed },
+            ].map((s) => (
+              <div key={s.label} className="bg-gray-900 px-4 py-3 text-center">
+                <div className="text-yellow-400 font-bold text-xl">{s.value.toLocaleString()}+</div>
+                <div className="text-gray-400 text-[11px] mt-0.5">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Activity Ticker */}
       {recentActivities && recentActivities.length > 0 && (
@@ -383,32 +369,9 @@ export function HomeView({
         </div>
       )}
 
-      {/* Constituency Stats */}
-      {stats && (
-        <section className="py-12 md:py-16 tvk-hero-gradient text-white">
-          <div className={`${embedded ? "w-full" : "max-w-7xl mx-auto"} px-4`}>
-            <div className="text-center mb-8 md:mb-10">
-              <h2 className="text-xl md:text-3xl font-bold text-white">
-                {tx(config.statsHeadline, config.statsHeadlineTa)}
-              </h2>
-              <p className="text-white/70 mt-2 text-sm md:text-base">
-                {tx(config.statsSubheadline, config.statsSubheadlineTa)}
-              </p>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
-              <StatCard animate={animate} label={tx("Roads Built (km)", "சாலை கட்டப்பட்டது (கி.மீ)")} value={stats.roadsBuiltKm} />
-              <StatCard animate={animate} label={tx("Water Projects", "நீர் திட்டங்கள்")} value={stats.waterProjectsCompleted} />
-              <StatCard animate={animate} label={tx("Schools Upgraded", "மேம்படுத்திய பள்ளிகள்")} value={stats.schoolsUpgraded} />
-              <StatCard animate={animate} label={tx("Jobs Created", "உருவாக்கிய வேலைகள்")} value={stats.jobsCreated} unit="+" />
-              <StatCard animate={animate} label={tx("Beneficiaries Served", "பயனாளிகள்")} value={stats.beneficiariesServed} unit="+" />
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Latest News */}
+      {/* Latest News — featured layout */}
       <section className={`py-12 md:py-16 ${embedded ? "w-full" : "max-w-7xl mx-auto"} px-4`}>
-        <div className="flex items-center justify-between mb-8 md:mb-10">
+        <div className="flex items-center justify-between mb-8">
           <SectionHeader title={tx("Latest News & Announcements", "சமீபத்திய செய்திகள்")} centered={false} />
           <Link href="/news">
             <Button variant="outline" size="sm" data-testid="view-all-news">
@@ -417,33 +380,77 @@ export function HomeView({
           </Link>
         </div>
         {!featuredNews ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-64 rounded-xl" />)}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+            <Skeleton className="h-80 rounded-xl lg:col-span-3" />
+            <div className="lg:col-span-2 flex flex-col gap-4">
+              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+            </div>
           </div>
         ) : featuredNews.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">{t(lang, "noData")}</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredNews.map((article) => (
-              <Link key={article.id} href={`/news/${article.id}`}>
-                <Card data-testid={`news-card-${article.id}`} className="group cursor-pointer hover:shadow-lg transition-all hover:-translate-y-1 overflow-hidden">
-                  {(article.thumbnailUrl ?? article.imageUrl) && (
-                    <div className="h-40 overflow-hidden">
-                      <img src={article.thumbnailUrl || article.imageUrl || undefined} alt={article.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    </div>
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+            {/* Featured large card */}
+            <Link href={`/news/${featuredNews[0].id}`} className="lg:col-span-3">
+              <Card data-testid={`news-card-${featuredNews[0].id}`} className="group cursor-pointer hover:shadow-xl transition-all overflow-hidden h-full">
+                {(featuredNews[0].thumbnailUrl ?? featuredNews[0].imageUrl) ? (
+                  <div className="h-52 md:h-64 overflow-hidden">
+                    <img
+                      src={featuredNews[0].thumbnailUrl || featuredNews[0].imageUrl || undefined}
+                      alt={featuredNews[0].title}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-52 md:h-64 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                    <Megaphone className="w-12 h-12 text-primary/30" />
+                  </div>
+                )}
+                <CardContent className="p-5">
+                  {featuredNews[0].category && (
+                    <Badge className="text-xs mb-3 bg-primary text-white">{featuredNews[0].category}</Badge>
                   )}
-                  <CardContent className="p-4">
-                    {article.category && <Badge variant="secondary" className="text-xs mb-2">{article.category}</Badge>}
-                    <h3 className="font-semibold text-sm leading-snug mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-                      {tx(article.title, article.titleTa || article.title)}
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                      {article.publishedAt ? format(new Date(article.publishedAt), "dd MMM yyyy") : ""}
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+                  <h3 className="font-bold text-lg leading-snug mb-2 group-hover:text-primary transition-colors line-clamp-2">
+                    {tx(featuredNews[0].title, featuredNews[0].titleTa || featuredNews[0].title)}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {featuredNews[0].publishedAt ? format(new Date(featuredNews[0].publishedAt), "dd MMM yyyy") : ""}
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+
+            {/* Side stack — 3 smaller cards */}
+            <div className="lg:col-span-2 flex flex-col gap-3">
+              {featuredNews.slice(1, 4).map((article) => (
+                <Link key={article.id} href={`/news/${article.id}`}>
+                  <Card data-testid={`news-card-${article.id}`} className="group cursor-pointer hover:shadow-md transition-all overflow-hidden flex-1">
+                    <CardContent className="p-0 flex gap-0">
+                      {(article.thumbnailUrl ?? article.imageUrl) && (
+                        <div className="w-24 h-24 flex-shrink-0 overflow-hidden">
+                          <img
+                            src={article.thumbnailUrl || article.imageUrl || undefined}
+                            alt={article.title}
+                            loading="lazy"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                      )}
+                      <div className="p-3 flex flex-col justify-between min-w-0">
+                        {article.category && <Badge variant="secondary" className="text-[10px] mb-1 w-fit">{article.category}</Badge>}
+                        <h3 className="font-semibold text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                          {tx(article.title, article.titleTa || article.title)}
+                        </h3>
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          {article.publishedAt ? format(new Date(article.publishedAt), "dd MMM yyyy") : ""}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
       </section>
