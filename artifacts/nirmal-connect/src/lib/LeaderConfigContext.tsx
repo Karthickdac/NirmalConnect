@@ -26,8 +26,8 @@ export interface LeaderConfig {
 }
 
 export const DEFAULT_LEADER_CONFIG: LeaderConfig = {
-  nameEn: "C.T.R. Nirmal Kumar",
-  nameTa: "C.T.R. நிர்மல் குமார்",
+  nameEn: "Thiru. C.T.R. Nirmal Kumar",
+  nameTa: "திரு. C.T.R. நிர்மல் குமார்",
   titleEn: "Minister of Energy Resources and Law",
   titleTa: "மின்சக்தி மற்றும் சட்டத்துறை அமைச்சர்",
   constituencyEn: "Tirupparankundram",

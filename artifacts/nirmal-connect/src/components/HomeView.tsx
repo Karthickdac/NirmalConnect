@@ -225,7 +225,7 @@ export function HomeView({
                 <span className="inline-block bg-yellow-400 text-yellow-900 text-[10px] font-bold px-3 py-0.5 rounded-full mb-2 tracking-wide uppercase">
                   {tx("Chief Minister · Tamil Nadu", "முதலமைச்சர் · தமிழ்நாடு")}
                 </span>
-                <p className="text-white font-bold text-base leading-tight">{tx("C. Joseph Vijay", "C. ஜோசப் விஜய்")}</p>
+                <p className="text-white font-bold text-base leading-tight">{tx("Thiru. C. Joseph Vijay", "திரு. C. ஜோசப் விஜய்")}</p>
                 <p className="text-white/70 text-xs mt-0.5">{tx("President, TVK", "தமிழக வெற்றி கழகம் தலைவர்")}</p>
               </div>
             </div>
@@ -244,7 +244,7 @@ export function HomeView({
                     <span className="inline-block bg-yellow-400 text-yellow-900 text-[9px] font-bold px-2 py-0.5 rounded-full mb-1 leading-none">
                       {tx("CM", "முதலமைச்சர்")}
                     </span>
-                    <p className="text-white text-[10px] font-semibold leading-tight">{tx("C. Joseph Vijay", "C. ஜோசப் விஜய்")}</p>
+                    <p className="text-white text-[10px] font-semibold leading-tight">{tx("Thiru. C. Joseph Vijay", "திரு. C. ஜோசப் விஜய்")}</p>
                   </div>
                 </div>
               </div>
@@ -256,7 +256,7 @@ export function HomeView({
                     <span className="inline-block bg-white/20 text-white text-[9px] font-bold px-2 py-0.5 rounded-full mb-1 leading-none border border-white/40">
                       {tx("MLA · Minister", "சட்டமன்ற உறுப்பினர்")}
                     </span>
-                    <p className="text-white text-[10px] font-semibold leading-tight">{tx("C.T.R. Nirmal Kumar", "C.T.R. நிர்மல் குமார்")}</p>
+                    <p className="text-white text-[10px] font-semibold leading-tight">{tx("Thiru. C.T.R. Nirmal Kumar", "திரு. C.T.R. நிர்மல் குமார்")}</p>
                   </div>
                 </div>
               </div>
