@@ -67,14 +67,16 @@ async function submitGrievanceWithFiles(
 }
 
 const CATEGORIES = [
+  "Suggestion", "Appreciation", "Service Request",
   "Roads", "Water Supply", "EB / Electricity Issues", "Sewage",
-  "Healthcare", "Education", "Women Safety", "Corruption",
+  "Healthcare", "Education", "Women Safety",
   "Ration", "Transport", "Pension", "Housing",
   "Agriculture", "Employment", "Others",
 ];
 const CATEGORIES_TA = [
+  "ஆலோசனை", "பாராட்டு", "சேவை கோரிக்கை",
   "சாலை", "குடிநீர்", "மின்சாரம்", "கழிவுநீர்",
-  "சுகாதாரம்", "கல்வி", "பெண் பாதுகாப்பு", "ஊழல்",
+  "சுகாதாரம்", "கல்வி", "பெண் பாதுகாப்பு",
   "ரேஷன்", "போக்குவரத்து", "ஓய்வூதியம்", "வீட்டுவசதி",
   "விவசாயம்", "வேலைவாய்ப்பு", "பிறவை",
 ];
@@ -313,7 +315,7 @@ export default function Grievance({ lang }: GrievanceProps) {
       const result = await trackGrievance(ticket);
       setTrackData(result);
     } catch {
-      setTrackError(lang === "ta" ? "புகார் எண் கிடைக்கவில்லை." : "Ticket not found. Check the number and try again.");
+      setTrackError(lang === "ta" ? "குறிப்பு எண் கிடைக்கவில்லை." : "Reference not found. Check the number and try again.");
     } finally {
       setIsTracking(false);
     }
@@ -333,17 +335,17 @@ export default function Grievance({ lang }: GrievanceProps) {
   return (
     <div className="max-w-5xl mx-auto px-4 py-12 space-y-12">
       <SectionHeader
-        title={lang === "ta" ? "மக்கள் புகார் மையம்" : "Public Grievance Portal"}
+        title={lang === "ta" ? "மக்கள் கருத்து மையம்" : "Public Feedback Portal"}
         subtitle={lang === "ta"
-          ? "உங்கள் பகுதியில் உள்ள பிரச்சினைகளை நேரடியாக தெரிவியுங்கள்"
-          : "Submit complaints directly to MLA Nirmal Kumar's office and track resolution progress"}
+          ? "உங்கள் கருத்து, ஆலோசனை அல்லது பிரச்சினைகளை நேரடியாக தெரிவியுங்கள்"
+          : "Share your feedback, suggestions or issues directly with MLA Nirmal Kumar's office"}
       />
 
       <Tabs defaultValue="submit" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto">
           <TabsTrigger value="submit" data-testid="tab-submit">
             <FileText className="w-4 h-4 mr-2" />
-            {lang === "ta" ? "புகார் அனுப்பு" : "Submit"}
+            {lang === "ta" ? "கருத்து அனுப்பு" : "Submit"}
           </TabsTrigger>
           <TabsTrigger value="track" data-testid="tab-track">
             <Search className="w-4 h-4 mr-2" />
@@ -363,10 +365,10 @@ export default function Grievance({ lang }: GrievanceProps) {
                 <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
               <h3 className="text-xl font-bold">
-                {lang === "ta" ? "புகார் பதிவு செய்யப்பட்டது!" : "Grievance Submitted!"}
+                {lang === "ta" ? "கருத்து பதிவு செய்யப்பட்டது!" : "Feedback Submitted!"}
               </h3>
               <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 space-y-2">
-                <p className="text-xs text-muted-foreground">{lang === "ta" ? "உங்கள் புகார் எண்" : "Your Ticket Number"}</p>
+                <p className="text-xs text-muted-foreground">{lang === "ta" ? "உங்கள் குறிப்பு எண்" : "Your Reference Number"}</p>
                 <p className="text-2xl font-bold text-primary font-mono tracking-wider">{ticketNo}</p>
                 <Button variant="ghost" size="sm" onClick={copyTicket} className="gap-1.5">
                   {copied ? <CheckCheck className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -376,14 +378,14 @@ export default function Grievance({ lang }: GrievanceProps) {
               <p className="text-muted-foreground text-sm">
                 {lang === "ta"
                   ? "இந்த எண்ணை வைத்து Track தாவலில் நிலையை கண்காணியுங்கள்."
-                  : "Use this number in the Track tab to follow your grievance status."}
+                  : "Use this number in the Track tab to follow your feedback status."}
               </p>
               <div className="flex gap-3 justify-center flex-wrap">
                 <Button onClick={() => { setSubmitted(false); form.reset(); }} variant="outline">
-                  {lang === "ta" ? "மற்றொரு புகார்" : "Submit Another"}
+                  {lang === "ta" ? "மற்றொரு கருத்து" : "Submit Another"}
                 </Button>
                 <a
-                  href={`https://wa.me/919876543210?text=${encodeURIComponent(`My grievance ticket: ${ticketNo}`)}`}
+                  href={`https://wa.me/919876543210?text=${encodeURIComponent(`My feedback reference: ${ticketNo}`)}`}
                   target="_blank" rel="noopener noreferrer"
                 >
                   <Button className="bg-[#25D366] hover:bg-[#20b558] text-white gap-2">
@@ -396,7 +398,7 @@ export default function Grievance({ lang }: GrievanceProps) {
           ) : (
             <Card className="max-w-2xl mx-auto">
               <CardHeader>
-                <CardTitle>{lang === "ta" ? "புகார் படிவம்" : "Grievance Form"}</CardTitle>
+                <CardTitle>{lang === "ta" ? "கருத்து படிவம்" : "Feedback Form"}</CardTitle>
               </CardHeader>
               <CardContent>
                 <Form {...form}>
@@ -405,7 +407,7 @@ export default function Grievance({ lang }: GrievanceProps) {
                     {/* Complaint Scope Toggle */}
                     <FormField control={form.control} name="complaintScope" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{lang === "ta" ? "புகார் வகை" : "Complaint Type"} *</FormLabel>
+                        <FormLabel>{lang === "ta" ? "கருத்து வகை" : "Feedback Type"} *</FormLabel>
                         <div className="grid grid-cols-2 gap-3">
                           <button
                             type="button"
@@ -477,7 +479,7 @@ export default function Grievance({ lang }: GrievanceProps) {
 
                     <FormField control={form.control} name="category" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{lang === "ta" ? "புகார் வகை" : "Complaint Category"} *</FormLabel>
+                        <FormLabel>{lang === "ta" ? "கருத்து வகை" : "Feedback Category"} *</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger data-testid="grievance-category">
@@ -645,12 +647,12 @@ export default function Grievance({ lang }: GrievanceProps) {
 
                     <FormField control={form.control} name="description" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{lang === "ta" ? "புகார் விவரம்" : "Complaint Details"} *</FormLabel>
+                        <FormLabel>{lang === "ta" ? "உங்கள் கருத்து" : "Your Feedback"} *</FormLabel>
                         <FormControl>
                           <Textarea
                             data-testid="grievance-description"
                             rows={4}
-                            placeholder={lang === "ta" ? "பிரச்சினையை விரிவாக விவரிக்கவும்..." : "Describe the issue in detail..."}
+                            placeholder={lang === "ta" ? "உங்கள் கருத்து அல்லது பிரச்சினையை விரிவாக விவரிக்கவும்..." : "Share your feedback, suggestion or describe the issue in detail..."}
                             {...field}
                           />
                         </FormControl>
@@ -730,7 +732,7 @@ export default function Grievance({ lang }: GrievanceProps) {
                     >
                       {submitMutation.isPending
                         ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{lang === "ta" ? "அனுப்புகிறது..." : "Submitting..."}</>
-                        : lang === "ta" ? "புகார் அனுப்பு" : "Submit Grievance"
+                        : lang === "ta" ? "கருத்து அனுப்பு" : "Submit Feedback"
                       }
                     </Button>
                   </form>
@@ -744,12 +746,12 @@ export default function Grievance({ lang }: GrievanceProps) {
         <TabsContent value="track">
           <div className="max-w-lg mx-auto space-y-5">
             <Card>
-              <CardHeader><CardTitle>{lang === "ta" ? "புகார் நிலை அறிய" : "Track Your Grievance"}</CardTitle></CardHeader>
+              <CardHeader><CardTitle>{lang === "ta" ? "கருத்து நிலை அறிய" : "Track Your Feedback"}</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex gap-2">
                   <Input
                     data-testid="track-ticket-input"
-                    placeholder={lang === "ta" ? "புகார் எண் (GRV-...)" : "Ticket number (GRV-...)"}
+                    placeholder={lang === "ta" ? "குறிப்பு எண் (GRV-...)" : "Reference number (GRV-...)"}
                     value={trackInput}
                     onChange={(e) => setTrackInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleTrack()}
@@ -808,7 +810,7 @@ export default function Grievance({ lang }: GrievanceProps) {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {[
                     {
-                      label: lang === "ta" ? "மொத்த புகார்கள்" : "Total Grievances",
+                      label: lang === "ta" ? "மொத்த கருத்துகள்" : "Total Submissions",
                       value: heatmapData.total,
                       icon: <FileText className="w-5 h-5 text-primary" />,
                     },
@@ -844,7 +846,7 @@ export default function Grievance({ lang }: GrievanceProps) {
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">
-                        {lang === "ta" ? "வகை வாரியான புகார்கள்" : "Grievances by Category"}
+                        {lang === "ta" ? "வகை வாரியான கருத்துகள்" : "Feedback by Category"}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -861,7 +863,7 @@ export default function Grievance({ lang }: GrievanceProps) {
                           <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                           <Tooltip
                             contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
-                            formatter={(value) => [value, lang === "ta" ? "புகார்கள்" : "Grievances"]}
+                            formatter={(value) => [value, lang === "ta" ? "கருத்துகள்" : "Submissions"]}
                           />
                           <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                             {heatmapData.byCategory.map((_entry, i) => (
@@ -878,7 +880,7 @@ export default function Grievance({ lang }: GrievanceProps) {
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">
-                        {lang === "ta" ? "வார்டு வாரியான புகார்கள்" : "Grievances by Ward"}
+                        {lang === "ta" ? "வார்டு வாரியான கருத்துகள்" : "Feedback by Ward"}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -900,7 +902,7 @@ export default function Grievance({ lang }: GrievanceProps) {
                 {heatmapData.total === 0 && (
                   <div className="text-center py-16 text-muted-foreground">
                     <TrendingUp className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                    <p>{lang === "ta" ? "இன்னும் புகார்கள் இல்லை." : "No grievances submitted yet."}</p>
+                    <p>{lang === "ta" ? "இன்னும் கருத்துகள் இல்லை." : "No feedback submitted yet."}</p>
                   </div>
                 )}
               </>
