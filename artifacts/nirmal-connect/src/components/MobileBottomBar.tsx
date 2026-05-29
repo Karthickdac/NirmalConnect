@@ -22,7 +22,7 @@ export function MobileBottomBar({ lang }: MobileBottomBarProps) {
       key: "grievance",
       href: "/grievance",
       icon: Megaphone,
-      label: tx("Grievance", "புகார்"),
+      label: tx("Feedback", "கருத்து"),
       type: "link" as const,
       highlight: true,
     },
