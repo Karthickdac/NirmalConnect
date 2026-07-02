@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Newspaper, Calendar, Activity, Image,
   Users, MessageSquare, HelpCircle, UserCircle, LogOut, Menu, X,
-  ChevronRight, ChevronDown, Settings, Megaphone, FileText, MapPin, ClipboardList, Network, Map as MapIcon, BarChart3, Home as HomeIcon, ShieldAlert,
+  ChevronRight, ChevronDown, Settings, Megaphone, FileText, MapPin, ClipboardList, Network, Map as MapIcon, BarChart3, Home as HomeIcon, ShieldAlert, HardHat,
 } from "lucide-react";
 import { isAuthenticated, removeToken, getToken } from "@/lib/auth";
 import { useGetMe } from "@workspace/api-client-react";
@@ -34,6 +34,7 @@ import VoterTagsAdmin from "./admin/VoterTagsAdmin";
 import VoterExportsAdmin from "./admin/VoterExportsAdmin";
 import { Download } from "lucide-react";
 import PressReleasesAdmin from "./admin/PressReleasesAdmin";
+import DevelopmentAdmin from "./admin/DevelopmentAdmin";
 import AssignmentsAdmin from "./admin/AssignmentsAdmin";
 import type { Language } from "@/lib/i18n";
 import { UnsavedChangesProvider, useConfirmDiscard } from "@/lib/unsavedChanges";
@@ -95,6 +96,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "press",        label: "Press Releases",       icon: FileText,        group: "content", roles: ["super_admin", "admin", "pa_staff", "media_team"] },
   { id: "events",       label: "Events",               icon: Calendar,        group: "content", roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator", "media_team"] },
   { id: "activities",   label: "Activities",           icon: Activity,        group: "content", roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator", "media_team"] },
+  { id: "development",  label: "Development Projects", icon: HardHat,         group: "content", roles: ["super_admin", "admin", "pa_staff", "constituency_coordinator", "media_team"] },
   { id: "gallery",      label: "Gallery",              icon: Image,           group: "content", roles: ["super_admin", "admin", "pa_staff", "media_team"] },
   { id: "banners",      label: "Banners",              icon: Megaphone,       group: "content", roles: ["super_admin", "admin", "pa_staff"] },
 
@@ -450,6 +452,7 @@ function AdminInner({ lang = "ta" }: AdminProps) {
           {active === "press"        && <PressReleasesAdmin />}
           {active === "events"       && <EventsAdmin />}
           {active === "activities"   && <ActivitiesAdmin />}
+          {active === "development"  && <DevelopmentAdmin />}
           {active === "gallery"      && <GalleryAdmin />}
           {active === "banners"      && <BannersAdmin />}
           {active === "volunteers"   && <VolunteersAdmin />}

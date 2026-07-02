@@ -197,6 +197,11 @@ export const adminApi = {
   // Grievance bulk assign
   bulkGrievanceAssign: (ids: number[], officerId: number, officerName: string) =>
     authFetch("/admin/grievances/bulk-assign", { method: "POST", body: JSON.stringify({ ids, officerId, officerName }) }),
+  // Development Projects
+  getDevelopmentProjects: () => authFetch("/development-projects"),
+  createDevelopmentProject: (data: unknown) => authFetch("/admin/development-projects", { method: "POST", body: JSON.stringify(data) }),
+  updateDevelopmentProject: (id: number, data: unknown) => authFetch(`/admin/development-projects/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteDevelopmentProject: (id: number) => authFetch(`/admin/development-projects/${id}`, { method: "DELETE" }),
   // Image upload (multipart)
   uploadImage: async (file: File): Promise<{ url: string; filename: string }> => {
     const token = getToken();

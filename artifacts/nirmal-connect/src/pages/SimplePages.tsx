@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Badge } from "@/components/ui/badge";
@@ -46,35 +47,67 @@ export function Journey({ lang }: SimplePageProps) {
   );
 }
 
-export function Development({ lang }: SimplePageProps) {
-  const lc = useLeaderConfig();
-  const c = lang === "ta" ? lc.constituencyTa : lc.constituencyEn;
+interface DevProject {
+  id: number;
+  title: string;
+  titleTa?: string | null;
+  category: string;
+  categoryTa?: string | null;
+  status: string;
+}
 
-  const projects = [
-    { cat: lang === "ta" ? "சாலை" : "Roads", title: lang === "ta" ? `${c} – மதுரை இணைப்பு சாலை மேம்பாடு` : `${c}–Madurai Connectivity Road Upgrade`, status: "Completed" },
-    { cat: lang === "ta" ? "நீர்" : "Water", title: lang === "ta" ? `${c} குடிநீர் திட்டம் – 10 வார்டுகள்` : `Drinking Water Project – 10 Wards Coverage`, status: "Completed" },
-    { cat: lang === "ta" ? "கல்வி" : "Education", title: lang === "ta" ? "அரசு பள்ளிகளில் கட்டமைப்பு மேம்பாடு (15 பள்ளிகள்)" : "Govt. School Infrastructure Upgrade – 15 Schools", status: "Ongoing" },
-    { cat: lang === "ta" ? "சுகாதாரம்" : "Health", title: lang === "ta" ? "மகளிர் சுகாதார மையம் திறப்பு" : "Women's Health Center Inauguration", status: "Completed" },
-    { cat: lang === "ta" ? "வீட்டுவசதி" : "Housing", title: lang === "ta" ? "இல்லமில்லாத குடும்பங்களுக்கு வீட்டுவசதி" : "Housing scheme for 200 homeless families", status: "Ongoing" },
-    { cat: lang === "ta" ? "தொழில்" : "Employment", title: lang === "ta" ? "தொழில் பயிற்சி மையம் திறப்பு" : "Skill Development Center Opening", status: "Completed" },
-  ];
-  const statusColor: Record<string, string> = { Completed: "bg-green-100 text-green-700", Ongoing: "bg-blue-100 text-blue-700", Planned: "bg-yellow-100 text-yellow-700" };
+export function Development({ lang }: SimplePageProps) {
+  const [projects, setProjects] = useState<DevProject[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/development-projects")
+      .then(r => r.ok ? r.json() : [])
+      .then((data: DevProject[]) => setProjects(data))
+      .catch(() => setProjects([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const statusColor: Record<string, string> = {
+    Completed: "bg-green-100 text-green-700",
+    Ongoing: "bg-blue-100 text-blue-700",
+    Planned: "bg-yellow-100 text-yellow-700",
+  };
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
       <SectionHeader title={lang === "ta" ? "தொகுதி வளர்ச்சி பணிகள்" : "Constituency Development Works"} />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {projects.map((p, i) => (
-          <Card key={i} data-testid={`project-card-${i}`} className="hover:shadow-md transition-all">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <Badge variant="secondary" className="text-xs">{p.cat}</Badge>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor[p.status]}`}>{p.status}</span>
-              </div>
-              <p className="font-medium text-sm">{p.title}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="animate-pulse"><CardContent className="p-5 h-20" /></Card>
+          ))}
+        </div>
+      ) : projects.length === 0 ? (
+        <p className="text-center text-muted-foreground py-12">
+          {lang === "ta" ? "விரைவில் திட்டங்கள் சேர்க்கப்படும்" : "Projects will be listed here soon."}
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {projects.map((p, i) => {
+            const cat = lang === "ta" && p.categoryTa ? p.categoryTa : p.category;
+            const title = lang === "ta" && p.titleTa ? p.titleTa : p.title;
+            return (
+              <Card key={p.id} data-testid={`project-card-${i}`} className="hover:shadow-md transition-all">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <Badge variant="secondary" className="text-xs">{cat}</Badge>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor[p.status] ?? "bg-gray-100 text-gray-700"}`}>
+                      {p.status}
+                    </span>
+                  </div>
+                  <p className="font-medium text-sm">{title}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

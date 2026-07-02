@@ -16,6 +16,7 @@ import householdsRouter from "./households.js";
 import voterExportsRouter from "./voter_exports.js";
 import siteRouter from "./site.js";
 import mapRouter from "./map.js";
+import developmentRouter from "./development.js";
 
 const router: IRouter = Router();
 
@@ -31,6 +32,7 @@ router.use(statsRouter);
 router.use(grievancesRouter);
 router.use(siteRouter);
 router.use(mapRouter);
+router.use(developmentRouter);
 router.use(adminRouter);
 // votersAdvancedRouter MUST be mounted before votersRouter so its
 // specific paths (/admin/voters/duplicates, /analytics, /merge, /bulk,

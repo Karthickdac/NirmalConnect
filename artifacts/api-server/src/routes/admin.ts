@@ -7,6 +7,7 @@ import {
   zonesTable, areasTable, streetsTable, pollingStationsTable,
   pincodesTable, pincodeWardsTable,
   officerAssignmentsTable, grievanceRoutingLogTable, volunteerAssignmentsTable,
+  developmentProjectsTable,
 } from "@workspace/db/schema";
 
 import { requireStaff, requireRole, type AuthRequest } from "../lib/auth.js";
@@ -512,6 +513,58 @@ router.delete("/admin/activities/:id", requireRole(...EVENTS_ROLES), async (req:
     res.json({ success: true });
   } catch (err) {
     console.error("[admin] activities delete:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ──────────────────────────────────────────────────────────
+// DEVELOPMENT PROJECTS CRUD
+// ──────────────────────────────────────────────────────────
+const DevProjectBody = z.object({
+  title: z.string().min(1),
+  titleTa: z.string().optional().nullable(),
+  category: z.string().default("Roads"),
+  categoryTa: z.string().optional().nullable(),
+  status: z.string().default("Ongoing"),
+  sortOrder: z.number().int().default(0),
+});
+
+router.post("/admin/development-projects", requireRole(...EVENTS_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const body = DevProjectBody.safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const [item] = await db.insert(developmentProjectsTable).values(body.data).returning();
+    await logAudit(req, "CREATE", `development_projects:${item.id}`, item.title);
+    res.status(201).json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] development-projects create:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/admin/development-projects/:id", requireRole(...EVENTS_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    const body = DevProjectBody.partial().safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const [item] = await db.update(developmentProjectsTable).set(body.data).where(eq(developmentProjectsTable.id, id)).returning();
+    if (!item) { res.status(404).json({ error: "Not found" }); return; }
+    await logAudit(req, "UPDATE", `development_projects:${id}`, item.title);
+    res.json({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] development-projects update:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/admin/development-projects/:id", requireRole(...EVENTS_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    await db.delete(developmentProjectsTable).where(eq(developmentProjectsTable.id, id));
+    await logAudit(req, "DELETE", `development_projects:${id}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[admin] development-projects delete:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
