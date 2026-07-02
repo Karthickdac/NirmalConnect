@@ -9,7 +9,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import type { Language } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
 import { format } from "date-fns";
-import leaderPhoto from "@assets/image_1778085777744.png";
+import leaderPhoto from "@assets/leader_profile_photo.jpeg";
 import cmVijayPhoto from "@assets/image_1780074852655.png";
 import { type LeaderConfig, DEFAULT_LEADER_CONFIG } from "@/lib/LeaderConfigContext";
 
