@@ -49,7 +49,7 @@ router.get("/zones", async (_req, res) => {
 router.get("/zones/:id/wards", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (!Number.isFinite(id)) return res.status(400).json({ error: "Invalid zone id" });
+    if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid zone id" }); return; }
     const rows = await db.select({
       id: wardsTable.id, name: wardsTable.name, nameTa: wardsTable.nameTa,
       slug: wardsTable.slug, wardType: wardsTable.wardType, zoneId: wardsTable.zoneId,
@@ -65,7 +65,7 @@ router.get("/zones/:id/wards", async (req, res) => {
 router.get("/wards/:id/areas", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (!Number.isFinite(id)) return res.status(400).json({ error: "Invalid ward id" });
+    if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid ward id" }); return; }
     const rows = await db.select({
       id: areasTable.id, wardId: areasTable.wardId, name: areasTable.name,
       nameTa: areasTable.nameTa, areaType: areasTable.areaType,
@@ -80,7 +80,7 @@ router.get("/wards/:id/areas", async (req, res) => {
 router.get("/wards/:id/polling-stations", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (!Number.isFinite(id)) return res.status(400).json({ error: "Invalid ward id" });
+    if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid ward id" }); return; }
     const rows = await db.select({
       id: pollingStationsTable.id, boothNo: pollingStationsTable.boothNo,
       name: pollingStationsTable.name, nameTa: pollingStationsTable.nameTa,

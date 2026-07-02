@@ -52,6 +52,10 @@ export const grievancesTable = pgTable("grievances", {
   address: text("address"),
   ward: text("ward"),
   constituency: text("constituency").notNull().default("Tirupparankundram"),
+  // Whether the complaint concerns the local constituency or a statewide issue.
+  complaintScope: text("complaint_scope").notNull().default("constituency"),
+  // Optional district for statewide complaints filed from outside the constituency.
+  district: text("district"),
   priority: text("priority").notNull().default("Medium"),
   status: text("status").notNull().default("Submitted"),
   anonymous: boolean("anonymous").notNull().default(false),

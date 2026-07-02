@@ -197,6 +197,11 @@ export const adminApi = {
   // Grievance bulk assign
   bulkGrievanceAssign: (ids: number[], officerId: number, officerName: string) =>
     authFetch("/admin/grievances/bulk-assign", { method: "POST", body: JSON.stringify({ ids, officerId, officerName }) }),
+  // User Management
+  getUsers: () => authFetch("/admin/users"),
+  createUser: (data: unknown) => authFetch("/admin/users", { method: "POST", body: JSON.stringify(data) }),
+  updateUser: (id: number, data: unknown) => authFetch(`/admin/users/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteUser: (id: number) => authFetch(`/admin/users/${id}`, { method: "DELETE" }),
   // Development Projects
   getDevelopmentProjects: () => authFetch("/development-projects"),
   createDevelopmentProject: (data: unknown) => authFetch("/admin/development-projects", { method: "POST", body: JSON.stringify(data) }),

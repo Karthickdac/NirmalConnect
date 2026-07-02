@@ -10,7 +10,7 @@ import {
   developmentProjectsTable,
 } from "@workspace/db/schema";
 
-import { requireStaff, requireRole, type AuthRequest } from "../lib/auth.js";
+import { requireStaff, requireRole, hashPassword, type AuthRequest } from "../lib/auth.js";
 import { logRouting } from "../lib/grievance-routing.js";
 import { eq, desc, asc, sql, gte, lte, and, inArray } from "drizzle-orm";
 import { z } from "zod";
@@ -565,6 +565,137 @@ router.delete("/admin/development-projects/:id", requireRole(...EVENTS_ROLES), a
     res.json({ success: true });
   } catch (err) {
     console.error("[admin] development-projects delete:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ──────────────────────────────────────────────────────────
+// USER MANAGEMENT CRUD (super_admin only)
+// ──────────────────────────────────────────────────────────
+// Only super_admin may manage user accounts ("admin" is not a valid DB role;
+// allowing it here would open a privilege-escalation path if it were ever added).
+const USER_MGMT_ROLES = ["super_admin"] as const;
+const USER_ROLE_VALUES = ["super_admin", "minister", "pa_staff", "constituency_coordinator", "media_team", "grievance_officer"] as const;
+
+const UserCreateBody = z.object({
+  email: z.string().email(),
+  name: z.string().min(1),
+  password: z.string().min(8),
+  role: z.enum(USER_ROLE_VALUES).default("grievance_officer"),
+  isActive: z.enum(["true", "false"]).default("true"),
+});
+
+const UserUpdateBody = z.object({
+  email: z.string().email().optional(),
+  name: z.string().min(1).optional(),
+  password: z.string().min(8).optional(),
+  role: z.enum(USER_ROLE_VALUES).optional(),
+  isActive: z.enum(["true", "false"]).optional(),
+});
+
+const publicUserFields = {
+  id: usersTable.id,
+  email: usersTable.email,
+  name: usersTable.name,
+  role: usersTable.role,
+  isActive: usersTable.isActive,
+  createdAt: usersTable.createdAt,
+  updatedAt: usersTable.updatedAt,
+};
+
+router.get("/admin/users", requireRole(...USER_MGMT_ROLES), async (_req: AuthRequest, res) => {
+  try {
+    const users = await db.select(publicUserFields).from(usersTable).orderBy(asc(usersTable.name));
+    res.json(users.map((u) => ({ ...u, createdAt: u.createdAt.toISOString(), updatedAt: u.updatedAt.toISOString() })));
+  } catch (err) {
+    console.error("[admin] users list:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/admin/users", requireRole(...USER_MGMT_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const body = UserCreateBody.safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const email = body.data.email.trim().toLowerCase();
+    const [existing] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email));
+    if (existing) { res.status(409).json({ error: "A user with this email already exists" }); return; }
+    const [user] = await db.insert(usersTable).values({
+      email,
+      name: body.data.name.trim(),
+      passwordHash: hashPassword(body.data.password),
+      role: body.data.role,
+      isActive: body.data.isActive,
+    }).returning(publicUserFields);
+    await logAudit(req, "CREATE", `users:${user.id}`, `${user.name} (${user.email}, ${user.role})`);
+    res.status(201).json({ ...user, createdAt: user.createdAt.toISOString(), updatedAt: user.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] users create:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/admin/users/:id", requireRole(...USER_MGMT_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    const body = UserUpdateBody.safeParse(req.body);
+    if (!body.success) { res.status(400).json({ error: "Invalid", details: body.error.issues }); return; }
+    const selfId = Number(req.user?.id);
+    if (id === selfId && (body.data.isActive === "false" || (body.data.role && body.data.role !== "super_admin"))) {
+      res.status(400).json({ error: "You cannot deactivate or demote your own account" });
+      return;
+    }
+    const [current] = await db.select({ role: usersTable.role, isActive: usersTable.isActive }).from(usersTable).where(eq(usersTable.id, id));
+    if (!current) { res.status(404).json({ error: "Not found" }); return; }
+    const demotingOrDeactivating =
+      current.role === "super_admin" && current.isActive === "true" &&
+      ((body.data.role && body.data.role !== "super_admin") || body.data.isActive === "false");
+    if (demotingOrDeactivating) {
+      const activeSupers = await db.select({ id: usersTable.id }).from(usersTable)
+        .where(and(eq(usersTable.role, "super_admin"), eq(usersTable.isActive, "true")));
+      if (activeSupers.length <= 1) {
+        res.status(400).json({ error: "Cannot demote or deactivate the last active super admin" });
+        return;
+      }
+    }
+    const updates: Record<string, unknown> = {};
+    if (body.data.email) {
+      const email = body.data.email.trim().toLowerCase();
+      const [existing] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email));
+      if (existing && existing.id !== id) { res.status(409).json({ error: "A user with this email already exists" }); return; }
+      updates["email"] = email;
+    }
+    if (body.data.name) updates["name"] = body.data.name.trim();
+    if (body.data.password) updates["passwordHash"] = hashPassword(body.data.password);
+    if (body.data.role) updates["role"] = body.data.role;
+    if (body.data.isActive) updates["isActive"] = body.data.isActive;
+    if (Object.keys(updates).length === 0) { res.status(400).json({ error: "No changes provided" }); return; }
+    const [user] = await db.update(usersTable).set(updates).where(eq(usersTable.id, id)).returning(publicUserFields);
+    if (!user) { res.status(404).json({ error: "Not found" }); return; }
+    await logAudit(req, "UPDATE", `users:${id}`, `${user.name} (${user.email}, ${user.role})${body.data.password ? " [password reset]" : ""}`);
+    res.json({ ...user, createdAt: user.createdAt.toISOString(), updatedAt: user.updatedAt.toISOString() });
+  } catch (err) {
+    console.error("[admin] users update:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/admin/users/:id", requireRole(...USER_MGMT_ROLES), async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params["id"] as string);
+    const selfId = Number(req.user?.id);
+    if (id === selfId) { res.status(400).json({ error: "You cannot delete your own account" }); return; }
+    const [target] = await db.select({ id: usersTable.id, role: usersTable.role, email: usersTable.email }).from(usersTable).where(eq(usersTable.id, id));
+    if (!target) { res.status(404).json({ error: "Not found" }); return; }
+    if (target.role === "super_admin") {
+      const superAdmins = await db.select({ id: usersTable.id }).from(usersTable).where(and(eq(usersTable.role, "super_admin"), eq(usersTable.isActive, "true")));
+      if (superAdmins.length <= 1) { res.status(400).json({ error: "Cannot delete the last active super admin" }); return; }
+    }
+    await db.delete(usersTable).where(eq(usersTable.id, id));
+    await logAudit(req, "DELETE", `users:${id}`, target.email);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[admin] users delete:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
